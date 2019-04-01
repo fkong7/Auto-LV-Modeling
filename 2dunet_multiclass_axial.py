@@ -35,14 +35,15 @@ import SimpleITK as sitk
 
 img_shape = (256, 256, 1)
 num_class = 8
-batch_size = 8
+batch_size = 10
 epochs = 100
 
 modality = ["ct", "mr"]
-data_folder = '/global/scratch/fanwei_kong/ImageData/MMWHS'
-view = 2
-data_folder_out = '/global/scratch/fanwei_kong/ImageData/MMWHS/2d_multiclass-sagittal'
-save_model_path = '/global/scratch/fanwei_kong/2DUNet/Logs/weights_multi-all-sagittal.hdf5'
+data_folder = '/global/scratch/fanwei_kong/ImageData/MMWHS_small'
+view = 0
+data_folder_out = '/global/scratch/fanwei_kong/ImageData/MMWHS_small/2d_multiclass-axial'
+save_model_path = '/global/scratch/fanwei_kong/2DUNet/Logs/weights_multi-all-axial_small.hdf5'
+overwrite = False
 
 
 
@@ -165,6 +166,25 @@ def data_preprocess(modality,data_folder,view, data_folder_out):
         train_mask_path.append(out_msk_path)
   return train_img_path, train_mask_path
 
+def sample(iterable, n):
+    """
+    Returns @param n random items from @param iterable.
+    """
+    if n == 0:
+      return []
+    reservoir = []
+    factor = int(np.ceil(float(n)/float(len(iterable))))
+    for i in range(0,factor-1):
+      iterable+=iterable
+    for t, item in enumerate(iterable):
+        if t < n:
+            reservoir.append(item)
+        else:
+            m = np.random.randint(0,t)
+            if m < n:
+                reservoir[m] = item
+    return reservoir
+
 print("Making dir...")
 try:
   os.mkdir(data_folder_out)
@@ -175,7 +195,6 @@ for m in modality:
     #os.mkdir(os.path.join(data_folder_out, m+'_train_masks'))
   except Exception as e: print(e)
 
-overwrite = False
 if overwrite:
   _, _  = data_preprocess(modality,data_folder,view, data_folder_out)
 
@@ -187,7 +206,14 @@ for i, m in enumerate(modality):
   nums[i] = len(filenames[i])
   x_train_filenames+=filenames[i]
   print(nums)
-    
+  
+np.random.seed(10)
+nums = np.max(nums) - nums
+for i , _ in enumerate(modality):
+  index = sample(list(range(len(filenames[i]))), nums[i])
+  x_train_filenames+=[filenames[i][j] for j in index]
+
+  
 x_train_filenames, x_val_filenames = train_test_split(x_train_filenames, test_size=0.2, random_state=42)
 num_train_examples = len(x_train_filenames)
 num_val_examples = len(x_val_filenames)
@@ -322,7 +348,7 @@ def get_baseline_dataset(filenames, preproc_fn=functools.partial(_augment),
   dataset = dataset.map(preproc_fn, num_parallel_calls=threads)
   print(num_x)
   if shuffle:
-    dataset = dataset.shuffle(int(num_x/2))
+    dataset = dataset.shuffle(6000)
   
   
   # It's necessary to repeat our data for all epochs 
