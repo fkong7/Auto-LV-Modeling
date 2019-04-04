@@ -43,6 +43,7 @@ data_folder = '/global/scratch/fanwei_kong/ImageData/MMWHS_small'
 view = 0
 data_folder_out = '/global/scratch/fanwei_kong/ImageData/MMWHS_small/2d_multiclass-axial'
 save_model_path = '/global/scratch/fanwei_kong/2DUNet/Logs/weights_multi-all-axial_small.hdf5'
+save_loss_path = '/global/scratch/fanwei_kong/2DUNet/Logs'
 overwrite = False
 
 
@@ -505,21 +506,21 @@ val_dice = history.history['val_dice_loss']
 
 loss = history.history['loss']
 val_loss = history.history['val_loss']
+np.save(save_loss_path+"dice_loss",val_dice)
+np.save(save_loss_path_"val_loss",val_loss) 
+#epochs_range = range(epochs)
 
-epochs_range = range(epochs)
+#plt.figure()
+#plt.subplot(1, 2, 1)
+#plt.plot(epochs_range, dice, label='Training Dice Loss')
+#plt.plot(epochs_range, val_dice, label='Validation Dice Loss')
+#plt.legend(loc='upper right')
+#plt.title('Training and Validation Dice Loss')
 
-plt.figure(figsize=(16, 8))
-plt.subplot(1, 2, 1)
-plt.plot(epochs_range, dice, label='Training Dice Loss')
-plt.plot(epochs_range, val_dice, label='Validation Dice Loss')
-plt.legend(loc='upper right')
-plt.title('Training and Validation Dice Loss')
+#plt.subplot(1, 2, 2)
+#plt.plot(epochs_range, loss, label='Training Loss')
+#plt.plot(epochs_range, val_loss, label='Validation Loss')
+#plt.legend(loc='upper right')
+#plt.title('Training and Validation Loss')
 
-plt.subplot(1, 2, 2)
-plt.plot(epochs_range, loss, label='Training Loss')
-plt.plot(epochs_range, val_loss, label='Validation Loss')
-plt.legend(loc='upper right')
-plt.title('Training and Validation Loss')
-
-plt.savefig('./loss.png')
 
