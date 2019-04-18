@@ -10,11 +10,13 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 total = comm.Get_size()
 """# Set up"""
-
+#TO-DO:allow arbitrary number of cpus, right now only divisible number of cpus are allowed
 modality = ["ct","mr"]
-data_folder = '/global/scratch/fanwei_kong/ImageData/MMWHS_small'
-view = 2 
-data_folder_out = '/global/scratch/fanwei_kong/ImageData/MMWHS_small/2d_multiclass-sagittal'
+base_name = 'MMWHS_small_10'
+data_folder = '/global/scratch/fanwei_kong/ImageData/' + base_name
+view_names = ['axial', 'coronal', 'sagittal']
+view = 0 
+data_folder_out = '/global/scratch/fanwei_kong/ImageData/%s/2d_multiclass-%s2' % (base_name, view_names[view])
 overwrite = True 
 
 
@@ -135,7 +137,13 @@ def data_preprocess(modality,data_folder,view, data_folder_out, comm, rank):
         imgVol = np.moveaxis(imgVol,0,-1)
         maskVol = np.moveaxis(maskVol,0,-1)
       print("number of image slices in this view %d" % imgVol.shape[view])
+      #remove the blank images with a probability - find the index first
+      IDs = np.max(np.max(np.moveaxis(maskVol,view,0),axis=-1),axis=-1)==0
+      
       for sid in range(imgVol.shape[view]):
+        if IDs[sid] and np.random.rand(1)>0.2:
+            continue
+        
         out_im_path = os.path.join(data_folder_out, m+'_train', m+'_train'+str(range(begin,end)[i])+'_'+str(sid))
         out_msk_path = os.path.join(data_folder_out, m+'_train_masks',  m+'_train_mask'+str(range(begin,end)[i])+'_'+str(sid))
         slice_im = np.moveaxis(imgVol,view,0)[sid,:,:]
