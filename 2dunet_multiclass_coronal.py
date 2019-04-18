@@ -39,12 +39,21 @@ batch_size = 10
 epochs = 100
 
 modality = ["ct", "mr"]
-data_folder = '/global/scratch/fanwei_kong/ImageData/MMWHS_small'
+im_base_name = 'MMWHS_small'
+base_name = 'MMWHS_small_btstrp3'
+data_folder = '/global/scratch/fanwei_kong/ImageData/%s' % im_base_name
 view = 1
-data_folder_out = '/global/scratch/fanwei_kong/ImageData/MMWHS_small/2d_multiclass-coronal'
-save_model_path = '/global/scratch/fanwei_kong/2DUNet/Logs/weights_multi-all-coronal_small.hdf5'
+seed = 41
+view_names = ['axial', 'coronal', 'sagittal']
+data_folder_out = '/global/scratch/fanwei_kong/ImageData/%s/2d_multiclass-%s2' % (im_base_name,view_names[view])
+save_model_path = '/global/scratch/fanwei_kong/2DUNet/Logs/%s/weights_multi-all-%s_small2.hdf5' % (base_name,view_names[view])
+save_loss_path = '/global/scratch/fanwei_kong/2DUNet/Logs/%s/%s' % (base_name,view_names[view])
 overwrite = False
 
+try:
+    os.mkdir(os.path.dirname(save_model_path))
+    os.mkdir(os.oath.dirname(save_loss_path))
+except Exception as e: print(e)
 
 
 
@@ -185,6 +194,14 @@ def sample(iterable, n):
                 reservoir[m] = item
     return reservoir
 
+def bootstrapping(fn_names):
+    index = np.array(range(len(fn_names)))
+    new_fn_names = [None]*len(fn_names)
+    for i in range(len(fn_names)):
+        new_fn_names[i] = fn_names[int(np.random.choice(index,replace=True))]
+
+    return new_fn_names
+
 print("Making dir...")
 try:
   os.mkdir(data_folder_out)
@@ -207,14 +224,15 @@ for i, m in enumerate(modality):
   x_train_filenames+=filenames[i]
   print(nums)
   
-np.random.seed(10)
+np.random.seed(seed)
 nums = np.max(nums) - nums
 for i , _ in enumerate(modality):
   index = sample(list(range(len(filenames[i]))), nums[i])
   x_train_filenames+=[filenames[i][j] for j in index]
 
   
-x_train_filenames, x_val_filenames = train_test_split(x_train_filenames, test_size=0.2, random_state=42)
+x_train_filenames, x_val_filenames = train_test_split(x_train_filenames, test_size=0.2, random_state=seed)
+x_train_filenames = bootstrapping(x_train_filenames)
 num_train_examples = len(x_train_filenames)
 num_val_examples = len(x_val_filenames)
 
@@ -500,26 +518,7 @@ history = model.fit(train_ds,
                    validation_steps=int(np.ceil(num_val_examples / float(batch_size))),
                    callbacks=[cp])
 
-dice = history.history['dice_loss']
-val_dice = history.history['val_dice_loss']
-
-loss = history.history['loss']
-val_loss = history.history['val_loss']
-
-epochs_range = range(epochs)
-
-plt.figure(figsize=(16, 8))
-plt.subplot(1, 2, 1)
-plt.plot(epochs_range, dice, label='Training Dice Loss')
-plt.plot(epochs_range, val_dice, label='Validation Dice Loss')
-plt.legend(loc='upper right')
-plt.title('Training and Validation Dice Loss')
-
-plt.subplot(1, 2, 2)
-plt.plot(epochs_range, loss, label='Training Loss')
-plt.plot(epochs_range, val_loss, label='Validation Loss')
-plt.legend(loc='upper right')
-plt.title('Training and Validation Loss')
-
-plt.savefig('./loss.png')
+from pickle import dump
+with open(save_loss_path+"history", 'wb') as handle: # saving the history 
+        dump(history.history, handle)
 
