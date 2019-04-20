@@ -27,7 +27,7 @@ from scipy.stats import mode
 from skimage.transform import resize
 from loss import bce_dice_loss, dice_loss
 from tensorflow.python.keras import backend as K
-
+from model import UNet2D
 """#Prediction"""
 
 from preProcess import RescaleIntensity
@@ -153,7 +153,8 @@ class ImageLoader:
 
 class Prediction:
     #This is a class to get 3D volumetric prediction from the 2DUNet model
-    def __init__(self, model,modality,view,image_vol_fn,label_vol_fn):
+    def __init__(self, unet, model,modality,view,image_vol_fn,label_vol_fn):
+        self.unet=unet
         self.models=model
         self.modality=modality
         self.views=view
@@ -212,12 +213,25 @@ class Prediction:
         if self.label_vol is None:
            self.load_label()
         prob = np.zeros((*self.label_vol.shape,8))
-        for i, model_path in enumerate(self.models):
-            image_vol_resize = data_preprocess_scale(self.image_vol, self.views[i], size)
-            model = models_keras.load_model(model_path, custom_objects={'bce_dice_loss': bce_dice_loss, 'dice_loss': dice_loss})
-            prob+=model_output(model, image_vol_resize, self.views[i], self.modality, self.original_shape)
-            del model
-            K.clear_session()
+        unique_views = np.unique(self.views)
+        for view in unique_views:
+            indices = np.where(self.views==view)[0]
+            predict_shape = [size,size,size,8]
+            predict_shape[view] = self.image_vol.shape[view]
+            prob_view = np.zeros(predict_shape)
+            if self.modality=="mr":
+                prob_view = np.moveaxis(prob_view, 2, 0)
+            for i in indices:
+                model_path = self.models[i]
+                image_vol_resize = data_preprocess_scale(self.image_vol, self.views[i], size)
+                (self.unet).load_weights(model_path)
+                prob_view+=model_output_no_resize(self.unet, image_vol_resize, self.views[i], self.modality)
+            prob_resize = np.zeros(prob.shape)
+            for i in range(prob.shape[-1]):
+                prob_resize[:,:,:,i] = resize(prob_view[:,:,:,i], self.original_shape, order=1)
+            prob += prob_resize
+            #del model
+            #K.clear_session()
         avg = prob/len(self.models)
         self.prediction = predictVol(avg, self.label_vol)
         return self.prediction
@@ -245,15 +259,19 @@ class Prediction:
         out_im.SetSpacing(space)
         out_im.SetDirection(direc)
       
-        sitk.WriteImage(out_im, out_fn)
+        sitk.WriteImage(sitk.Cast(out_im, sitk.sitkInt16), out_fn)
 
 
 
 
 
 def modelEnsemble(folder_postfix, model_postfix, modality, view_names, view_attributes, data_folder, data_out_folder, base_folder, write=False, mode='single'):
-    
+    img_shape = (256, 256, 1)
+    num_class = 8
+    inputs, outputs = UNet2D(img_shape, num_class)
+    unet = models_keras.Model(inputs=[inputs], outputs=[outputs])
     try:
+      os.mkdir('/global/scratch/fanwei_kong/2DUNet/Logs/%s' % base_folder[-1])
       os.mkdir(data_out_folder)
     except Exception as e: print(e)
     
@@ -271,7 +289,7 @@ def modelEnsemble(folder_postfix, model_postfix, modality, view_names, view_attr
             for j in range(len(view_attributes)):
                 save_model_path = '/global/scratch/fanwei_kong/2DUNet/Logs/%s/weights_multi-all-%s_%s.hdf5' % (base_folder[j], view_names[j], model_postfix)
                 models[j] = save_model_path
-            predict = Prediction(models,m,view_attributes,x_filenames[i],y_filenames[i])
+            predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i])
             if mode=='single':
                 predict.volume_prediction_single(256)
             else:
@@ -282,13 +300,13 @@ def modelEnsemble(folder_postfix, model_postfix, modality, view_names, view_attr
             del predict 
         writeDiceScores(csv_path, dice_list)
 
-if __name__ == '__main__':
+def main():
     folder_postfix = "ensemble_all"
     model_postfix = "small2"
     im_base_folder = "MMWHS_small"
     base_folder = ["MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3","MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3","MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3", "Ensemble_btstrp"]
     #base_folder = ["MMWHS_small","MMWHS_small","MMWHS_small"]
-    modality = ["mr","ct"]
+    modality = ["ct"]
     names = ['axial', 'coronal', 'sagittal']
     view_attributes = [0,0,0,1,1,1,2,2,2]
     #view_attributes = [0,1,2]
@@ -299,6 +317,18 @@ if __name__ == '__main__':
     #save_model_path = '/global/scratch/fanwei_kong/2DUNet/Logs/weights_multi-all-%s.hdf5' % view_names[view]
     
     modelEnsemble(folder_postfix, model_postfix, modality, view_names, view_attributes, data_folder, data_out_folder, base_folder, mode="ensemble",write=True)
+
+if __name__ == '__main__':
+    import cProfile
+    pr = cProfile.Profile()
+    pr.enable()
+    
+    main()
+
+    pr.disable()
+    pr.print_stats(sort='time')
+    
+    
     for i in range(3,3):
         view_names_i = [view_names[i]]
         view_attributes_i = [view_attributes[i]]

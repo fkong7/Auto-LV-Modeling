@@ -15,9 +15,8 @@ def dice_coeff(y_true, y_pred):
 def dice_loss(y_true, y_pred):
     y_true_one_hot = tf.one_hot(tf.cast(y_true,tf.int32), 8)
     loss = 0.
-    weights = [0.5,1.,1.5,1.,1.,1.,1.,1.]
     for i in range(8):
-      loss += weights[i]*(1 - dice_coeff(y_true_one_hot[:,:,:,:,i], y_pred[:,:,:,i]))
+      loss += (1 - dice_coeff(y_true_one_hot[:,:,:,:,i], y_pred[:,:,:,i]))
     return loss
   
   
