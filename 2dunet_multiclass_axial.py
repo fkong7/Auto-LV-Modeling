@@ -60,9 +60,9 @@ num_class = 8
 batch_size = 10
 epochs = 100
 
-modality = ["ct", "mr"]
+modality = ["mr"]
 im_base_name = 'MMWHS_small'
-base_name = 'MMWHS_small_test'
+base_name = 'MMWHS_small_mr'
 data_folder = '/global/scratch/fanwei_kong/ImageData/%s' % im_base_name
 view = 0
 seed = 41

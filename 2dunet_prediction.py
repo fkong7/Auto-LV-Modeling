@@ -141,9 +141,9 @@ class ImageLoader:
     def load_imagefiles(self):
         x_train_filenames = []
         y_train_filenames = []
-        for subject_dir in sorted(glob.glob(os.path.join(self.data_folder,self.modality+'_test','*.nii.gz'))):
+        for subject_dir in sorted(glob.glob(os.path.join(self.data_folder,self.modality+'_train','*.nii.gz'))):
             x_train_filenames.append(os.path.realpath(subject_dir))
-        for subject_dir in sorted(glob.glob(os.path.join(self.data_folder ,self.modality+'_test_masks','*.nii.gz'))):
+        for subject_dir in sorted(glob.glob(os.path.join(self.data_folder ,self.modality+'_train_masks','*.nii.gz'))):
             y_train_filenames.append(os.path.realpath(subject_dir))
         print("Number of testing volumes %d" % len(x_train_filenames))
         print("Number of mask volumes %d" % len(y_train_filenames))
@@ -304,9 +304,9 @@ def main():
     folder_postfix = "ensemble_all"
     model_postfix = "small2"
     im_base_folder = "MMWHS_small"
-    base_folder = ["MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3","MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3","MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3", "Ensemble_btstrp"]
+    base_folder = ["MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3","MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3","MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3", "Ensemble_btstrp_train"]
     #base_folder = ["MMWHS_small","MMWHS_small","MMWHS_small"]
-    modality = ["ct"]
+    modality = ["ct","mr"]
     names = ['axial', 'coronal', 'sagittal']
     view_attributes = [0,0,0,1,1,1,2,2,2]
     #view_attributes = [0,1,2]
