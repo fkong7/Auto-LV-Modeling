@@ -131,9 +131,11 @@ def majority_vote(volume_list):
 
 class ImageLoader:
     #This is a class that loads in the filenames of the image volume and mask volume
-    def __init__(self, modality, data_folder):
+    def __init__(self, modality, data_folder, fn='_test', fn_mask='_test_masks'):
         self.modality = modality
         self.data_folder = data_folder
+        self.test_fn = fn
+        self.test_mask_fn = fn_mask
     def set_modality(self, modality):
         self.modality = modality
     def set_datafolder(self, data_folder):
@@ -141,10 +143,15 @@ class ImageLoader:
     def load_imagefiles(self):
         x_train_filenames = []
         y_train_filenames = []
-        for subject_dir in sorted(glob.glob(os.path.join(self.data_folder,self.modality+'_train','*.nii.gz'))):
+        print(os.path.join(self.data_folder,self.modality+self.test_fn))
+        for subject_dir in sorted(glob.glob(os.path.join(self.data_folder,self.modality+self.test_fn,'*.nii.gz'))):
             x_train_filenames.append(os.path.realpath(subject_dir))
-        for subject_dir in sorted(glob.glob(os.path.join(self.data_folder ,self.modality+'_train_masks','*.nii.gz'))):
-            y_train_filenames.append(os.path.realpath(subject_dir))
+        try:
+            for subject_dir in sorted(glob.glob(os.path.join(self.data_folder ,self.modality+self.test_mask_fn,'*.nii.gz'))):
+                y_train_filenames.append(os.path.realpath(subject_dir))
+        except Exception as e: print(e)
+        if len(y_train_filenames)==0:
+            y_train_filenames = [None]*len(x_train_filenames)
         print("Number of testing volumes %d" % len(x_train_filenames))
         print("Number of mask volumes %d" % len(y_train_filenames))
         self.x_filenames = x_train_filenames
@@ -181,7 +188,11 @@ class Prediction:
         self.y_name = label_vol_fn
 
     def load_label(self):
-        labels = sitk.GetArrayFromImage(sitk.ReadImage(self.y_name))
+        #if the data is unlabeled
+        if self.y_name is None:
+            labels = np.array([205, 500, 600,820,850,550,420,0])
+        else:
+            labels = sitk.GetArrayFromImage(sitk.ReadImage(self.y_name))
         labels[labels==421]=420
         self.label_vol = labels
 
@@ -207,12 +218,12 @@ class Prediction:
         #self.prediction = mode(np.array(prediction),axis=0)[0]
         return self.prediction
 
-    def volume_prediction_average(self, size):
+    def volume_prediction_average(self, size, out_fn=None):
         if self.image_vol is None:
            self.process_image() 
         if self.label_vol is None:
            self.load_label()
-        prob = np.zeros((*self.label_vol.shape,8))
+        prob = np.zeros((*self.original_shape,8))
         unique_views = np.unique(self.views)
         for view in unique_views:
             indices = np.where(self.views==view)[0]
@@ -233,6 +244,8 @@ class Prediction:
             #del model
             #K.clear_session()
         avg = prob/len(self.models)
+        if out_fn:
+            np.save(out_fn, avg)
         self.prediction = predictVol(avg, self.label_vol)
         return self.prediction
     
@@ -278,7 +291,7 @@ def modelEnsemble(folder_postfix, model_postfix, modality, view_names, view_attr
     for m in modality:
         #csv_path = '/global/scratch/fanwei_kong/2DUNet/Logs/%s_test-%s.csv' % (m , view_names[view])
         csv_path = '/global/scratch/fanwei_kong/2DUNet/Logs/%s/%s_test-%s.csv' % (base_folder[-1], m , folder_postfix) 
-        im_loader = ImageLoader(m,data_folder)
+        im_loader = ImageLoader(m,data_folder,fn='_test_nolabel',fn_mask=None)
         x_filenames, y_filenames = im_loader.load_imagefiles()
         
         dice_list = [None]*len(x_filenames)
@@ -293,20 +306,21 @@ def modelEnsemble(folder_postfix, model_postfix, modality, view_names, view_attr
             if mode=='single':
                 predict.volume_prediction_single(256)
             else:
+                #predict.volume_prediction_average(256,os.path.join(os.path.dirname(csv_path),m+'_'+str(i)))
                 predict.volume_prediction_average(256)
-            dice_list[i] = predict.dice()
+            #dice_list[i] = predict.dice()
             if write:
                 predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
             del predict 
-        writeDiceScores(csv_path, dice_list)
+        #writeDiceScores(csv_path, dice_list)
 
 def main():
     folder_postfix = "ensemble_all"
     model_postfix = "small2"
     im_base_folder = "MMWHS_small"
-    base_folder = ["MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3","MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3","MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3", "Ensemble_btstrp_train"]
-    #base_folder = ["MMWHS_small","MMWHS_small","MMWHS_small"]
-    modality = ["ct","mr"]
+    base_folder = ["MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3","MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3","MMWHS_small_btstrp","MMWHS_small_btstrp2","MMWHS_small_btstrp3", "Ensemble_btstrp"]
+    #base_folder = ["MMWHS_small_ct","MMWHS_small_ct","MMWHS_small_ct","MMWHS_small_ct"]
+    modality = ["mr"]
     names = ['axial', 'coronal', 'sagittal']
     view_attributes = [0,0,0,1,1,1,2,2,2]
     #view_attributes = [0,1,2]
