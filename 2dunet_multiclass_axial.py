@@ -52,7 +52,7 @@ from loss import bce_dice_loss
 from tensorflow.python.keras.optimizers import Adam
 
 from pickle import dump
-
+import sys
 """# Set up"""
 
 img_shape = (256, 256, 1)
@@ -60,17 +60,20 @@ num_class = 8
 batch_size = 10
 epochs = 100
 
-modality = ["mr"]
-im_base_name = 'MMWHS_small'
-base_name = 'MMWHS_small_mr'
+modality = ["ct","mr"]
+#im_base_name = 'MMWHS_small_13'
+#base_name = 'MMWHS_small_13'
+im_base_name = sys.argv[1]
+base_name = sys.argv[2]
+seed = int(sys.argv[3])
+
 data_folder = '/global/scratch/fanwei_kong/ImageData/%s' % im_base_name
 view = 0
-seed = 41
 view_names = ['axial', 'coronal', 'sagittal']
-data_folder_out = '/global/scratch/fanwei_kong/ImageData/%s/2d_multiclass-%s2' % (im_base_name,view_names[view])
+data_folder_out = '/global/scratch/fanwei_kong/ImageData/%s/2d_multiclass-%s2_train' % (im_base_name,view_names[view])
+data_val_folder_out = '/global/scratch/fanwei_kong/ImageData/%s/2d_multiclass-%s2_val' % (im_base_name,view_names[view])
 save_model_path = '/global/scratch/fanwei_kong/2DUNet/Logs/%s/weights_multi-all-%s_small2.hdf5' % (base_name,view_names[view])
 save_loss_path = '/global/scratch/fanwei_kong/2DUNet/Logs/%s/%s' % (base_name,view_names[view])
-overwrite = False
 
 """ Create new directories """
 try:
@@ -86,30 +89,30 @@ for m in modality:
   except Exception as e: print(e)
 
 """ Pre-process data """
+def buildImageDataset(data_folder_out, modality, seed):
+    x_train_filenames = []
+    filenames = [None]*len(modality)
+    nums = np.zeros(len(modality))
+    for i, m in enumerate(modality):
+      filenames[i], _ = getTrainNLabelNames(data_folder_out, m, ext='*.tfrecords')
+      nums[i] = len(filenames[i])
+      x_train_filenames+=filenames[i]
+      
+    print("Number of images obtained for training and validation: " + str(nums))
+    
+    """ Sample dataset """
+    np.random.seed(seed)
+    nums = np.max(nums) - nums
+    for i , _ in enumerate(modality):
+      index = sample(list(range(len(filenames[i]))), nums[i])
+      x_train_filenames+=[filenames[i][j] for j in index]
+    
+    x_train_filenames = bootstrapping(x_train_filenames)
 
-if overwrite:
-  _, _  = data_preprocess(modality,data_folder,view, data_folder_out)
+    return x_train_filenames
 
-x_train_filenames = []
-filenames = [None]*len(modality)
-nums = np.zeros(len(modality))
-for i, m in enumerate(modality):
-  filenames[i], _ = getTrainNLabelNames(data_folder_out, m, ext='*.tfrecords')
-  nums[i] = len(filenames[i])
-  x_train_filenames+=filenames[i]
-  
-print("Number of images obtained for training and validation: " + str(nums))
-
-""" Sample dataset """
-np.random.seed(seed)
-nums = np.max(nums) - nums
-for i , _ in enumerate(modality):
-  index = sample(list(range(len(filenames[i]))), nums[i])
-  x_train_filenames+=[filenames[i][j] for j in index]
-
-x_train_filenames, x_val_filenames = train_test_split(x_train_filenames, test_size=0.2, random_state=seed)
-x_train_filenames = bootstrapping(x_train_filenames)
-
+x_train_filenames = buildImageDataset(data_folder_out, modality, seed)
+x_val_filenames = buildImageDataset(data_val_folder_out, modality, seed)
 num_train_examples = len(x_train_filenames)
 num_val_examples = len(x_val_filenames)
 print("Number of training examples after sampling: {}".format(num_train_examples))
@@ -172,6 +175,7 @@ history = model.fit(train_ds,
                    validation_steps=int(np.ceil(num_val_examples / float(batch_size))),
                    callbacks=[cp])
 
+model.save_weights(save_model_path)
 with open(save_loss_path+"history", 'wb') as handle: # saving the history 
         dump(history.history, handle)
 

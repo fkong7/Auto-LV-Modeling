@@ -1,10 +1,14 @@
 import os
 import glob
+import sys
 
 import numpy as np
 import SimpleITK as sitk
 import tensorflow as tf
 from mpi4py import MPI
+from utils import np_to_tfrecords
+from utils import getTrainNLabelNames
+from preProcess import swapLabels, RescaleIntensity
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -12,108 +16,30 @@ total = comm.Get_size()
 """# Set up"""
 #TO-DO:allow arbitrary number of cpus, right now only divisible number of cpus are allowed
 modality = ["ct","mr"]
-base_name = 'MMWHS_small_10'
+#base_name = 'MMWHS_small_13'
+#view = 0 
+base_name = str(sys.argv[1])
+view = int(sys.argv[2])
+if len(sys.argv)>3:
+    fn = sys.argv[3]
+else:
+    fn = None
 data_folder = '/global/scratch/fanwei_kong/ImageData/' + base_name
 view_names = ['axial', 'coronal', 'sagittal']
-view = 0 
-data_folder_out = '/global/scratch/fanwei_kong/ImageData/%s/2d_multiclass-%s2' % (base_name, view_names[view])
+data_folder_out = '/global/scratch/fanwei_kong/ImageData/%s/2d_multiclass-%s2%s' % (base_name, view_names[view],fn)
 overwrite = True 
 
 
 
-"""Find training data filenames and label filenames"""
 
-def getTrainNLabelNames(data_folder, m, ext='*.nii.gz'):
-  x_train_filenames = []
-  y_train_filenames = []
-  for subject_dir in sorted(glob.glob(os.path.join(data_folder,m+'_train',ext))):
-      x_train_filenames.append(os.path.realpath(subject_dir))
-  for subject_dir in sorted(glob.glob(os.path.join(data_folder ,m+'_train_masks',ext))):
-      y_train_filenames.append(os.path.realpath(subject_dir))
-  return x_train_filenames, y_train_filenames
-
-"""Convert 3D data to 2D data"""
-
-def swapLabels(labels):
-    labels[labels==421]=420
-    unique_label = np.unique(labels)
-
-    new_label = range(len(unique_label))
-    for i in range(len(unique_label)):
-        label = unique_label[i]
-        print(label)
-        newl = new_label[i]
-        print(newl)
-        labels[labels==label] = newl
-       
-    print(unique_label)
-
-    return labels
-
-def RescaleIntensity(slice_im,m):
-  #slice_im: numpy array
-  #m: modality, ct or mr
-  if m =="ct":
-    slice_im[slice_im>750] = 750
-    slice_im[slice_im<-750] = -750
-    slice_im = slice_im/750
-  elif m=="mr":
-#     top_10 = np.percentile(slice_im,90)
-#     above = slice_im[slice_im>top_10]
-#     med = np.median(above)
-#     slice_im = slice_im/med
-#     slice_im[slice_im>1.] = 1.
-#     slice_im = slice_im*2.-1.
-    slice_im[slice_im>1500] = 1500
-    slice_im = (slice_im-750)/750
-  return slice_im
-
-def np_to_tfrecords(X, Y, file_path_prefix, verbose=True):
-    def _bytes_feature(value):
-      """Returns a bytes_list from a string / byte."""
-      return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
-
-    def _float_feature(value):
-      """Returns a float_list from a float / double."""
-      return tf.train.Feature(float_list=tf.train.FloatList(value=value))
-
-    def _int64_feature(value):
-      """Returns an int64_list from a bool / enum / int / uint."""
-      return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
-            
-    if Y is not None:
-        assert X.shape == Y.shape
-    
-    # Generate tfrecord writer
-    result_tf_file = file_path_prefix + '.tfrecords'
-    writer = tf.python_io.TFRecordWriter(result_tf_file)
-    if verbose:
-        print("Serializing example into {}".format(result_tf_file))
-        
-    # iterate over each sample,
-    # and serialize it as ProtoBuf.
-    
-    d_feature = {}
-    d_feature['X'] = _float_feature(X.flatten())
-    if Y is not None:
-        d_feature['Y'] = _int64_feature(Y.flatten())
-    d_feature['shape0'] = _int64_feature([X.shape[0]])
-    d_feature['shape1'] = _int64_feature([X.shape[1]])
-            
-    features = tf.train.Features(feature=d_feature)
-    example = tf.train.Example(features=features)
-    serialized = example.SerializeToString()
-    writer.write(serialized)
-    
-    if verbose:
-        print("Writing {} done!".format(result_tf_file))
 
 def data_preprocess(modality,data_folder,view, data_folder_out, comm, rank):
   train_img_path = []
   train_mask_path = []
   train_weights = []
   for m in modality:
-    imgVol_fn, mask_fn = getTrainNLabelNames(data_folder, m)
+    #imgVol_fn, mask_fn = getTrainNLabelNames(data_folder, m, fn='_test_nolabel')
+    imgVol_fn, mask_fn = getTrainNLabelNames(data_folder, m, fn=fn)
     if rank ==0:
       print("number of training data %d" % len(imgVol_fn))
     assert len(imgVol_fn) == len(mask_fn)
