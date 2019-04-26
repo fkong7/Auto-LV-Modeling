@@ -42,7 +42,7 @@ def data_preprocess_intensity(image_vol_fn, m):
     space = img.GetSpacing()
     direc = img.GetDirection()
     
-    image_vol = RescaleIntensity(image_vol, m)
+    image_vol = RescaleIntensity(image_vol, m, [750,-750])
     
     image_info = (ori, space, direc)
     

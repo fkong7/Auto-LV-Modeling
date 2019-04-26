@@ -14,6 +14,7 @@ def getTrainNLabelNames(data_folder, m, ext='*.nii.gz',fn='_train'):
 
   return x_train_filenames, y_train_filenames
 
+
 def _bytes_feature(value):
     """Returns a bytes_list from a string / byte."""
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
