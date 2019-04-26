@@ -32,13 +32,13 @@ def swapLabelsBack(labels,pred):
     return pred
     
 
-def RescaleIntensity(slice_im,m):
+def RescaleIntensity(slice_im,m,limit):
   #slice_im: numpy array
   #m: modality, ct or mr
   if m =="ct":
-    slice_im[slice_im>750] = 750
-    slice_im[slice_im<-750] = -750
-    slice_im = slice_im/750
+    slice_im[slice_im>limit[0]] = limit[0]
+    slice_im[slice_im<limit[1]] = limit[1]
+    slice_im = slice_im/limit[0]
   elif m=="mr":
 #     top_10 = np.percentile(slice_im,90)
 #     above = slice_im[slice_im>top_10]

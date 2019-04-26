@@ -4,30 +4,40 @@ import sys
 
 import numpy as np
 import SimpleITK as sitk
+print('Importing tf...')
 import tensorflow as tf
 from mpi4py import MPI
 from utils import np_to_tfrecords
 from utils import getTrainNLabelNames
 from preProcess import swapLabels, RescaleIntensity
+import argparse
+
+print('Start...')
+parser = argparse.ArgumentParser()
+parser.add_argument('--folder', nargs=1, help='Name of the folder containing the image data')
+parser.add_argument('--view', nargs=1, type=int, help='Which views 0, 1, 2, axial, coronal, sagittal')
+parser.add_argument('--modality', nargs='+', help='Name of the modality, mr, ct, split by space')
+parser.add_argument('--out_folder', nargs='?', default='_train', help='Folder postfix of the folder to look for')
+parser.add_argument('--n_channel', nargs='?', const=1, default=1, type=int, help='Number of channels')
+parser.add_argument('--intensity',nargs='+', type=int, default=[750,-750], help='Intensity range to clip to [upper, lower]')
+print('Finished parsing...')
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 total = comm.Get_size()
 """# Set up"""
-#TO-DO:allow arbitrary number of cpus, right now only divisible number of cpus are allowed
-modality = ["ct","mr"]
-#base_name = 'MMWHS_small_13'
-#view = 0 
-base_name = str(sys.argv[1])
-view = int(sys.argv[2])
-if len(sys.argv)>3:
-    fn = sys.argv[3]
-else:
-    fn = None
+args = parser.parse_args()
+
+modality = args.modality
+base_name = args.folder[0]
+view = args.view[0]
+fn = args.out_folder
+channel = args.n_channel
+intensity = args.intensity
+
 data_folder = '/global/scratch/fanwei_kong/ImageData/' + base_name
 view_names = ['axial', 'coronal', 'sagittal']
 data_folder_out = '/global/scratch/fanwei_kong/ImageData/%s/2d_multiclass-%s2%s' % (base_name, view_names[view],fn)
-overwrite = True 
 
 
 
@@ -43,20 +53,23 @@ def data_preprocess(modality,data_folder,view, data_folder_out, comm, rank):
     if rank ==0:
       print("number of training data %d" % len(imgVol_fn))
     assert len(imgVol_fn) == len(mask_fn)
-    num_vol_per_core = int(np.ceil(len(imgVol_fn)/comm.Get_size()))
-    begin = rank*num_vol_per_core
-    end = (rank+1)*num_vol_per_core if (rank+1)*num_vol_per_core <= len(imgVol_fn) else len(imgVol_fn)
-    imgVol_fn = imgVol_fn[begin:end]
-    mask_fn = mask_fn[begin:end] 
-    comm.barrier()   
-    print("rank %d, begin %d, end %d" % (rank, begin,end)) 
+    
+
+    num_vol_per_core = int(np.floor(len(imgVol_fn)/comm.Get_size()))
+    extra = len(imgVol_fn) % comm.Get_size()
+    vol_ids = list(range(rank*num_vol_per_core,(rank+1)*num_vol_per_core))
+    if rank < extra:
+        vol_ids.append(len(imgVol_fn)-1-rank)
+
+    imgVol_fn = [imgVol_fn[k] for k in vol_ids]
+    mask_fn = [mask_fn[k] for k in vol_ids]
+    print(vol_ids)
 
     for i in range(len(imgVol_fn)):
       img_path = imgVol_fn[i]
       mask_path = mask_fn[i]
       imgVol = sitk.GetArrayFromImage(sitk.ReadImage(img_path))  # numpy array
-      imgVol = RescaleIntensity(imgVol, m)
-      #imgVol = HistogramEqualization(imgVol)
+      imgVol = RescaleIntensity(imgVol, m, intensity)
       maskVol = sitk.GetArrayFromImage(sitk.ReadImage(mask_path))  # numpy array
       maskVol = swapLabels(maskVol)
       if m =="mr":
@@ -70,14 +83,17 @@ def data_preprocess(modality,data_folder,view, data_folder_out, comm, rank):
         if IDs[sid] and np.random.rand(1)>0.2:
             continue
         
-        out_im_path = os.path.join(data_folder_out, m+'_train', m+'_train'+str(range(begin,end)[i])+'_'+str(sid))
-        out_msk_path = os.path.join(data_folder_out, m+'_train_masks',  m+'_train_mask'+str(range(begin,end)[i])+'_'+str(sid))
-        slice_im = np.moveaxis(imgVol,view,0)[sid,:,:]
-        slice_msk = np.moveaxis(maskVol,view,0)[sid,:,:]
-        np_to_tfrecords(slice_im.astype(np.float32),slice_msk.astype(np.int64), out_im_path, verbose=True)
-        train_img_path.append(out_im_path)
-        train_mask_path.append(out_msk_path)
-    comm.barrier()
+        out_im_path = os.path.join(data_folder_out, m+'_train', m+'_train'+str(vol_ids[i])+'_'+str(sid))
+        out_msk_path = os.path.join(data_folder_out, m+'_train_masks',  m+'_train_mask'+str(vol_ids[i])+'_'+str(sid))
+        try:
+            up = (channel-1)/2
+            down = channel-up
+            slice_im = np.moveaxis(imgVol,view,0)[sid-up:sid+down,:,:]
+            slice_msk = np.moveaxis(maskVol,view,0)[sid-up:sid+down,:,:]
+            np_to_tfrecords(slice_im.astype(np.float32),slice_msk.astype(np.int64), out_im_path, verbose=True)
+            train_img_path.append(out_im_path)
+            train_mask_path.append(out_msk_path)
+        except Exception as e: print(e)
       
   return train_img_path, train_mask_path
 
@@ -93,5 +109,4 @@ if rank == 0:
     except Exception as e: print(e)
 comm.barrier()
 
-if overwrite:
-  _, _  = data_preprocess(modality,data_folder,view, data_folder_out,comm,rank)
+data_preprocess(modality,data_folder,view, data_folder_out,comm,rank)
