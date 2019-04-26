@@ -82,12 +82,11 @@ def data_preprocess(modality,data_folder,view, data_folder_out, comm, rank):
       for sid in range(imgVol.shape[view]):
         if IDs[sid] and np.random.rand(1)>0.2:
             continue
-        
         out_im_path = os.path.join(data_folder_out, m+'_train', m+'_train'+str(vol_ids[i])+'_'+str(sid))
         out_msk_path = os.path.join(data_folder_out, m+'_train_masks',  m+'_train_mask'+str(vol_ids[i])+'_'+str(sid))
         try:
-            up = (channel-1)/2
-            down = channel-up
+            up = int((channel-1)/2)
+            down = int(channel-up)
             slice_im = np.moveaxis(imgVol,view,0)[sid-up:sid+down,:,:]
             slice_msk = np.moveaxis(maskVol,view,0)[sid-up:sid+down,:,:]
             np_to_tfrecords(slice_im.astype(np.float32),slice_msk.astype(np.int64), out_im_path, verbose=True)
