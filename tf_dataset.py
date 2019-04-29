@@ -11,7 +11,11 @@ def _parse_function(example_proto):
   img = tf.sparse_tensor_to_dense(parsed_features["X"])
   height = tf.cast(parsed_features["shape0"], tf.int32)
   width = tf.cast(parsed_features["shape1"], tf.int32)
-  print(img,parsed_features)
+  print(tf.shape(img))
+  with tf.Session() as sess:
+      h, w = sess.run([height,width])
+  print(h)
+  print(w)
   label = tf.sparse_tensor_to_dense(parsed_features["Y"])
   img = tf.reshape(img, tf.stack([height, width,1]))
   label = tf.reshape(label, tf.stack([height, width,1]) )

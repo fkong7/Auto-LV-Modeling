@@ -60,7 +60,8 @@ num_class = 8
 batch_size = 10
 epochs = 100
 
-modality = ["ct","mr"]
+#modality = ["ct","mr"]
+modality = ["ct"]
 #im_base_name = 'MMWHS_small_13'
 #base_name = 'MMWHS_small_13'
 im_base_name = sys.argv[1]
@@ -77,9 +78,8 @@ save_loss_path = '/global/scratch/fanwei_kong/2DUNet/Logs/%s/%s' % (base_name,vi
 
 """ Create new directories """
 try:
-    os.mkdir(os.path.dirname(save_model_path))
-    os.mkdir(os.oath.dirname(save_loss_path))
-    os.mkdir(data_folder_out)
+    os.makedirs(os.path.dirname(save_model_path))
+    os.makedirs(os.path.dirname(save_loss_path))
 except Exception as e: print(e)
 
 for m in modality:

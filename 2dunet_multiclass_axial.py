@@ -60,7 +60,8 @@ num_class = 8
 batch_size = 10
 epochs = 100
 
-modality = ["ct","mr"]
+#modality = ["ct","mr"]
+modality = ["ct"]
 #im_base_name = 'MMWHS_small_13'
 #base_name = 'MMWHS_small_13'
 im_base_name = sys.argv[1]
@@ -77,9 +78,8 @@ save_loss_path = '/global/scratch/fanwei_kong/2DUNet/Logs/%s/%s' % (base_name,vi
 
 """ Create new directories """
 try:
-    os.mkdir(os.path.dirname(save_model_path))
-    os.mkdir(os.oath.dirname(save_loss_path))
-    os.mkdir(data_folder_out)
+    os.makedirs(os.path.dirname(save_model_path))
+    os.makedirs(os.path.dirname(save_loss_path))
 except Exception as e: print(e)
 
 for m in modality:
@@ -145,6 +145,14 @@ train_ds = get_baseline_dataset(x_train_filenames, preproc_fn=tr_preprocessing_f
 val_ds = get_baseline_dataset(x_train_filenames, preproc_fn=val_preprocessing_fn,
                               batch_size=batch_size)
 
+"""# DEBUG """
+data_aug_iter = val_ds.make_one_shot_iterator()
+next_element = data_aug_iter.get_next()
+with tf.Session() as sess: 
+    batch_of_imgs, label = sess.run(next_element)
+    print("****DEBUG PRINT****")
+    print(batch_of_imgs.shape)
+    print(label.shape)
 
 """# Build the model"""
 inputs, outputs = UNet2D(img_shape, num_class)
