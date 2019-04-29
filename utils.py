@@ -46,10 +46,21 @@ def np_to_tfrecords(X, Y, file_path_prefix=None, Prob=None, verbose=True):
     
     d_feature = {}
     d_feature['X'] = _float_feature(X.flatten())
+
+    if debug:
+        print("**** X shape ****")
+        print(X.shape, X.flatten())
+
     if Y is not None:
         d_feature['Y'] = _int64_feature(Y.flatten())
+        if debug:
+            print("**** Y shape ****")
+            print(Y.shape, Y.flatten())
     if Prob is not None:
         d_feature['P'] = _float_feature(Prob.flatten())
+        if debug:
+            print("**** P shape ****")
+            print(Prob.shape, Prob.flatten())
 
     d_feature['shape0'] = _int64_feature([X.shape[0]])
     d_feature['shape1'] = _int64_feature([X.shape[1]])    
