@@ -4,7 +4,6 @@ import tensorflow.contrib as tfcontrib
 def shift_img(output_img, label_img, width_shift_range, height_shift_range):
   """This fn will perform the horizontal or vertical shift"""
   img_shape = output_img.get_shape().as_list()
-  print(img_shape)
   if width_shift_range or height_shift_range:
       if width_shift_range:
         width_shift_range = tf.random_uniform([], 
@@ -50,12 +49,10 @@ def _augment(img,
              changeIntensity=False,
              width_shift_range=0,  # Randomly translate the image horizontally
              height_shift_range=0):  # Randomly translate the image vertically 
-  print("start...")
   if resize is not None:
     # Resize both images
     label_img = tf.image.resize_images(label_img, resize, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR, align_corners=True)
     img = tf.image.resize_images(img, resize, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR, align_corners=True)
-  print("finished resizing")
   img, label_img = flip_img(horizontal_flip, img, label_img)
   img, label_img = shift_img(img, label_img, width_shift_range, height_shift_range)
   img, label_img = changeIntensity_img(img, label_img,changeIntensity )
