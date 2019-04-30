@@ -56,9 +56,9 @@ import sys
 """# Set up"""
 
 img_shape = (256, 256, 1)
-num_class = 8
+#num_class = 8
 batch_size = 10
-epochs = 100
+#epochs = 100
 
 #modality = ["ct","mr"]
 modality = ["ct"]
@@ -67,6 +67,8 @@ modality = ["ct"]
 im_base_name = sys.argv[1]
 base_name = sys.argv[2]
 seed = int(sys.argv[3])
+num_class = int(sys.argv[4])
+epochs = int(sys.argv[5])
 
 data_folder = '/global/scratch/fanwei_kong/ImageData/%s' % im_base_name
 view = 0
