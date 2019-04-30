@@ -145,6 +145,16 @@ train_ds = get_baseline_dataset(x_train_filenames, preproc_fn=tr_preprocessing_f
 val_ds = get_baseline_dataset(x_train_filenames, preproc_fn=val_preprocessing_fn,
                               batch_size=batch_size)
 
+"""# DEBUG """
+print("Debug...")
+data_aug_iter = train_ds.make_one_shot_iterator()
+next_element = data_aug_iter.get_next()
+with tf.Session() as sess: 
+    batch_of_imgs, label = sess.run(next_element)
+    print("****DEBUG PRINT****")
+    print(batch_of_imgs.shape)
+    print(label.shape)
+
 
 """# Build the model"""
 inputs, outputs = UNet2D(img_shape, num_class)
