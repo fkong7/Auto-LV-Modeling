@@ -249,6 +249,36 @@ class Prediction:
         self.prediction = predictVol(avg, self.label_vol)
         return self.prediction
     
+    def volume_prediction_superlearner(self, size, out_fn=None):
+        if self.image_vol is None:
+           self.process_image() 
+        if self.label_vol is None:
+           self.load_label()
+        #initialize alphas to be zero
+        alpha = tf.Variable(tf.zeros(self.views.shape))
+
+        prob = np.zeros((*self.original_shape,8))
+        unique_views = np.unique(self.views)
+        count = 0
+        for view in unique_views:
+            indices = np.where(self.views==view)[0]
+            predict_shape = [size,size,size,8]
+            predict_shape[view] = self.image_vol.shape[view]
+            prob_view = np.zeros(predict_shape)
+            if self.modality=="mr":
+                prob_view = np.moveaxis(prob_view, 2, 0)
+            for i in indices:
+                model_path = self.models[i]
+                image_vol_resize = data_preprocess_scale(self.image_vol, self.views[i], size)
+                (self.unet).load_weights(model_path)
+                prob_view+= alpha[count] * model_output_no_resize(self.unet, image_vol_resize, self.views[i], self.modality)
+            
+            prob_resize = np.zeros(prob.shape)
+            for i in range(prob.shape[-1]):
+                prob_resize[:,:,:,i] = resize(prob_view[:,:,:,i], self.original_shape, order=1)
+            prob += prob_resize
+            count+=1
+
     def volume_prediction_single(self, size):
         if self.image_vol is None:
            self.process_image() 

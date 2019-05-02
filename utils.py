@@ -31,7 +31,7 @@ def _int64_feature(value):
 def np_to_tfrecords(X, Y, file_path_prefix=None, Prob=None, verbose=True, debug=True):
             
     if Y is not None:
-        assert X.shape == Y.shape
+        assert X.shape[1:] == Y.shape
     if Prob is not None:
         assert X.shape == Prob.shape[:-1]
 
