@@ -39,6 +39,9 @@ data_folder = '/global/scratch/fanwei_kong/ImageData/' + base_name
 view_names = ['axial', 'coronal', 'sagittal']
 data_folder_out = '/global/scratch/fanwei_kong/ImageData/%s/2d_multiclass-%s2%s' % (base_name, view_names[view],fn)
 
+if channel>1:
+    data_folder_out += '_multi%d' %  channel
+    
 
 
 
@@ -84,15 +87,19 @@ def data_preprocess(modality,data_folder,view, data_folder_out, comm, rank):
             continue
         out_im_path = os.path.join(data_folder_out, m+'_train', m+'_train'+str(vol_ids[i])+'_'+str(sid))
         out_msk_path = os.path.join(data_folder_out, m+'_train_masks',  m+'_train_mask'+str(vol_ids[i])+'_'+str(sid))
-        try:
-            up = int((channel-1)/2)
-            down = int(channel-up)
-            slice_im = np.moveaxis(imgVol,view,0)[sid-up:sid+down,:,:]
-            slice_msk = np.moveaxis(maskVol,view,0)[sid-up:sid+down,:,:]
-            np_to_tfrecords(slice_im.astype(np.float32),slice_msk.astype(np.int64), out_im_path, verbose=True)
-            train_img_path.append(out_im_path)
-            train_mask_path.append(out_msk_path)
-        except Exception as e: print(e)
+        up = int((channel-1)/2)
+        down = int(channel-up)
+        if sid+down >= imgVol.shape[view] or sid-up < 0:
+            print(sid, down, up)
+            continue
+        slice_im = np.moveaxis(imgVol,view,0)[sid-up:sid+down,:,:]
+        slice_msk = np.moveaxis(maskVol,view,0)[sid,:,:]
+        if slice_im.shape[0]!=channel:
+            print("Image channel size is incorrect!")
+            continue
+        np_to_tfrecords(slice_im.astype(np.float32),slice_msk.astype(np.int64), out_im_path, verbose=True)
+        train_img_path.append(out_im_path)
+        train_mask_path.append(out_msk_path)
       
   return train_img_path, train_mask_path
 

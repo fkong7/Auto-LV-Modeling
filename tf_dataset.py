@@ -14,8 +14,8 @@ def _parse_function(example_proto):
   height = tf.cast(parsed_features["shape1"], tf.int32)
   width = tf.cast(parsed_features["shape2"], tf.int32)
   label = tf.sparse_tensor_to_dense(parsed_features["Y"])
-  img = tf.reshape(img, tf.stack([height, width,channel]))
-  label = tf.reshape(label, tf.stack([height, width,channel]) )
+  img = tf.transpose(tf.reshape(img, tf.stack([channel,height, width])), perm=[1,2,0])
+  label = tf.reshape(label, tf.stack([height, width,1]))
   label = tf.cast(label, tf.int32)
   return img, label
 
@@ -33,8 +33,8 @@ def _process_pathnames(fname):
   height = tf.cast(parsed_features["shape1"], tf.int32)
   width = tf.cast(parsed_features["shape2"], tf.int32)
   label = tf.sparse_tensor_to_dense(parsed_features["Y"])
-  img = tf.reshape(img, tf.stack([height, width,channel]))
-  label = tf.reshape(label, tf.stack([height, width,channel]) )
+  img = tf.transpose(tf.reshape(img, tf.stack([channel,height, width])),perm=[1,2,0])
+  label = tf.reshape(label, tf.stack([height, width,1]))
 
   return img, label
 

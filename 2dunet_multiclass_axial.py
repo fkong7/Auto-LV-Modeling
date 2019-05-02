@@ -55,7 +55,6 @@ from pickle import dump
 import sys
 """# Set up"""
 
-img_shape = (256, 256, 1)
 #num_class = 8
 batch_size = 10
 #epochs = 100
@@ -69,12 +68,19 @@ base_name = sys.argv[2]
 seed = int(sys.argv[3])
 num_class = int(sys.argv[4])
 epochs = int(sys.argv[5])
+channel = int(sys.argv[6])
+img_shape = (256, 256, channel)
+
 
 data_folder = '/global/scratch/fanwei_kong/ImageData/%s' % im_base_name
 view = 0
 view_names = ['axial', 'coronal', 'sagittal']
 data_folder_out = '/global/scratch/fanwei_kong/ImageData/%s/2d_multiclass-%s2_train' % (im_base_name,view_names[view])
 data_val_folder_out = '/global/scratch/fanwei_kong/ImageData/%s/2d_multiclass-%s2_val' % (im_base_name,view_names[view])
+if channel>1:
+   data_folder_out += '_multi%d' % channel
+   data_val_folder_out += '_multi%d' % channel
+
 save_model_path = '/global/scratch/fanwei_kong/2DUNet/Logs/%s/weights_multi-all-%s_small2.hdf5' % (base_name,view_names[view])
 save_loss_path = '/global/scratch/fanwei_kong/2DUNet/Logs/%s/%s' % (base_name,view_names[view])
 
