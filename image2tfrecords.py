@@ -9,7 +9,7 @@ import tensorflow as tf
 from mpi4py import MPI
 from utils import np_to_tfrecords
 from utils import getTrainNLabelNames
-from preProcess import swapLabels, RescaleIntensity
+from preProcess import swapLabels, RescaleIntensity, HistogramEqualization
 import argparse
 
 print('Start...')
@@ -72,6 +72,7 @@ def data_preprocess(modality,data_folder,view, data_folder_out, comm, rank):
       img_path = imgVol_fn[i]
       mask_path = mask_fn[i]
       imgVol = sitk.GetArrayFromImage(sitk.ReadImage(img_path))  # numpy array
+      imgVol = HistogramEqualization(imgVol)
       imgVol = RescaleIntensity(imgVol, m, intensity)
       maskVol = sitk.GetArrayFromImage(sitk.ReadImage(mask_path))  # numpy array
       maskVol = swapLabels(maskVol)
