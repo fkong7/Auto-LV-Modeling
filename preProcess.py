@@ -3,7 +3,37 @@ import SimpleITK as sitk
 from skimage.transform import resize
 from utils import np_to_tfrecords
 
+def HistogramEqualization(pyIm):
+    pyImNew = np.empty(pyIm.shape)
 
+    num = int(np.max(pyIm.flatten())-np.min(pyIm.flatten()))+1
+    im_hist, bins = np.histogram(pyIm.flatten(), num)
+
+    cdf = im_hist.cumsum()
+    cdf = max(pyIm.flatten()) * cdf /cdf[-1]
+
+    image_equalized = np.interp(pyIm.flatten(),bins[:-1],cdf)
+    pyImNew = np.reshape(image_equalized,pyIm.shape)
+    
+    return pyImNew
+  
+def resample(sitkIm_fn, resolution = (0.5, 0.5, 0.5), dim=3):
+  image = sitk.ReadImage(sitkIm_fn)
+  resample = sitk.ResampleImageFilter()
+  resample.SetInterpolator(sitk.sitkLinear)
+  resample.SetOutputDirection(image.GetDirection())
+  resample.SetOutputOrigin(image.GetOrigin())
+  resample.SetOutputSpacing(resolution)
+
+  orig_size = np.array(image.GetSize(), dtype=np.int)
+  orig_spacing = np.array(image.GetSpacing())
+  new_size = orig_size*(orig_spacing/np.array(resolution))
+  new_size = np.ceil(new_size).astype(np.int) #  Image dimensions are in integers
+  new_size = [int(s) for s in new_size]
+  resample.SetSize(new_size)
+  newimage = resample.Execute(image)
+  
+  return newimage
 
 def swapLabels(labels):
     labels[labels==421]=420
@@ -40,12 +70,6 @@ def RescaleIntensity(slice_im,m,limit):
     slice_im[slice_im<limit[1]] = limit[1]
     slice_im = slice_im/limit[0]
   elif m=="mr":
-#     top_10 = np.percentile(slice_im,90)
-#     above = slice_im[slice_im>top_10]
-#     med = np.median(above)
-#     slice_im = slice_im/med
-#     slice_im[slice_im>1.] = 1.
-#     slice_im = slice_im*2.-1.
     slice_im[slice_im>1500] = 1500
     slice_im = (slice_im-750)/750
   return slice_im

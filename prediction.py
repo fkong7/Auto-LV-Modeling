@@ -33,7 +33,7 @@ from model import UNet2D
 from preProcess import RescaleIntensity
 def data_preprocess_intensity(image_vol_fn, m):
     img = sitk.ReadImage(image_vol_fn)
-    image_vol = sitk.GetArrayFromImage(img)
+    image_vol = sitk.GetArrayFromImage(img).astype(float)
     original_shape = image_vol.shape
     if m =="mr":
         image_vol = np.moveaxis(image_vol,0,-1)
@@ -47,11 +47,32 @@ def data_preprocess_intensity(image_vol_fn, m):
     image_info = (ori, space, direc)
     
     return image_vol, original_shape, image_info
+  
+def data_preprocess_intensity_2scale(image_vol_fn, m):
+    img = sitk.ReadImage(image_vol_fn)
+    ori = img.GetOrigin()
+    space = img.GetSpacing()
+    direc = img.GetDirection()
+    image_vol = sitk.GetArrayFromImage(img).astype(float)
+    original_shape = image_vol.shape
+    
+    image_vol = resize(image_vol, (space[0]*original_shape[0],space[1]*original_shape[1], space[2]*original_shape[2])) 
+    
+    if m =="mr":
+        image_vol = np.moveaxis(image_vol,0,-1)
+ 
+
+    
+    image_vol = RescaleIntensity(image_vol, m, [750,-750])
+    
+    image_info = (ori, space, direc)
+    
+    return image_vol, original_shape, image_info
 
 def data_preprocess_scale(image_vol, view, size):
     shape = [size, size, size]
     shape[view] = image_vol.shape[view]
-    image_vol_resize = resize(image_vol, tuple(shape))
+    image_vol_resize = resize(image_vol.astype(float), tuple(shape))
     return image_vol_resize
 
 def model_output(model, im_vol, view, modality,ori_shape):
@@ -136,6 +157,8 @@ class ImageLoader:
         self.data_folder = data_folder
         self.test_fn = fn
         self.test_mask_fn = fn_mask
+        self.x_filenames = None
+        self.y_filenames = None
     def set_modality(self, modality):
         self.modality = modality
     def set_datafolder(self, data_folder):
@@ -156,7 +179,11 @@ class ImageLoader:
         print("Number of mask volumes %d" % len(y_train_filenames))
         self.x_filenames = x_train_filenames
         self.y_filenames = y_train_filenames
-        return self.x_filenames, self.y_filenames 
+        return self.x_filenames, self.y_filenames
+    def get_imagefiles(self):
+        if self.x_filenames is None:
+            self.load_imagefiles()
+        return self.x_filenames, self.y_filenames
 
 class Prediction:
     #This is a class to get 3D volumetric prediction from the 2DUNet model
