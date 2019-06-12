@@ -68,9 +68,9 @@ def RescaleIntensity(slice_im,m,limit):
   rng = abs(limit[0]-limit[1])
   threshold = rng/2
   if m =="ct":
-    slice_im[slice_im>threshold] = threshold
-    slice_im[slice_im<(-1*threshold)] = -1.*threshold
-    slice_im = slice_im/threshold
+    slice_im[slice_im>limit[0]] = limit[0]
+    slice_im[slice_im<limit[1]] = limit[1]
+    (slice_im-threshold-np.min(slice_im))/threshold
   elif m=="mr":
     slice_im -= np.min(slice_im)
     slice_im[slice_im>rng] = rng
