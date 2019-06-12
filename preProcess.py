@@ -68,12 +68,12 @@ def RescaleIntensity(slice_im,m,limit):
   rng = abs(limit[0]-limit[1])
   threshold = rng/2
   if m =="ct":
-    slice_im[slice_im>threshold] = threshold
-    slice_im[slice_im<(-1*threshold)] = -1.*threshold
-    slice_im = slice_im/threshold
+    slice_im[slice_im>limit[0]] = limit[0]
+    slice_im[slice_im<limit[1]] = limit[1]
+    (slice_im-threshold-np.min(slice_im))/threshold
   elif m=="mr":
-    slice_im[slice_im>rng] = rng
-    slice_im = (slice_im-threshold)/threshold
+    slice_im[slice_im>(limit[0]*2)] = rng
+    slice_im = (slice_im-threshold-np.min(slice_im))/threshold
   return slice_im
     
 def data_preprocess_test(image_vol_fn, view, size, m):
