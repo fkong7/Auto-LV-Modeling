@@ -1,7 +1,10 @@
 import os
 import numpy as np
 import glob
-import tensorflow as tf
+try:
+    import tensorflow as tf
+except Exception as e: print(e)
+
 def getTrainNLabelNames(data_folder, m, ext='*.nii.gz',fn='_train'):
   x_train_filenames = []
   y_train_filenames = []
