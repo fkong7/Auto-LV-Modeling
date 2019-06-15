@@ -9,6 +9,7 @@ def _parse_function(example_proto):
               "shape1": tf.FixedLenFeature((), tf.int64),
               "shape2": tf.FixedLenFeature((), tf.int64)}
   parsed_features = tf.parse_single_example(example_proto, features)
+
   img = tf.sparse_tensor_to_dense(parsed_features["X"])
   channel = tf.cast(parsed_features["shape0"], tf.int32)
   height = tf.cast(parsed_features["shape1"], tf.int32)
