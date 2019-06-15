@@ -72,17 +72,17 @@ channel = int(sys.argv[6])
 img_shape = (256, 256, channel)
 
 
-data_folder = '/global/scratch/fanwei_kong/ImageData/%s' % im_base_name
+data_folder = '/global/scratch/fanwei_kong/DeepLearning/ImageData/%s' % im_base_name
 view = 0
 view_names = ['axial', 'coronal', 'sagittal']
-data_folder_out = '/global/scratch/fanwei_kong/ImageData/%s/2d_multiclass-%s2_train' % (im_base_name,view_names[view])
-data_val_folder_out = '/global/scratch/fanwei_kong/ImageData/%s/2d_multiclass-%s2_val' % (im_base_name,view_names[view])
+data_folder_out = ['/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s2_train' % (im_base_name,view_names[view]), '/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s2_train' % (im_base_name,view_names[view])]
+data_val_folder_out = ['/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s2_val' % (im_base_name,view_names[view]),'/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s2_val' % (im_base_name,view_names[view])]
 if channel>1:
    data_folder_out += '_multi%d' % channel
    data_val_folder_out += '_multi%d' % channel
 
-save_model_path = '/global/scratch/fanwei_kong/2DUNet/Logs/%s/weights_multi-all-%s_small2.hdf5' % (base_name,view_names[view])
-save_loss_path = '/global/scratch/fanwei_kong/2DUNet/Logs/%s/%s' % (base_name,view_names[view])
+save_model_path = '/global/scratch/fanwei_kong/DeepLearning/2DUNet/Logs/%s/weights_multi-all-%s_small2.hdf5' % (base_name,view_names[view])
+save_loss_path = '/global/scratch/fanwei_kong/DeepLearning/2DUNet/Logs/%s/%s' % (base_name,view_names[view])
 
 """ Create new directories """
 try:
@@ -90,11 +90,6 @@ try:
     os.makedirs(os.path.dirname(save_loss_path))
 except Exception as e: print(e)
 
-for m in modality:
-  try:
-    os.mkdir(os.path.join(data_folder_out, m+'_train'))
-    #os.mkdir(os.path.join(data_folder_out, m+'_train_masks'))
-  except Exception as e: print(e)
 
 """ Pre-process data """
 def buildImageDataset(data_folder_out, modality, seed):
@@ -102,7 +97,7 @@ def buildImageDataset(data_folder_out, modality, seed):
     filenames = [None]*len(modality)
     nums = np.zeros(len(modality))
     for i, m in enumerate(modality):
-      filenames[i], _ = getTrainNLabelNames(data_folder_out, m, ext='*.tfrecords')
+      filenames[i], _ = getTrainNLabelNames(data_folder_out[i], m, ext='*.tfrecords')
       nums[i] = len(filenames[i])
       x_train_filenames+=filenames[i]
       
