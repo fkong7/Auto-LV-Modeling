@@ -9,112 +9,9 @@ import matplotlib.pyplot as plt
 import SimpleITK as sitk 
 from skimage.transform import resize
 
-from utils import getTrainNLabelNames
+from utils import getTrainNLabelNames, writeIm, sample_in_range
 from skimage.transform import resize
-
-def transform_func(image, reference_image, transform, order=1):
-    # Output image Origin, Spacing, Size, Direction are taken from the reference
-    # image in this call to Resample
-    if order ==1:
-      interpolator = sitk.sitkLinear
-    elif order == 0:
-      interpolator = sitk.sitkNearestNeighbor
-    default_value = 0
-    try:
-      resampled = sitk.Resample(image, reference_image, transform,
-                         interpolator, default_value)
-    except Exception as e: print(e)
-      
-    return resampled
-
-def reference_image(spacing, size, dim):
- 
-  reference_size = [256] * dim
-  reference_spacing = [int(np.max(size))/256*spacing] * dim
-  #reference_size = size
-  reference_image = sitk.Image(reference_size, 0)
-  reference_image.SetOrigin(np.zeros(3))
-  reference_image.SetSpacing(reference_spacing)
-  reference_image.SetDirection(np.eye(3).ravel())
-  return reference_image
-
-def centering(img, ref_img, order=1):
-  dimension = img.GetDimension()
-  transform = sitk.AffineTransform(dimension)
-  transform.SetMatrix(img.GetDirection())
-  transform.SetTranslation(np.array(img.GetOrigin()) - ref_img.GetOrigin())
-  # Modify the transformation to align the centers of the original and reference image instead of their origins.
-  centering_transform = sitk.TranslationTransform(dimension)
-  img_center = np.array(img.TransformContinuousIndexToPhysicalPoint(np.array(img.GetSize())/2.0))
-  reference_center = np.array(ref_img.TransformContinuousIndexToPhysicalPoint(np.array(ref_img.GetSize())/2.0))
-  centering_transform.SetOffset(np.array(transform.GetInverse().TransformPoint(img_center) - reference_center))
-  centered_transform = sitk.Transform(transform)
-  centered_transform.AddTransform(centering_transform)
-
-  return transform_func(img, ref_img, centered_transform, order)
-
-def isometric_transform(image, ref_img, orig_direction, order=1):
-  # transform image volume to orientation of eye(dim)
-  dim = ref_img.GetDimension()
-  affine = sitk.AffineTransform(dim)
-  target = np.eye(dim)
-  
-  ori = np.reshape(orig_direction, np.eye(dim).shape)
-  affine.SetMatrix(np.matmul(target,np.linalg.inv(ori)).ravel())
-  affine.SetCenter(ref_img.TransformContinuousIndexToPhysicalPoint(np.array(ref_img.GetSize())/2.0))
-  #affine.SetMatrix(image.GetDirection())
-  return transform_func(image, ref_img, affine, order)
-
-def resample_spacing(sitkIm_fn, resolution=0.5, dim=3, order=1):
-  image = sitk.ReadImage(sitkIm_fn)
-  orig_direction = image.GetDirection()
-  orig_size = np.array(image.GetSize(), dtype=np.int)
-  orig_spacing = np.array(image.GetSpacing())
-  new_size = orig_size*(orig_spacing/np.array(resolution))
-  new_size = np.ceil(new_size).astype(np.int) #  Image dimensions are in integers
-  new_size = [int(s) for s in new_size]
-  
-  ref_img = reference_image(resolution, new_size, dim)
-  centered = centering(image, ref_img, order)
-  transformed = isometric_transform(centered, ref_img, orig_direction, order)
-  
-  return transformed, ref_img
-
-def resample_scale(sitkIm, ref_img, scale_factor=1., order=1):
-  assert type(scale_factor)==np.float64, "Isotropic scaling"
-  dim = sitkIm.GetDimension()
-  affine = sitk.AffineTransform(dim)
-  scale = np.eye(dim)
-  np.fill_diagonal(scale, 1./scale_factor)
-  
-  affine.SetMatrix(scale.ravel())
-  affine.SetCenter(sitkIm.TransformContinuousIndexToPhysicalPoint(np.array(sitkIm.GetSize())/2.0))
-  transformed = transform_func(sitkIm, ref_img, affine, order)
-  return transformed
-
-def cropMask(mask, percentage):
-  ori_shape = mask.shape
-  print("Original shape before cropping: ", ori_shape)
-  # crop the surroundings by percentage
-  def boolCounter(boolArr):
-    #Count consecutive occurences of values varying in length in a numpy array
-    out = np.diff(np.where(np.concatenate(([boolArr[0]],
-                                     boolArr[:-1] != boolArr[1:],
-                                     [True])))[0])[::2]
-    return out
-  
-  dim  = len(mask.shape)
-  for i in range(dim):
-    tmp = np.moveaxis(mask, i, 0)
-    IDs = np.max(np.max(tmp,axis=-1),axis=-1)==0
-    blank = boolCounter(IDs)
-    upper = int(blank[0]*percentage) if int(blank[0]*percentage) != 0 else 1
-    lower = -1*int(blank[-1]*percentage) if int(blank[-1]*percentage) !=0 else -1
-    mask = np.moveaxis(tmp[int(blank[0]*percentage): -1*int(blank[-1]*percentage),:,:],0,i)
-    
-  print("Final shape post cropping: ", mask.shape)
-  ratio = np.array(mask.shape)/np.array(ori_shape)
-  return mask, ratio
+from preProcess import resample_scale, resample_spacing, cropMask
 
 def blankSpaces(y_train_filenames_ct, y_train_filenames_mr):
   num = len(y_train_filenames_ct)
@@ -129,8 +26,6 @@ def blankSpaces(y_train_filenames_ct, y_train_filenames_mr):
     ratio_mr = np.concatenate((ratio_mr, ratio))
   return ratio_ct, ratio_mr
 
-def sample_in_range(range_):
-  return (range_[1] - range_[0]) * np.random.random_sample() + range_[0]
   
 def main():
 
@@ -185,11 +80,6 @@ def main():
         image = resample_scale(sitkIm, ref_img, scale_factor, order)
         return image, scale_factor
       
-    def _writeIm(fn, image):
-        writer = sitk.ImageFileWriter()
-        writer.SetFileName(fn)
-        writer.Execute(image)
-        return 
         
     for m in modality:
       num = len(filenames_dic[m+'_x'])
