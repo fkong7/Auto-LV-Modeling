@@ -4,6 +4,11 @@ import glob
 try:
     import tensorflow as tf
 except Exception as e: print(e)
+import SimpleITK as sitk
+
+
+def sample_in_range(range_):
+  return (range_[1] - range_[0]) * np.random.random_sample() + range_[0]
 
 def getTrainNLabelNames(data_folder, m, ext='*.nii.gz',fn='_train'):
   x_train_filenames = []
@@ -17,6 +22,11 @@ def getTrainNLabelNames(data_folder, m, ext='*.nii.gz',fn='_train'):
 
   return x_train_filenames, y_train_filenames
 
+def writeIm(fn, image):
+    writer = sitk.ImageFileWriter()
+    writer.SetFileName(fn)
+    writer.Execute(image)
+    return 
 
 def _bytes_feature(value):
     """Returns a bytes_list from a string / byte."""
