@@ -7,7 +7,7 @@ from tensorflow.python.keras import models as models_keras
 
 import SimpleITK as sitk 
 from skimage.transform import resize
-from preProcess import swapLabelsBack
+from preProcess import swapLabelsBack, resample_spacing, Resize_by_view, isometric_transform, centering, RescaleIntensity
 from loss import bce_dice_loss, dice_loss
 from tensorflow.python.keras import backend as K
 from model import UNet2D
@@ -36,6 +36,8 @@ def dice_score(pred, true):
   for i in range(len(num_class)):
     pred_i = pred==num_class[i]
     true_i = true==num_class[i]
+    print(pred_i.shape)
+    print(true_i.shape)
     sim = 1 - dice(pred_i.reshape(-1), true_i.reshape(-1))
     dice_out[i] = sim
     
@@ -65,14 +67,19 @@ class Prediction:
         self.label_vol = label_vol
         self.prediction = None
         self.dice_score = None
-        self.original_shape = image_vol.GetSize()
-        self.image_info = (image_vol.GetOrigin(), image_vol.GetSpacing(), image_vol.GetDirection())
+        self.original_shape = None
+        self.image_info = (label_vol.GetOrigin(), label_vol.GetSpacing(), label_vol.GetDirection())
         assert len(self.models)==len(self.views), "Missing view attributes for models"
 
     def volume_prediction_average(self, size):
         img_vol = sitk.GetArrayFromImage(self.image_vol)
-        label_vol = sitk.GetArrayFromImage(self.label_vol)
 
+        self.original_shape = img_vol.shape
+
+        img_vol = RescaleIntensity(img_vol,self.modality, [750, -750])
+        
+        label_vol = sitk.GetArrayFromImage(self.label_vol)
+        
         prob = np.zeros((*self.original_shape,8))
         unique_views = np.unique(self.views)
         
@@ -91,21 +98,22 @@ class Prediction:
                 prob_resize[:,:,:,i] = resize(prob_view[:,:,:,i], self.original_shape, order=1)
             prob += prob_resize
         avg = prob/len(self.models)
-        if out_fn:
-            np.save(out_fn, avg)
         self.prediction = predictVol(avg, label_vol)
         return self.prediction
 
     def dice(self):
         label_vol = sitk.GetArrayFromImage(self.label_vol)
-        self.dice_score = dice_score(self.prediction, self.label_vol)
+        self.dice_score = dice_score(self.prediction, label_vol)
         return self.dice_score
     
     def resample_prediction(self):
         #resample prediction so it matches the original image
-        transformed = isometric_transform(sitk.GetImageFromArray(self.prediction), self.label_vol,np.eye(3),order=0,target=self.label_vol.GetDirection())
-        transformed = centering(transformed, self.label_vol, order=0)
+        print(self.prediction.shape)
+        transformed = centering(sitk.GetImageFromArray(self.prediction), self.label_vol, order=0)
+        #transformed = isometric_transform(transformed, self.label_vol,np.eye(3),order=0,target=self.label_vol.GetDirection())
         self.prediction = sitk.GetArrayFromImage(transformed)
+        print(self.prediction.shape)
+        print(sitk.GetArrayFromImage(self.label_vol).shape)
         return self.prediction
 
     def write_prediction(self, out_fn):
@@ -114,22 +122,26 @@ class Prediction:
         out_im.SetOrigin(ori)
         out_im.SetSpacing(space)
         out_im.SetDirection(direc)
-      
+        try:
+            os.makedirs(os.path.dirname(out_fn))
+        except:
+            pass
         sitk.WriteImage(sitk.Cast(out_im, sitk.sitkInt16), out_fn)
 
 def main():
-    modality = ["mr", "ct"]
-    im_base_folder = "MMWHS_small_aug"
-    data_folder = '/global/scratch/fanwei_kong/DeepLearning/' + im_base_folder 
-    folder_postfix = "aug_both"
+    modality = ["ct", "mr"]
+    im_base_folder = "MMWHS_small"
+    home_dir = '/global/scratch/fanwei_kong/DeepLearning/'
+    data_folder = os.path.join(home_dir, 'ImageData', im_base_folder)
+    folder_postfix = "aug_debug"
     model_postfix = "small2"
-    base_folder = ["MMWHS_small_aug","MMWHS_small_aug"]
+    base_folder = ["MMWHS_small2","MMWHS_small2"]
     names = ['axial', 'coronal', 'sagittal']
     view_attributes = [0]
     view_names = [names[i] for i in view_attributes]
-    data_out_folder = '/global/scratch/fanwei_kong/DeepLearning/2DUNet/Logs/%s/prediction_%s' % (base_folder[-1], folder_postfix)
+    data_out_folder =home_dir + '2DUNet/Logs/%s/prediction_%s' % (base_folder[-1], folder_postfix)
     try:
-      os.mkdir('/global/scratch/fanwei_kong/DeepLearning/2DUNet/Logs/%s' % base_folder[-1])
+      os.mkdir(home_dir+'2DUNet/Logs/%s' % base_folder[-1])
       os.mkdir(data_out_folder)
     except Exception as e: print(e)
     
@@ -148,16 +160,21 @@ def main():
 
         for i in range(len(x_filenames)):
             print("processing "+x_filenames[i])
-            models = ['/global/scratch/fanwei_kong/DeepLearning/2DUNet/Logs/%s/weights_multi-all-%s_%s.hdf5' % (base_folder[j], view_names[j], model_postfix) for j in range(len(view_attributes))]
-            img, _ = resample_spacing(x_filenames[i], order=1)
+            models = [home_dir + '2DUNet/Logs/%s/weights_multi-all-%s_%s.hdf5' % (base_folder[j], view_names[j], model_postfix) for j in range(len(view_attributes))]
+            #img, _ = resample_spacing(x_filenames[i], order=1)
+            #sitk.WriteImage(img, os.path.join(data_out_folder, m+'_im_'+os.path.basename(x_filenames[i])))
+            img = sitk.ReadImage(x_filenames[i])
             mask = sitk.ReadImage(y_filenames[i])
             predict = Prediction(unet, models,m,view_attributes,img,mask)
             predict.volume_prediction_average(256)
-            predict.resample_prediction()
+            predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
+#            predict.resample_prediction()
             dice_list[i] = predict.dice()
             
             predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
             del predict 
-        csv_path = '/global/scratch/fanwei_kong/2DUNet/Logs/%s/%s_test-%s.csv' % (base_folder[-1], m , folder_postfix) 
+        csv_path = home_dir + '2DUNet/Logs/%s/%s_test-%s.csv' % (base_folder[-1], m , folder_postfix) 
         writeDiceScores(csv_path, dice_list)
-    
+
+if __name__ == '__main__':
+    main()

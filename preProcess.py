@@ -145,13 +145,15 @@ def centering(img, ref_img, order=1):
 
   return transform_func(img, ref_img, centered_transform, order)
 
-def isometric_transform(image, ref_img, orig_direction, order=1):
+def isometric_transform(image, ref_img, orig_direction, order=1, target=None):
   # transform image volume to orientation of eye(dim)
   dim = ref_img.GetDimension()
   affine = sitk.AffineTransform(dim)
-  target = np.eye(dim)
+  if target is None:
+    target = np.eye(dim)
   
   ori = np.reshape(orig_direction, np.eye(dim).shape)
+  target = np.reshape(target, np.eye(dim).shape)
   affine.SetMatrix(np.matmul(target,np.linalg.inv(ori)).ravel())
   affine.SetCenter(ref_img.TransformContinuousIndexToPhysicalPoint(np.array(ref_img.GetSize())/2.0))
   #affine.SetMatrix(image.GetDirection())
@@ -219,7 +221,8 @@ def RescaleIntensity(slice_im,m,limit):
   if m =="ct":
     slice_im[slice_im>limit[0]] = limit[0]
     slice_im[slice_im<limit[1]] = limit[1]
-    (slice_im-threshold-np.min(slice_im))/threshold
+    #(slice_im-threshold-np.min(slice_im))/threshold
+    slice_im = slice_im/threshold
   elif m=="mr":
     slice_im -= np.min(slice_im)
     slice_im[slice_im>rng] = rng
