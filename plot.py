@@ -7,13 +7,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-def plot_surface(verts, faces):
+def plot_surface(verts, faces, shape):
     """
     This function plot a mesh surface
 
     Args:
         verts: verts output from marching cube algorithm
         faces: faces output from marching cube algorithm
+        shape: dimension of the image
     Returns:
         None
     """    
@@ -25,6 +26,9 @@ def plot_surface(verts, faces):
     mesh.set_edgecolor('k')
     ax.add_collection3d(mesh)
 
-    plt.tight_layout()
+    ax.set_xlim(0, shape[0])
+    ax.set_ylim(0, shape[1])
+    ax.set_zlim(0, shape[2])
+#    plt.tight_layout()
     plt.show()
 
