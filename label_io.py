@@ -175,33 +175,19 @@ def exportSitk2VTK(sitkIm):
     Args:
         sitkIm: simple itk image
     Returns:
-        vtkIm: vtk image
+        imageData: vtk image
     """
     img = sitk.GetArrayFromImage(sitkIm)
-    print(img.shape)
-    importer = vtk.vtkImageImport()
-    img_data = img.astype('uint8')
-    img_string = img_data.tostring()  # type short
-    dim = img.shape
-
-    importer.CopyImportVoidPointer(img_string, len(img_string))
-    importer.SetDataScalarTypeToUnsignedChar
-    importer.SetNumberOfScalarComponents(1)
-
-    extent = importer.GetDataExtent()
-    importer.SetDataExtent(extent[0], extent[0] + dim[2] - 1,
-                                 extent[2], extent[2] + dim[1] - 1,
-                                 extent[4], extent[4] + dim[0] - 1)
-    importer.SetWholeExtent(extent[0], extent[0] + dim[2] - 1,
-                                   extent[2], extent[2] + dim[1] - 1,
-                                   extent[4], extent[4] + dim[0] - 1)
-    importer.SetDataSpacing(sitkIm.GetSpacing())
-    importer.SetDataOrigin(sitkIm.GetOrigin())
-
-    importer.Update()
-
-    vtkIm = importer.GetOutput()
-    print(vtkIm)
-    print(importer)
-    return vtkIm
+    
+    from vtk.util.numpy_support import numpy_to_vtk, get_vtk_array_type
+    
+    vtkArray = numpy_to_vtk(num_array=img.flatten('F'), deep=True,
+                                        array_type=get_vtk_array_type(img.dtype))
+    imageData = vtk.vtkImageData()
+    imageData.SetOrigin(sitkIm.GetOrigin())
+    imageData.SetSpacing(sitkIm.GetSpacing())
+    imageData.SetDimensions(img.shape)
+    imageData.GetPointData().SetScalars(vtkArray)
+    
+    return imageData
 
