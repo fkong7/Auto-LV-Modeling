@@ -60,7 +60,7 @@ batch_size = 10
 #epochs = 100
 
 #modality = ["ct","mr"]
-modality = ["ct"]
+modality = ["mr"]
 #im_base_name = 'MMWHS_small_13'
 #base_name = 'MMWHS_small_13'
 im_base_name = sys.argv[1]
