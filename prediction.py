@@ -133,9 +133,9 @@ def main():
     im_base_folder = "MMWHS_small"
     home_dir = '/global/scratch/fanwei_kong/DeepLearning/'
     data_folder = os.path.join(home_dir, 'ImageData', im_base_folder)
-    folder_postfix = "aug_debug"
+    folder_postfix = "aug_test"
     model_postfix = "small2"
-    base_folder = ["MMWHS_small2","MMWHS_small2"]
+    base_folder = ["MMWHS_small_aug/mr_only3","MMWHS_small_aug/mr_only3"]
     names = ['axial', 'coronal', 'sagittal']
     view_attributes = [0]
     view_names = [names[i] for i in view_attributes]
@@ -161,10 +161,12 @@ def main():
         for i in range(len(x_filenames)):
             print("processing "+x_filenames[i])
             models = [home_dir + '2DUNet/Logs/%s/weights_multi-all-%s_%s.hdf5' % (base_folder[j], view_names[j], model_postfix) for j in range(len(view_attributes))]
-            #img, _ = resample_spacing(x_filenames[i], order=1)
+            img, _ = resample_spacing(x_filenames[i], order=1)
+
             #sitk.WriteImage(img, os.path.join(data_out_folder, m+'_im_'+os.path.basename(x_filenames[i])))
-            img = sitk.ReadImage(x_filenames[i])
-            mask = sitk.ReadImage(y_filenames[i])
+            #img = sitk.ReadImage(x_filenames[i])
+            #mask = sitk.ReadImage(y_filenames[i])
+            mask, _ = resample_spacing(y_filenames[i], order=0)
             predict = Prediction(unet, models,m,view_attributes,img,mask)
             predict.volume_prediction_average(256)
             predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
