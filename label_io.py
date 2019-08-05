@@ -168,6 +168,23 @@ def writeVTKImage(vtkIm, fn):
     writer.Write()
     return
 
+def exportPython2VTK(img):
+    """
+    This function creates a vtk image from a python array
+
+    Args:
+        img: python ndarray of the image
+    Returns:
+        imageData: vtk image
+    """
+    from vtk.util.numpy_support import numpy_to_vtk, get_vtk_array_type
+    
+    vtkArray = numpy_to_vtk(num_array=img.flatten('F'), deep=True,
+                                        array_type=get_vtk_array_type(img.dtype))
+    
+    return vtkArray
+
+
 def exportSitk2VTK(sitkIm):
     """
     This function creates a vtk image from a simple itk image
@@ -178,16 +195,13 @@ def exportSitk2VTK(sitkIm):
         imageData: vtk image
     """
     img = sitk.GetArrayFromImage(sitkIm)
-    
-    from vtk.util.numpy_support import numpy_to_vtk, get_vtk_array_type
-    
-    vtkArray = numpy_to_vtk(num_array=img.flatten('F'), deep=True,
-                                        array_type=get_vtk_array_type(img.dtype))
+    vtkArray = exportPython2VTK(img)
     imageData = vtk.vtkImageData()
-    imageData.SetOrigin(sitkIm.GetOrigin())
-    imageData.SetSpacing(sitkIm.GetSpacing())
     imageData.SetDimensions(img.shape)
     imageData.GetPointData().SetScalars(vtkArray)
+    imageData.SetOrigin(sitkIm.GetOrigin())
+    imageData.SetSpacing(sitkIm.GetSpacing())
+    
     
     return imageData
 
