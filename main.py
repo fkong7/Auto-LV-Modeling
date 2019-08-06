@@ -83,7 +83,9 @@ def test3():
         if i==0:
            continue
         mesh  = vtk_marching_cube(vtkIm, i)
+        mesh = utils.setCellScalar(utils.fillHole(mesh),i)
         model = utils.appendVTKPolydata(model, mesh)
+    
 
     #write to vtk polydata
     fn_poly = os.path.join(os.path.dirname(__file__), "debug", "test_poly_multi.vtk")
@@ -109,7 +111,8 @@ def test4():
 
     #run marchine cube algorithm
     import marching_cube as m_c
-    model = m_c.vtk_marching_cube_multi(label_io.exportSitk2VTK(label_io.exportPy2Sitk(pylabel, label)), 0)
+    model = m_c.vtk_marching_cube_multi(label_io.exportSitk2VTK(label_io.exportPy2Sitk(pylabel, label)), 0, False)
+    model = utils.fillHole(model)
     #model = m_c.vtk_marching_cube_union(label_io.exportSitk2VTK(label_io.exportPy2Sitk(pylabel, label)), 0)
     #write to vtk polydata
     fn_poly = os.path.join(os.path.dirname(__file__), "debug", "test_poly_multi_mani.vtk")
