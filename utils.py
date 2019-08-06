@@ -67,7 +67,7 @@ def appendVTKPolydata(poly1, poly2):
     poly = cleaner.GetOutput()
     return poly
 
-def smoothVTKPolydata(poly, iteration=25):
+def smoothVTKPolydata(poly, iteration=100):
     """
     This function smooths a vtk polydata
 
@@ -116,3 +116,39 @@ def booleanVTKPolyData(poly1, poly2, keyword):
     boolean.Update()
 
     return boolean.GetOuptut()
+
+def fillHole(poly):
+    """
+    Fill holes in VTK PolyData
+    
+    Args:
+        poly: VTK PolyData to fill
+    Returns:
+        poly: filled VTK PolyData
+    """
+    filler = vtk.vtkFillHolesFilter()
+    filler.SetInputData(poly)
+    filler.SetHoleSize(100000000.)
+    filler.Update()
+    
+    return filler.GetOutput()
+
+def setCellScalar(poly, scalar):
+    """
+    Assign a scalar value to each cell of the polydata
+
+    Args:
+        poly; VTK PolyData to edit
+        scalar: scalar value float
+    Returns:
+        poly: edited VTK PolyData
+    """
+    num = poly.GetNumberOfCells()
+    cellData = vtk.vtkFloatArray()
+    cellData.SetNumberOfValues(num)
+    for i in range(num):
+        cellData.SetValue(i, scalar)
+    poly.GetCellData().SetScalars(cellData)
+    
+    return poly
+
