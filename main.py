@@ -1,4 +1,5 @@
 import os
+import glob
 import numpy as np
 import label_io
 from marching_cube import marching_cube, vtk_marching_cube
@@ -95,34 +96,31 @@ def test4():
     """
     This is a test funciton to create manifold mesh surfaces for blood pool with vtk marching cube
     """
-    fn = os.path.join(os.path.dirname(__file__), "examples", "ct_train_1012_label.nii.gz")
+    fns = glob.glob(os.path.join(os.path.dirname(__file__),"examples","*.nii.gz"))
+    for fn in fns: 
+        print(fn)
+        #load label map 
+        label = label_io.loadLabelMap(fn)
+        pylabel = sitk.GetArrayFromImage(label)
+        #debug: write to disk
+        try:
+            os.makedirs(os.path.join(os.path.dirname(__file__), "debug"))
+        except Exception as e: print(e)
+        #remove myocardium, RV, RA and PA
+        for tissue in [205, 600, 550, 850]:
+            pylabel = utils.removeClass(pylabel, tissue, 0)
+        pylabel = utils.convert2binary(label_io.exportPy2Sitk(pylabel, label))
+        pylabel = utils.eraseBoundary(pylabel, 3, 0)
+        
+        vtkIm = label_io.exportSitk2VTK(label_io.exportPy2Sitk(pylabel, label))
     
-    #load label map 
-    label = label_io.loadLabelMap(fn)
-    pylabel = sitk.GetArrayFromImage(label)
-    #debug: write to disk
-    try:
-        os.makedirs(os.path.join(os.path.dirname(__file__), "debug"))
-    except Exception as e: print(e)
-    #remove myocardium, RV, RA and PA
-    for tissue in [205, 600, 550, 850]:
-        pylabel = utils.removeClass(pylabel, tissue, 0)
-    pylabel = utils.convert2binary(label_io.exportPy2Sitk(pylabel, label))
-    #pylabel = utils.gaussianSmoothImage(pylabel, np.array(label.GetSpacing()))
+        #run marchine cube algorithm
+        import marching_cube as m_c
+        model = m_c.vtk_marching_cube_multi(vtkIm, 0)
     
-    vtkIm = label_io.exportSitk2VTK(label_io.exportPy2Sitk(pylabel, label))
-    #vtkIm = utils.gaussianSmoothImage(vtkIm,2.)
-    fn_out = os.path.join(os.path.dirname(__file__), "debug", "test_volume_multi.vti")
-    label_io.writeVTKImage(vtkIm, fn_out)
-
-    #run marchine cube algorithm
-    import marching_cube as m_c
-    model = m_c.vtk_marching_cube_multi(vtkIm, 0)
-    model = utils.fillHole(model)
-
-    #write to vtk polydata
-    fn_poly = os.path.join(os.path.dirname(__file__), "debug", "test_poly_multi_mani.vtk")
-    label_io.writeVTKPolyData(model, fn_poly)
+        #write to vtk polydata
+        fn_poly = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(fn)+".vtk")
+        label_io.writeVTKPolyData(model, fn_poly)
 
 if __name__=="__main__":
     test4()
