@@ -27,6 +27,26 @@ def convert2binary(labels):
 
     return pyLabel
 
+def eraseBoundary(labels, pixels, bg_id):
+    """
+    Erase anything on the boundary by a specified number of pixels
+
+    Args:
+        labels: python nd array 
+        pixels: number of pixel width to erase
+        bg_id: id number of background class
+    Returns:
+        labels: editted label maps
+    """
+    x,y,z = labels.shape
+    labels[:pixels,:,:] = bg_id
+    labels[-pixels:,:,:] = bg_id
+    labels[:,:pixels,:] = bg_id
+    labels[:,-pixels:,:] = bg_id
+    labels[:,:,:pixels] = bg_id
+    labels[:,:,-pixels:] = bg_id
+    return labels
+
 def removeClass(labels, class_id, bg_id):
     """
     Convert class label to background label
