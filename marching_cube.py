@@ -57,6 +57,10 @@ def vtk_marching_cube_multi(vtkLabel, bg_id, smooth=True):
     from vtk.util.numpy_support import vtk_to_numpy
     ids = np.unique(vtk_to_numpy(vtkLabel.GetPointData().GetScalars()))
     ids = np.delete(ids, np.where(ids==bg_id))
+
+    #smooth the label map
+    #vtkLabel = utils.gaussianSmoothImage(vtkLabel, 2.)
+
     contour = vtk.vtkDiscreteMarchingCubes()
     contour.SetInputData(vtkLabel)
     for index, i in enumerate(ids):
