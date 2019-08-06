@@ -41,6 +41,22 @@ def removeClass(labels, class_id, bg_id):
     labels[np.where(labels==class_id)] = bg_id
     return labels
 
+def gaussianSmoothImage(im, stdev):
+    """
+    Smooths a python ndarray Image with Gaussian smoothing
+
+    Args:
+        im: Python nd array
+        stdev: standard deviation for Gaussian smoothing
+    Returns:
+        im: smoothed Image
+    """
+    from scipy.ndimage.filters import gaussian_filter
+    im = gaussian_filter(im, stdev)
+
+    return im
+
+
 ################################
 ## VTK PolyData functions
 ###############################
@@ -152,3 +168,19 @@ def setCellScalar(poly, scalar):
     
     return poly
 
+def gaussianSmoothVTKImage(im, stdev):
+    """
+    Smooths a vtk Image with Gaussian smoothing
+
+    Args:
+        im: vtkImage
+        stdev: standard deviation for Gaussian smoothing
+    Returns:
+        im: smoothed vtkImage
+    """
+    smoother = vtk.vtkImageGaussianSmooth()
+    smoother.SetInputData(im)
+    print(im.GetSpacing())
+    smoother.SetRadiusFactors(np.array(im.GetSpacing())*stdev)
+    smoother.Update()
+    return smoother.GetOutput()
