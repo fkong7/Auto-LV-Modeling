@@ -201,7 +201,7 @@ def exportSitk2VTK(sitkIm):
     imageData.GetPointData().SetScalars(vtkArray)
     imageData.SetOrigin(sitkIm.GetOrigin())
     imageData.SetSpacing(sitkIm.GetSpacing())
-    
+    #imageData.SetDirectionMatrix(sitkIm.GetDirection()) 
     
     return imageData
 
