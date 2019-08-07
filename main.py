@@ -144,12 +144,12 @@ def test5():
       
         fn_out2 = os.path.join(os.path.dirname(__file__), "debug", "test_volume_multi2.vti")
         vtkIm = label_io.exportSitk2VTK(label_io.exportPy2Sitk(pylabel, label))
-        
-        newIm = utils.labelDilateErode(vtkIm, 600, 0, 7)
         ori = (-30.472927203693008, 217.50936443034828, -99.92209600534021)
         nrm = (-0.27544302463217574, 0.8246285707645975, 0.4940838597446954)
-        newIm = utils.recolorVTKPixelsByPlane(newIm, ori, nrm, 0)
-        label_io.writeVTKImage(newIm, fn_out2)
+        vtkIm = utils.recolorVTKPixelsByPlane(vtkIm, ori, nrm, 0)
+        label_io.writeVTKImage(vtkIm, fn_out2)
+        
+        newIm = utils.labelDilateErode(vtkIm, 600, 0, 5)
         
         #run marchine cube algorithm
         import marching_cube as m_c
