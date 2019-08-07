@@ -144,6 +144,11 @@ def test5():
       
         fn_out2 = os.path.join(os.path.dirname(__file__), "debug", "test_volume_multi2.vti")
         vtkIm = label_io.exportSitk2VTK(label_io.exportPy2Sitk(pylabel, label))
+        # debug
+        fn_out3 = os.path.join(os.path.dirname(__file__), "debug", "test_volume_multi3.vti")
+        vtkIm = utils.vtkImageResample(vtkIm, (10,10,10), 'linear')
+        label_io.writeVTKImage(vtkIm, fn_out3)
+
         ori = (-30.472927203693008, 217.50936443034828, -99.92209600534021)
         nrm = (-0.27544302463217574, 0.8246285707645975, 0.4940838597446954)
         vtkIm = utils.recolorVTKPixelsByPlane(vtkIm, ori, nrm, 0)
