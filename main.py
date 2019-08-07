@@ -122,5 +122,43 @@ def test4():
         fn_poly = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(fn)+".vtk")
         label_io.writeVTKPolyData(model, fn_poly)
 
+def test5():
+    """
+    Test function to create RV and LV mesh surfaces for electromechanical simulations
+    """
+    #fns = glob.glob(os.path.join(os.path.dirname(__file__),"examples","*.nii.gz"))
+    fns = [os.path.join(os.path.dirname(__file__), "examples", "ct_train_1019_label.nii.gz")]
+    for fn in fns: 
+        print(fn)
+    
+        #load label map 
+        label = label_io.loadLabelMap(fn)
+        pylabel = sitk.GetArrayFromImage(label)
+        #remove myocardium, RV, RA and PA
+        for tissue in [500, 420, 550, 820,850]:
+            pylabel = utils.removeClass(pylabel, tissue, 0)
+        #debug: write to disk
+        try:
+            os.makedirs(os.path.join(os.path.dirname(__file__), "debug"))
+        except Exception as e: print(e)
+      
+        fn_out2 = os.path.join(os.path.dirname(__file__), "debug", "test_volume_multi2.vti")
+        vtkIm = label_io.exportSitk2VTK(label_io.exportPy2Sitk(pylabel, label))
+        
+        newIm = utils.labelDilateErode(vtkIm, 600, 0, 7)
+        ori = (-30.472927203693008, 217.50936443034828, -99.92209600534021)
+        nrm = (-0.27544302463217574, 0.8246285707645975, 0.4940838597446954)
+        newIm = utils.recolorVTKPixelsByPlane(newIm, ori, nrm, 0)
+        label_io.writeVTKImage(newIm, fn_out2)
+        
+        #run marchine cube algorithm
+        import marching_cube as m_c
+        model = m_c.vtk_marching_cube_multi(newIm, 0)
+        model = utils.clipVTKPolyData(model, ori, nrm)
+
+        
+        #write to vtk polydata
+        fn_poly = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(fn)+".vtk")
+        label_io.writeVTKPolyData(model, fn_poly)
 if __name__=="__main__":
-    test4()
+    test5()

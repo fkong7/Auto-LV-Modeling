@@ -76,7 +76,38 @@ def gaussianSmoothImage(im, stdev):
 
     return im
 
+def recolorPixelsByPlane(labels, ori, nrm, bg_id):
+    """
+    For every pixel above a plane in physcal coordinates, change the pixel value to background pixel value
 
+    Args:
+        labels: SimpleItk image
+        ori: plane origin
+        nrm: plane normal
+    Returns:
+        labels: editted SimpleItk image
+    """
+    def isAbovePlane(pt1, ori, nrm):
+        vec1 = np.array(pt1)-np.array(ori)
+        vec2 = np.array(nrm)
+        dot = np.dot(vec1, vec2)
+        if dot>0:
+            return True
+        else:
+            return False
+
+    X, Y, Z = labels.GetSize()
+    for x in range(X):
+        for y in range(Y):
+            for z in range(Z):
+                coords = labels.TransformIndexToPhysicalPoint((x,y,z))
+                if isAbovePlane(coords, ori, nrm):
+                    labels.SetPixel(x, y, z, bg_id)
+
+    return labels
+
+
+    
 ################################
 ## VTK PolyData functions
 ###############################
@@ -204,3 +235,128 @@ def gaussianSmoothVTKImage(im, stdev):
     smoother.SetRadiusFactors(np.array(im.GetSpacing())*stdev)
     smoother.Update()
     return smoother.GetOutput()
+
+def labelDilateErode(im, label_id, bg_id,thickness):
+    """
+    Dilates a label to create thickness 
+    
+    Args:
+        im: vtkImage of the label map
+        label_id: class id to erode
+        bg_id: class id of backgroud to dilate
+        thickness: thickness of the erosion in physical unit
+    Returns
+        newIm: vtkImage with thickened boundary of the tissue structure
+    """
+    dilateErode = vtk.vtkImageDilateErode3D()
+    dilateErode.SetInputData(im)
+    dilateErode.SetDilateValue(label_id)
+    dilateErode.SetErodeValue(bg_id)
+    
+    kernel_size = np.rint(thickness/np.array(im.GetSpacing())).astype(int)
+    print(kernel_size)
+    dilateErode.SetKernelSize(*kernel_size)
+    dilateErode.Update()
+    newIm = dilateErode.GetOutput()
+    
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+
+    pyIm_new = vtk_to_numpy(newIm.GetPointData().GetScalars())
+    pyIm = vtk_to_numpy(im.GetPointData().GetScalars())
+    pyIm_new[np.where((pyIm_new-pyIm==0)&(pyIm==label_id))]=bg_id
+   # convert to binary
+    pyIm_new[np.where(pyIm_new!=0)] = 1 
+    newIm.GetPointData().SetScalars(numpy_to_vtk(pyIm_new))
+    return newIm
+
+def clipVTKPolyData(poly, ori, nrm):
+    """
+    Clip a VTK PolyData with a plane by specifying the plane normal and origin
+    TO-DO: future improvements to close the cut: https://github.com/Kitware/VTK/blob/master/Examples/VisualizationAlgorithms/Python/ClipCow.py
+
+    Args:
+        poly: VTK PolyData
+        ori: plane origin, tuple
+        nrm: plane normal, tuple
+    Returns:
+        poly: clipped VTK PolyData
+    """
+    polyNormals = vtk.vtkPolyDataNormals()
+    polyNormals.SetInputData(poly)
+
+    plane = vtk.vtkPlane()
+    plane.SetOrigin(*ori)
+    plane.SetNormal(*nrm)
+
+    clipper = vtk.vtkClipPolyData()
+    clipper.SetInputData(poly)
+    clipper.SetClipFunction(plane)
+    clipper.GenerateClipScalarsOn()
+    clipper.GenerateClippedOutputOn()
+    clipper.SetValue(0.5)
+    clipper.Update()
+    
+    cutEdges = vtk.vtkCutter()
+    cutEdges.SetInputConnection(polyNormals.GetOutputPort())
+    cutEdges.SetCutFunction(plane)
+    cutEdges.GenerateCutScalarsOn()
+    cutEdges.SetValue(0, 0.5)
+    cutEdges.Update()
+
+    cutStrips = vtk.vtkStripper()
+    cutStrips.SetInputConnection(cutEdges.GetOutputPort())
+    cutStrips.Update()
+    cutPoly = vtk.vtkPolyData()
+    cutPoly.SetPoints(cutStrips.GetOutput().GetPoints())
+    cutPoly.SetPolys(cutStrips.GetOutput().GetLines())
+    
+    cutTriangles = vtk.vtkTriangleFilter()
+    cutTriangles.SetInputData(cutPoly)
+    cutTriangles.Update()
+    print(cutTriangles.GetOutput())
+    poly = appendVTKPolydata(clipper.GetOutput(), cutTriangles.GetOutput())
+
+    return poly
+
+def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id):
+    """
+    For every pixel above a plane in physcal coordinates, change the pixel value to background pixel value
+
+    Args:
+        labels: VTK image
+        ori: plane origin
+        nrm: plane normal
+    Returns:
+        labels: editted VTK image
+    """
+    def toPhysical(x, y, z, spacing, origin):
+        px = origin[0] + spacing[0]*x
+        py = origin[1] + spacing[1]*y
+        pz = origin[2] + spacing[2]*x
+        return (px, py, pz)
+
+    def isAbovePlane(pt1, ori, nrm):
+        vec1 = np.array(pt1)-np.array(ori)
+        vec2 = np.array(nrm)
+        dot = np.dot(vec1, vec2)
+        if dot>0:
+            return True
+        else:
+            return False
+
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+    pyLabel = vtk_to_numpy(labels.GetPointData().GetScalars()).reshape(labels.GetDimensions(),order='F')
+    X, Y, Z = labels.GetDimensions()
+    
+    # TO-DO: prototyping now, need optimizing!!
+    spacing = labels.GetSpacing()
+    origin = labels.GetOrigin()
+    for x in range(X):
+        for y in range(Y):
+            for z in range(Z):
+                coords = toPhysical(x, y, z, spacing, origin)
+                if isAbovePlane(coords, ori, nrm):
+                    pyLabel[x,y,z]=bg_id
+    labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel.flatten('F')))
+
+    return labels
