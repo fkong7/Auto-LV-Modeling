@@ -313,7 +313,6 @@ def clipVTKPolyData(poly, ori, nrm):
     cutTriangles = vtk.vtkTriangleFilter()
     cutTriangles.SetInputData(cutPoly)
     cutTriangles.Update()
-    print(cutTriangles.GetOutput())
     poly = appendVTKPolydata(clipper.GetOutput(), cutTriangles.GetOutput())
 
     return poly
@@ -337,8 +336,10 @@ def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id):
     
     X, Y, Z = labels.GetDimensions()
     total_num = X*Y*Z
+    print("total_num: ", total_num)
     
     x, y, z = np.meshgrid(range(X), range(Y), range(Z))
+    print(x, y, z)
     indices = np.moveaxis(np.vstack((x.flatten(),y.flatten(),z.flatten())),0,1)
     print(indices.shape)
     b = np.tile(spacing, total_num).reshape(total_num,3)
@@ -356,3 +357,34 @@ def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id):
     labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel))
 
     return labels
+
+def vtkImageResample(image, dims, opt):
+    """
+    Resamples the vtk image to the given dimenstion
+
+    Args:
+        image: vtk Image data
+        dims: image dimension
+        opt: interpolation option: linear, NN, cubic
+    Returns:
+        image: resampled vtk image data
+    """
+
+    reslicer = vtk.vtkImageReslice()
+    reslicer.SetInputData(image)
+    if opt=='linear':
+        reslicer.SetInterpolationModeToLinear()
+    elif opt=='NN':
+        reslicer.SetInterpolationModeToNearestNeighbor()
+    elif opt=='cubic':
+        reslicer.SetInterpolationModeToCubic()
+    else:
+        raise ValueError("interpolation option not recognized")
+
+    size = np.array(image.GetSpacing())*np.array(image.GetDimensions())
+    new_spacing = size/np.array(dims)
+
+    reslicer.SetOutputSpacing(*new_spacing)
+    reslicer.Update()
+
+    return reslicer.GetOutput()
