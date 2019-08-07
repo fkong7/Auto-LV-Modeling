@@ -329,34 +329,30 @@ def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id):
     Returns:
         labels: editted VTK image
     """
-    def toPhysical(x, y, z, spacing, origin):
-        px = origin[0] + spacing[0]*x
-        py = origin[1] + spacing[1]*y
-        pz = origin[2] + spacing[2]*x
-        return (px, py, pz)
-
-    def isAbovePlane(pt1, ori, nrm):
-        vec1 = np.array(pt1)-np.array(ori)
-        vec2 = np.array(nrm)
-        dot = np.dot(vec1, vec2)
-        if dot>0:
-            return True
-        else:
-            return False
 
     from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
-    pyLabel = vtk_to_numpy(labels.GetPointData().GetScalars()).reshape(labels.GetDimensions(),order='F')
-    X, Y, Z = labels.GetDimensions()
-    
-    # TO-DO: prototyping now, need optimizing!!
+    pyLabel = vtk_to_numpy(labels.GetPointData().GetScalars())
     spacing = labels.GetSpacing()
     origin = labels.GetOrigin()
-    for x in range(X):
-        for y in range(Y):
-            for z in range(Z):
-                coords = toPhysical(x, y, z, spacing, origin)
-                if isAbovePlane(coords, ori, nrm):
-                    pyLabel[x,y,z]=bg_id
-    labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel.flatten('F')))
+    
+    X, Y, Z = labels.GetDimensions()
+    total_num = X*Y*Z
+    
+    x, y, z = np.meshgrid(range(X), range(Y), range(Z))
+    indices = np.moveaxis(np.vstack((x.flatten(),y.flatten(),z.flatten())),0,1)
+    print(indices.shape)
+    b = np.tile(spacing, total_num).reshape(total_num,3)
+    print(b)
+    physical = indices * b +np.tile(origin, total_num).reshape(total_num,3)
+    print("ok")
+    vec1 = physical - np.tile(ori, total_num).reshape(total_num,3)
+    print("ok2")
+    vec2 = np.tile(nrm, total_num).reshape(total_num,3)
+    print("ok3")
+    below = np.sum(vec1*vec2, axis=1)<0
+    print("ok4")
+    pyLabel[below] = bg_id
+    print("ok5")
+    labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel))
 
     return labels
