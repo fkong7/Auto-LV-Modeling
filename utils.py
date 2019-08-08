@@ -333,27 +333,17 @@ def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id):
     pyLabel = vtk_to_numpy(labels.GetPointData().GetScalars())
     spacing = labels.GetSpacing()
     origin = labels.GetOrigin()
-    
     X, Y, Z = labels.GetDimensions()
     total_num = X*Y*Z
-    print("total_num: ", total_num)
     
     x, y, z = np.meshgrid(range(X), range(Y), range(Z))
-    print(x, y, z)
-    indices = np.moveaxis(np.vstack((x.flatten(),y.flatten(),z.flatten())),0,1)
-    print(indices.shape)
+    indices = np.moveaxis(np.vstack((z.flatten(),y.flatten(),x.flatten())),0,1)
     b = np.tile(spacing, total_num).reshape(total_num,3)
-    print(b)
     physical = indices * b +np.tile(origin, total_num).reshape(total_num,3)
-    print("ok")
     vec1 = physical - np.tile(ori, total_num).reshape(total_num,3)
-    print("ok2")
     vec2 = np.tile(nrm, total_num).reshape(total_num,3)
-    print("ok3")
     below = np.sum(vec1*vec2, axis=1)<0
-    print("ok4")
     pyLabel[below] = bg_id
-    print("ok5")
     labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel))
 
     return labels
