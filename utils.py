@@ -6,10 +6,86 @@ Utility functions for label map editing
 import numpy as np
 import SimpleITK as sitk
 import vtk
+import scipy
+
+##########################
+## Numpy Utility functions
+##########################
+
+def fitPlaneNormal(points_input):
+    """
+    Fit a plane to a point set
+    
+    Args:
+        points_input: 3d coordinates of a point set
+    Returns:
+        normal: normal of the fitting plane
+    """
+    import functools
+    def _cross(a, b):
+        """
+        Cross product of two vectors
+        """
+        return [a[1]*b[2] - a[2]*b[1],
+                a[2]*b[0] - a[0]*b[2],
+                a[0]*b[1] - a[1]*b[0]]
+
+    def _plane(x, y, params):
+        a = params[0]
+        b = params[1]
+        c = params[2]
+        z = a*x + b*y + c
+        return z
+    
+    def _error(params, points):
+        result = 0
+        for (x,y,z) in points:
+            plane_z = _plane(x, y, params)
+            diff = abs(plane_z - z)
+            result += diff**2
+        return result
+    fun = functools.partial(_error, points=points_input)
+    params0 = [0, 0, 0]
+    res = scipy.optimize.minimize(fun, params0)
+    a = res.x[0]
+    b = res.x[1]
+    c = res.x[2]
+    point  = np.array([0.0, 0.0, c])
+    normal = np.array(_cross([1,0,a], [0,1,b]))
+    D = -point.dot(normal)
+    return normal
 
 ########################
 ## Label Map functions
 ########################
+ 
+def resample(image, resolution = (0.5, 0.5, 0.5), dim=3):
+  """
+  This function resamples a SimpleITK image to desired resolution
+
+  Args:
+    image: SimpleItk image
+    resolution: desired grid resolution
+    dim: image dimension
+  Returns:
+    newimage: resampeled SimpleITK image
+  """
+  resample = sitk.ResampleImageFilter()
+  resample.SetInterpolator(sitk.sitkNearestNeighbor)
+  resample.SetOutputDirection(image.GetDirection())
+  resample.SetOutputOrigin(image.GetOrigin())
+  resample.SetOutputSpacing(resolution)
+
+  orig_size = np.array(image.GetSize(), dtype=np.int)
+  orig_spacing = np.array(image.GetSpacing())
+  new_size = orig_size*(orig_spacing/np.array(resolution))
+  new_size = np.ceil(new_size).astype(np.int) #  Image dimensions are in integers
+  new_size = [int(s) for s in new_size]
+  resample.SetSize(new_size)
+  newimage = resample.Execute(image)
+  
+  return newimage
+
 def convert2binary(labels):
     """
     This function converts a Simple ITK label to binary label
@@ -269,6 +345,66 @@ def labelDilateErode(im, label_id, bg_id,thickness):
     newIm.GetPointData().SetScalars(numpy_to_vtk(pyIm_new))
     return newIm
 
+def getCentroid(im, label_id):
+    """
+    Compute the centroid (mean coordinates) of one labelled region
+    
+    Args:
+        im: vtkImage of label map
+        label_id: region id
+    Returns:
+        centroid: np array of the centroid coordinates
+    """
+    from vtk.util.numpy_support import vtk_to_numpy
+
+    x, y, z = im.GetDimensions()
+    pyIm = vtk_to_numpy(im.GetPointData().GetScalars()).reshape(z, y, x).transpose(2, 1, 0)
+    ids = np.array(np.where(pyIm==label_id)).transpose()
+    total_num = len(ids)
+    
+    origin = np.tile(im.GetOrigin(), total_num).reshape(total_num,3)
+    spacing = np.tile(im.GetSpacing(), total_num).reshape(total_num,3)
+    
+    centroid = np.mean(spacing * ids + origin, axis=0)
+    return centroid
+
+def locateRegionBoundary(im, label_id1, label_id2):
+    """
+    Locate the boundary coordinates between two regions with different labels
+    
+    Args:
+        im: vtkImage of the label map
+        label_id1: class id of 1st region
+        label_id2: class id of 2nd region
+        
+    Returns
+        points: coordinates of the boundary points
+    """
+    dilateErode = vtk.vtkImageDilateErode3D()
+    dilateErode.SetInputData(im)
+    dilateErode.SetDilateValue(label_id1)
+    dilateErode.SetErodeValue(label_id2)
+    
+    kernel_size = np.rint(1./np.array(im.GetSpacing())).astype(int)
+    print(kernel_size)
+    dilateErode.SetKernelSize(*kernel_size)
+    dilateErode.Update()
+    newIm = dilateErode.GetOutput()
+    
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+
+    x, y, z = newIm.GetDimensions()
+    pyIm_new = vtk_to_numpy(newIm.GetPointData().GetScalars()).reshape(z, y, x).transpose(2, 1, 0)
+    pyIm = vtk_to_numpy(im.GetPointData().GetScalars()).reshape(z, y, x).transpose(2, 1, 0)
+    ids = np.array(np.where(pyIm_new-pyIm!=0)).transpose()
+
+    total_num = len(ids)
+    
+    origin = np.tile(newIm.GetOrigin(), total_num).reshape(total_num,3)
+    spacing = np.tile(newIm.GetSpacing(), total_num).reshape(total_num,3)
+    points = ids * spacing + origin
+    return points
+
 def clipVTKPolyData(poly, ori, nrm):
     """
     Clip a VTK PolyData with a plane by specifying the plane normal and origin
@@ -336,8 +472,8 @@ def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id):
     X, Y, Z = labels.GetDimensions()
     total_num = X*Y*Z
     
-    x, y, z = np.meshgrid(range(X), range(Y), range(Z))
-    indices = np.moveaxis(np.vstack((z.flatten(),y.flatten(),x.flatten())),0,1)
+    x, y, z = np.meshgrid(range(Y), range(Z), range(X))
+    indices = np.moveaxis(np.vstack((z.flatten(),x.flatten(),y.flatten())),0,1)
     b = np.tile(spacing, total_num).reshape(total_num,3)
     physical = indices * b +np.tile(origin, total_num).reshape(total_num,3)
     vec1 = physical - np.tile(ori, total_num).reshape(total_num,3)
@@ -345,6 +481,45 @@ def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id):
     below = np.sum(vec1*vec2, axis=1)<0
     pyLabel[below] = bg_id
     labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel))
+
+    return labels
+
+def recolorVTKPixelsByPlaneByRegion(labels, ori, nrm, region_id, bg_id):
+    """
+    Within each region, for every pixel above a plane in physcal coordinates, change the pixel value to background pixel value
+
+    TO-DO: Mayber combine with the previous function
+    Args:
+        labels: VTK image
+        ori: plane origin
+        nrm: plane normal
+        region_id: class id of the labelled region
+        bg_id: class id of the new color
+    Returns:
+        labels: editted VTK image
+    """
+
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+    x, y, z = labels.GetDimensions()
+    pyLabel = vtk_to_numpy(labels.GetPointData().GetScalars()).reshape(z, y, x).transpose(2, 1, 0)
+    
+    indices = np.array(np.where(pyLabel==region_id)).transpose()
+    total_num = len(indices)
+
+    spacing = np.tile(labels.GetSpacing(), total_num).reshape(total_num,3)
+    origin = np.tile(labels.GetOrigin(), total_num).reshape(total_num,3)
+    physical = indices * spacing + origin
+   
+    vec1 = physical - np.tile(ori, total_num).reshape(total_num,3)
+    vec2 = np.tile(nrm, total_num).reshape(total_num,3)
+    above = np.sum(vec1*vec2, axis=1)>0
+
+    remove_indices = indices[above]
+    for i in remove_indices:
+        pyLabel[i[0],i[1],i[2]] = bg_id
+
+    print(pyLabel.shape)
+    labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel.transpose(2,1,0).flatten()))
 
     return labels
 
@@ -378,3 +553,19 @@ def vtkImageResample(image, dims, opt):
     reslicer.Update()
 
     return reslicer.GetOutput()
+
+
+def convertVTK2binary(labels):
+    """
+    This function converts a vtk label to binary label
+    
+    Args:
+        labels: VTK image
+    Returns:
+        labels: converted VTK image
+    """
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+    pyLabel = vtk_to_numpy(labels.GetPointData().GetScalars())
+    pyLabel[np.where(pyLabel!=0)] = 1
+    labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel))
+    return labels
