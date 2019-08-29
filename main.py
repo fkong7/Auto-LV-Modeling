@@ -96,18 +96,19 @@ def test4():
     """
     This is a test funciton to create manifold mesh surfaces for blood pool with vtk marching cube
     """
-    fns = glob.glob(os.path.join(os.path.dirname(__file__),"examples","*.nii.gz"))
+    fns = glob.glob(os.path.join(os.path.dirname(__file__),"4dct","*.nii.gz"))
     for fn in fns: 
         print(fn)
         #load label map 
         label = label_io.loadLabelMap(fn)
+        label = utils.resample(label)
         pylabel = sitk.GetArrayFromImage(label)
         #debug: write to disk
         try:
-            os.makedirs(os.path.join(os.path.dirname(__file__), "debug"))
+            os.makedirs(os.path.join(os.path.dirname(__file__), "4dct_model"))
         except Exception as e: print(e)
         #remove myocardium, RV, RA and PA
-        for tissue in [205, 600, 550, 850]:
+        for tissue in [1, 4, 5,7]:
             pylabel = utils.removeClass(pylabel, tissue, 0)
         pylabel = utils.convert2binary(label_io.exportPy2Sitk(pylabel, label))
         pylabel = utils.eraseBoundary(pylabel, 3, 0)
@@ -117,9 +118,10 @@ def test4():
         #run marchine cube algorithm
         import marching_cube as m_c
         model = m_c.vtk_marching_cube_multi(vtkIm, 0)
+        model = utils.smoothVTKPolydata(model, 1000)
     
         #write to vtk polydata
-        fn_poly = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(fn)+".vtk")
+        fn_poly = os.path.join(os.path.dirname(__file__), "4dct", os.path.basename(fn)+".vtk")
         label_io.writeVTKPolyData(model, fn_poly)
 
 def test5():
@@ -127,7 +129,7 @@ def test5():
     Test function to create RV and LV mesh surfaces for electromechanical simulations
     """
     #fns = glob.glob(os.path.join(os.path.dirname(__file__),"examples","*.nii.gz"))
-    fns = [os.path.join(os.path.dirname(__file__), "examples", "ct_train_1019_label.nii.gz")]
+    fns = [os.path.join(os.path.dirname(__file__), "examples", "ct_train_1015_label.nii.gz")]
     for fn in fns: 
         print(fn)
     
@@ -142,24 +144,83 @@ def test5():
             os.makedirs(os.path.join(os.path.dirname(__file__), "debug"))
         except Exception as e: print(e)
       
-        fn_out2 = os.path.join(os.path.dirname(__file__), "debug", "test_volume_multi2.vti")
         vtkIm = label_io.exportSitk2VTK(label_io.exportPy2Sitk(pylabel, label))
 
-        ori = (-30.472927203693008, 217.50936443034828, -99.92209600534021)
-        nrm = (-0.27544302463217574, 0.8246285707645975, 0.4940838597446954)
-        vtkIm = utils.recolorVTKPixelsByPlane(vtkIm, ori, nrm, 0)
-        label_io.writeVTKImage(vtkIm, fn_out2)
+        vtkIm = utils.vtkImageResample(vtkIm, (256,256,256), 'linear')
         
-        newIm = utils.labelDilateErode(vtkIm, 600, 0, 5)
+        newIm = utils.labelDilateErode(vtkIm, 600, 0, 8)
+        #ori = (-30.472927203693008, 217.50936443034828, -99.92209600534021)
+        #nrm = (-0.27544302463217574, 0.8246285707645975, 0.4940838597446954)
+        ori = (17.398820412524746, 328.4073098038115, -190.07031423467626)
+        nrm = (-0.4405409315781873, 0.7659402071382034, 0.468251307198719)
+        newIm = utils.recolorVTKPixelsByPlane(newIm, ori, nrm, 0)
+        fn_out2 = os.path.join(os.path.dirname(__file__), "debug", "test_volume_multi2.vti")
+        label_io.writeVTKImage(newIm, fn_out2)
         
         #run marchine cube algorithm
         import marching_cube as m_c
         model = m_c.vtk_marching_cube_multi(newIm, 0)
-        model = utils.clipVTKPolyData(model, ori, nrm)
+        #model = utils.clipVTKPolyData(model, ori, nrm)
 
         
         #write to vtk polydata
         fn_poly = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(fn)+".vtk")
         label_io.writeVTKPolyData(model, fn_poly)
+
+def test6():
+    """
+    This is a test function to generate geometry for fluid simulation (aorta, lv, part of atrium)
+    The left atrium is cut normal to the direction defined by the centroid of the mitral plane and the centroid of left atrium.
+    The amount of left atrium kept can be adjusted by a scalar factor. 
+    """
+    FACTOR = 0.5
+
+    fns = [os.path.join(os.path.dirname(__file__),"4dct","phase7.nii.gz")]
+    for fn in fns: 
+        print(fn)
+        #load label map 
+        label = label_io.loadLabelMap(fn)
+        label = utils.resample(label)
+        pylabel = sitk.GetArrayFromImage(label)
+        #debug: write to disk
+        try:
+            os.makedirs(os.path.join(os.path.dirname(__file__), "4dct_model"))
+        except Exception as e: print(e)
+        #remove myocardium, RV, RA and PA
+        for tissue in [1, 4, 5,7]:
+            pylabel = utils.removeClass(pylabel, tissue, 0)
+        vtkIm = label_io.exportSitk2VTK(label_io.exportPy2Sitk(pylabel, label))
+        
+        
+        #locate centroid of mitral plane
+        mv_pts = utils.locateRegionBoundary(vtkIm, 3, 2)
+        ctr_mv = np.mean(mv_pts, axis=0)
+        #centroid of left atrium
+        ctr_la = utils.getCentroid(vtkIm, 2)
+        #center and nrm of the cutting plane
+        length = np.linalg.norm(ctr_la-ctr_mv)
+        nrm_la_mv = (ctr_la - ctr_mv)/length
+        nrm_mv_plane = utils.fitPlaneNormal(mv_pts)
+        #check normal direction
+        if np.dot(nrm_la_mv, nrm_mv_plane)>0:
+            nrm = nrm_mv_plane
+        else:
+            nrm = -1 * nrm_mv_plane
+
+        ori = ctr_mv + length * FACTOR * nrm
+        vtkIm = utils.recolorVTKPixelsByPlaneByRegion(vtkIm, ori, nrm, 2, 0)
+        # convert to binary
+        vtkIm = utils.convertVTK2binary(vtkIm)
+        #run marchine cube algorithm
+        import marching_cube as m_c
+        model = m_c.vtk_marching_cube_multi(vtkIm, 0)
+        model = utils.smoothVTKPolydata(model, 1000)
+    
+        #write to vtk polydata
+        fn_poly = os.path.join(os.path.dirname(__file__), "4dct", os.path.basename(fn)+".vtk")
+        label_io.writeVTKPolyData(model, fn_poly)
+        
+
+
 if __name__=="__main__":
-    test5()
+    test6()

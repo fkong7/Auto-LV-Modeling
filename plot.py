@@ -32,3 +32,17 @@ def plot_surface(verts, faces, shape):
 #    plt.tight_layout()
     plt.show()
 
+def point_cloud3D(points):
+    """
+    This function plots a 3d scatter plot
+
+    Args:
+        points: coordinates of the points
+    """
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(points[:,0], points[:,1], points[:,2], c='r', marker='o')
+
+    plt.show()
+
