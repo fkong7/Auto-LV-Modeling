@@ -523,13 +523,13 @@ def recolorVTKPixelsByPlaneByRegion(labels, ori, nrm, region_id, bg_id):
 
     return labels
 
-def vtkImageResample(image, dims, opt):
+def vtkImageResample(image, spacing, opt):
     """
     Resamples the vtk image to the given dimenstion
 
     Args:
         image: vtk Image data
-        dims: image dimension
+        spacing: image new spacing
         opt: interpolation option: linear, NN, cubic
     Returns:
         image: resampled vtk image data
@@ -546,10 +546,10 @@ def vtkImageResample(image, dims, opt):
     else:
         raise ValueError("interpolation option not recognized")
 
-    size = np.array(image.GetSpacing())*np.array(image.GetDimensions())
-    new_spacing = size/np.array(dims)
+    #size = np.array(image.GetSpacing())*np.array(image.GetDimensions())
+    #new_spacing = size/np.array(dims)
 
-    reslicer.SetOutputSpacing(*new_spacing)
+    reslicer.SetOutputSpacing(*spacing)
     reslicer.Update()
 
     return reslicer.GetOutput()
