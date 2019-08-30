@@ -105,7 +105,7 @@ def test4():
         pylabel = sitk.GetArrayFromImage(label)
         #debug: write to disk
         try:
-            os.makedirs(os.path.join(os.path.dirname(__file__), "4dct_model"))
+            os.makedirs(os.path.join(os.path.dirname(__file__), "4dct_model_raw"))
         except Exception as e: print(e)
         #remove myocardium, RV, RA and PA
         for tissue in [1, 4, 5,7]:
@@ -121,7 +121,7 @@ def test4():
         model = utils.smoothVTKPolydata(model, 1000)
     
         #write to vtk polydata
-        fn_poly = os.path.join(os.path.dirname(__file__), "4dct", os.path.basename(fn)+".vtk")
+        fn_poly = os.path.join(os.path.dirname(__file__), "4dct_model_raw", os.path.basename(fn)+".vtk")
         label_io.writeVTKPolyData(model, fn_poly)
 
 def test5():
@@ -170,8 +170,9 @@ def test5():
 def test6():
     """
     This is a test function to generate geometry for fluid simulation (aorta, lv, part of atrium)
-    The left atrium is cut normal to the direction defined by the centroid of the mitral plane and the centroid of left atrium.
-    The amount of left atrium kept can be adjusted by a scalar factor. 
+    The left atrium is cut normal to the direction defined by the normal of the mitral plane
+    The amount of left atrium kept can be adjusted by a scalar factor, 
+    which scales the distance between mv plane centroid and la centroid
     """
     FACTOR = 0.5
 
@@ -180,6 +181,7 @@ def test6():
         print(fn)
         #load label map 
         label = label_io.loadLabelMap(fn)
+
         label = utils.resample(label)
         pylabel = sitk.GetArrayFromImage(label)
         #debug: write to disk
@@ -190,7 +192,6 @@ def test6():
         for tissue in [1, 4, 5,7]:
             pylabel = utils.removeClass(pylabel, tissue, 0)
         vtkIm = label_io.exportSitk2VTK(label_io.exportPy2Sitk(pylabel, label))
-        
         
         #locate centroid of mitral plane
         mv_pts = utils.locateRegionBoundary(vtkIm, 3, 2)
@@ -213,14 +214,50 @@ def test6():
         vtkIm = utils.convertVTK2binary(vtkIm)
         #run marchine cube algorithm
         import marching_cube as m_c
+        vtkIm = utils.vtkImageResample(vtkIm, (2.,2.,2.),'linear')
         model = m_c.vtk_marching_cube_multi(vtkIm, 0)
-        model = utils.smoothVTKPolydata(model, 1000)
+        #model = utils.smoothVTKPolydata(model, 10)
     
         #write to vtk polydata
         fn_poly = os.path.join(os.path.dirname(__file__), "4dct", os.path.basename(fn)+".vtk")
         label_io.writeVTKPolyData(model, fn_poly)
         
 
-
+def test7():
+    """
+    Registration of surface mesh point set using Elastix
+    Performs 3D image registration and move points based on the computed transform
+    """
+    START_PHASE = 7
+    TOTAL_PHASE = 10
+    fn = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/4dct_model/outputpoints.txt'
+    MODEL_NAME = 'phase%d.nii.gz.vtk'
+    IMAGE_NAME = 'phase%d.nii'
+    image_dir = '/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40282_20150504/wall_motion_image_volumes'
+    import registration
+    
+    ids = list(range(START_PHASE,TOTAL_PHASE+1)) + list(range(1,START_PHASE))
+    
+    # Only need to register N-1 mesh
+    for index in ids[:-1]:
+        print("REGISTERING FROM %d TO %d " % (index, index%TOTAL_PHASE+1))
+        # load surface mesh
+        fn = os.path.join(os.path.dirname(__file__),"4dct_model",MODEL_NAME % START_PHASE)
+        model = label_io.loadVTKMesh(fn)
+        fn_out = os.path.join(os.path.dirname(__file__), "4dct_model", "verts.pts")
+    
+        #ASSUMING increment is 1
+        moving_im_fn = os.path.join(image_dir, IMAGE_NAME % (index%TOTAL_PHASE+1)) 
+        fixed_im_fn =os.path.join(image_dir, IMAGE_NAME % START_PHASE)
+    
+        new_model = registration.point_image_transform(utils.resample(sitk.ReadImage(fixed_im_fn)),
+            utils.resample(sitk.ReadImage(moving_im_fn)),
+            model,
+            fn_out
+        )
+        #ASSUMING increment is 1
+        fn_poly = os.path.join(os.path.dirname(__file__), "4dct_model", MODEL_NAME % (index%TOTAL_PHASE+1))
+        label_io.writeVTKPolyData(new_model, fn_poly)
+   
 if __name__=="__main__":
-    test6()
+    test4()
