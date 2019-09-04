@@ -21,13 +21,14 @@ def marching_cube(label, tol):
     
     return (verts, faces, normals, values)
 
-def vtk_marching_cube(vtkLabel, tol, smooth=True):
+def vtk_marching_cube(vtkLabel, tol, smooth=None):
     """
     Use the VTK marching cube implementation to create the surface mesh
 
     Args:
         vtkLabel: vtk structured array containing the label map
         tol: threshold value for iso-surface
+        smooth: smoothing iterations
     Returns:
         mesh: vtk PolyData of the surface mesh
     """
@@ -38,19 +39,19 @@ def vtk_marching_cube(vtkLabel, tol, smooth=True):
 
     mesh = contour.GetOutput()
 
-    if smooth:
-        mesh = utils.smoothVTKPolydata(mesh)
+    if smooth is not None:
+        mesh = utils.smoothVTKPolydata(mesh, smooth)
 
     return mesh
 
-def vtk_marching_cube_multi(vtkLabel, bg_id, smooth=True):
+def vtk_marching_cube_multi(vtkLabel, bg_id, smooth=None):
     """
     Use the VTK marching cube to create isosrufaces for all classes excluding the background
 
     Args:
         labels: vtk image contraining the label map
         bg_id: id number of background class
-        smooth: whether to smooth
+        smooth: smoothing iteration
     Returns:
         mesh: vtk PolyData of the surface mesh
     """
@@ -69,8 +70,8 @@ def vtk_marching_cube_multi(vtkLabel, bg_id, smooth=True):
     contour.Update()
     mesh = contour.GetOutput()
 
-    if smooth:
-        mesh = utils.smoothVTKPolydata(mesh)
+    if smooth is not None:
+        mesh = utils.smoothVTKPolydata(mesh, smooth)
 
     return mesh
 
