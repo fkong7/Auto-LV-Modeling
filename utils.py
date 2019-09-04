@@ -210,7 +210,7 @@ def appendVTKPolydata(poly1, poly2):
     poly = cleaner.GetOutput()
     return poly
 
-def smoothVTKPolydata(poly, iteration=100):
+def smoothVTKPolydata(poly, iteration=10):
     """
     This function smooths a vtk polydata
 
@@ -314,7 +314,7 @@ def gaussianSmoothVTKImage(im, stdev):
 
 def labelDilateErode(im, label_id, bg_id,thickness):
     """
-    Dilates a label to create thickness 
+    Dilates a label
     
     Args:
         im: vtkImage of the label map
@@ -322,7 +322,7 @@ def labelDilateErode(im, label_id, bg_id,thickness):
         bg_id: class id of backgroud to dilate
         thickness: thickness of the erosion in physical unit
     Returns
-        newIm: vtkImage with thickened boundary of the tissue structure
+        newIm: vtkImage with dilated tissue structure
     """
     dilateErode = vtk.vtkImageDilateErode3D()
     dilateErode.SetInputData(im)
@@ -334,14 +334,32 @@ def labelDilateErode(im, label_id, bg_id,thickness):
     dilateErode.SetKernelSize(*kernel_size)
     dilateErode.Update()
     newIm = dilateErode.GetOutput()
+
+    return newIm
+    
+
+def createTissueThickness(im, label_id, bg_id,thickness,binary=True):
+    """
+    Dilates a label to create thickness 
+    
+    Args:
+        im: vtkImage of the label map
+        label_id: class id to erode
+        bg_id: class id of backgroud to dilate
+        thickness: thickness of the erosion in physical unit
+    Returns
+        newIm: vtkImage with thickened boundary of the tissue structure
+    """
+
+    newIm = labelDilateErode(im, label_id, bg_id,thickness)
     
     from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
-
     pyIm_new = vtk_to_numpy(newIm.GetPointData().GetScalars())
     pyIm = vtk_to_numpy(im.GetPointData().GetScalars())
     pyIm_new[np.where((pyIm_new-pyIm==0)&(pyIm==label_id))]=bg_id
-   # convert to binary
-    pyIm_new[np.where(pyIm_new!=0)] = 1 
+    if binary:
+        # convert to binary
+        pyIm_new[np.where(pyIm_new!=0)] = 1 
     newIm.GetPointData().SetScalars(numpy_to_vtk(pyIm_new))
     return newIm
 
@@ -478,8 +496,8 @@ def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id):
     physical = indices * b +np.tile(origin, total_num).reshape(total_num,3)
     vec1 = physical - np.tile(ori, total_num).reshape(total_num,3)
     vec2 = np.tile(nrm, total_num).reshape(total_num,3)
-    below = np.sum(vec1*vec2, axis=1)<0
-    pyLabel[below] = bg_id
+    above = np.sum(vec1*vec2, axis=1)>0
+    pyLabel[above] = bg_id
     labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel))
 
     return labels
@@ -569,3 +587,34 @@ def convertVTK2binary(labels):
     pyLabel[np.where(pyLabel!=0)] = 1
     labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel))
     return labels
+
+
+def cutPolyDataWithAnother(poly1, poly2, inside=False):
+    """
+    Cuts the first VTK PolyData with another
+    
+    Args:
+        poly1: 1st VTK PolyData
+        poly2: 2nd VTK PolyData
+        inside: whether inside or outside gets kept (bool)
+    Returns:
+        poly: cut VTK PolyData
+    """
+    implicit = vtk.vtkImplicitPolyDataDistance()
+    implicit.SetInput(poly2)
+
+    #clipper = vtk.vtkClipPolyData()
+    clipper = vtk.vtkExtractPolyDataGeometry()
+    #clipper.SetClipFunction(implicit)
+    clipper.SetImplicitFunction(implicit)
+    clipper.SetInputData(poly1)
+    #clipper.SetInsideOut(inside)
+    clipper.SetExtractInside(inside)
+    clipper.Update()
+
+    connectivity = vtk.vtkPolyDataConnectivityFilter()
+    connectivity.SetInputData(clipper.GetOutput())
+    connectivity.SetExtractionModeToLargestRegion()
+    connectivity.Update()
+    poly = connectivity.GetOutput()
+    return poly
