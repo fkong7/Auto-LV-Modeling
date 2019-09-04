@@ -295,8 +295,8 @@ def test6_2():
     The amount of left atrium kept can be adjusted by a scalar factor, 
     which scales the distance between mv plane centroid and la centroid
     """
-    FACTOR_LA = 0.5
-    FACTOR_AA = 1.5
+    FACTOR_LA = 0.7
+    FACTOR_AA = 1.2
 
     fns = [os.path.join(os.path.dirname(__file__),"4dct","phase7.nii.gz")]
     for fn in fns: 
@@ -348,12 +348,10 @@ def test6_2():
             ori = ctr_valve + length * FACTOR * nrm/np.linalg.norm(nrm)
         
             #dilate by a little bit
-            cut_Im = utils.labelDilateErode(utils.recolorVTKPixelsByPlane(cut_Im, ori, -1.*nrm, 0), region_id, 0, 3)
-            print(ctr_valve)
-            print(ctr)
-            print(nrm)
+            cut_Im = utils.labelDilateErode(utils.recolorVTKPixelsByPlane(cut_Im, ori, -1.*nrm, 0), region_id, 0, 4)
             # marching cube
             cutter = m_c.vtk_marching_cube(cut_Im, region_id,50)
+
             return cutter
         
         la_cutter = _buildCutter(label, 2, 3, FACTOR_LA, op='valve')
@@ -369,7 +367,13 @@ def test6_2():
         model = m_c.vtk_marching_cube_multi(vtkIm, 0, 10)
         model = utils.cutPolyDataWithAnother(model, la_cutter,False)
         model = utils.cutPolyDataWithAnother(model, aa_cutter,False)
-    
+        #improve valve opening geometry
+        id_lists,pt_lists = utils.getPointIdsOnBoundaries(model)
+        for ids, pts in zip(id_lists, pt_lists):
+            proj_pts = utils.projectPointsToFitPlane(pts)
+            model = utils.changePolyDataPointsCoordinates(model, ids, proj_pts)
+        model,_ = utils.removeFreeCells(model, [idx for sub_l in id_lists for idx in sub_l])
+        model = utils.cleanPolyData(model, 0.)
         #write to vtk polydata
         fn_poly = os.path.join(os.path.dirname(__file__), "4dct", os.path.basename(fn)+".vtk")
         label_io.writeVTKPolyData(model, fn_poly)

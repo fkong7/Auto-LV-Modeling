@@ -187,6 +187,26 @@ def recolorPixelsByPlane(labels, ori, nrm, bg_id):
 ################################
 ## VTK PolyData functions
 ###############################
+def cleanPolyData(poly, tol):
+    """
+    Cleans a VTK PolyData
+
+    Args:
+        poly: VTK PolyData
+        tol: tolerance to merge points
+    Returns:
+        poly: cleaned VTK PolyData
+    """
+
+    clean = vtk.vtkCleanPolyData()
+    clean.SetInputData(poly)
+    clean.SetTolerance(tol)
+    clean.PointMergingOn()
+    clean.Update()
+
+    poly = clean.GetOutput()
+    return poly
+
 def appendVTKPolydata(poly1, poly2):
     """ 
     This function appends two polydata
@@ -202,12 +222,8 @@ def appendVTKPolydata(poly1, poly2):
     appender.AddInputData(poly1)
     appender.AddInputData(poly2)
     appender.Update()
-
-    cleaner = vtk.vtkCleanPolyData()
-    cleaner.SetInputConnection(appender.GetOutputPort())
-    cleaner.Update()
-
-    poly = cleaner.GetOutput()
+    
+    poly = cleanPolyData(appender, 0.)
     return poly
 
 def smoothVTKPolydata(poly, iteration=10):
@@ -258,7 +274,7 @@ def booleanVTKPolyData(poly1, poly2, keyword):
     boolean.SetInputData(1, poly2)
     boolean.Update()
 
-    return boolean.GetOuptut()
+    return boolean.GetOutput()
 
 def fillHole(poly):
     """
@@ -618,3 +634,201 @@ def cutPolyDataWithAnother(poly1, poly2, inside=False):
     connectivity.Update()
     poly = connectivity.GetOutput()
     return poly
+
+def boundaryEdges(mesh):
+    """
+    Finds boundary edges of a VTK PolyData
+
+    Args:
+        mesh: VTK PolyData
+    
+    Returns:
+        edges: Extracted boundary edges as VTK PolyData
+    """
+
+    extractor = vtk.vtkFeatureEdges()
+    extractor.SetInputData(mesh)
+    extractor.BoundaryEdgesOn()
+    extractor.FeatureEdgesOff()
+    extractor.NonManifoldEdgesOff()
+    extractor.ManifoldEdgesOff()
+    extractor.SetFeatureAngle(150)
+    extractor.Update()
+    return extractor.GetOutput()
+
+def findPointCorrespondence(mesh,points):
+    """
+    Find the point IDs of the points on a VTK PolyData
+
+    Args:
+        mesh: the PolyData to find IDs on
+        points: vtk Points
+    
+    Returns
+        IdList: list containing the IDs
+    """
+    IdList = [None]*points.GetNumberOfPoints()
+    for i in range(len(IdList)):
+        newPt = points.GetPoint(i)
+        locator = vtk.vtkKdTreePointLocator()
+        locator.SetDataSet(mesh)
+        locator.BuildLocator()
+        IdList[i] = locator.FindClosestPoint(newPt)
+
+    return IdList
+
+
+def separateDisconnectedPolyData(poly):
+    """
+    Separate disconnected PolyData into separate PolyData objects
+
+    Args:
+        poly: VTK PolyData
+    Returns:
+        components: list of VTK PolyData objects
+    """
+    cc_filter = vtk.vtkPolyDataConnectivityFilter()
+    cc_filter.SetInputData(poly)
+    cc_filter.SetExtractionModeToSpecifiedRegions()
+    components = list()
+    idx = 0
+    while True:
+        cc_filter.AddSpecifiedRegion(idx)
+        cc_filter.Update()
+        
+        component = vtk.vtkPolyData()
+        component.DeepCopy(cc_filter.GetOutput())
+        component = cleanPolyData(component, 0.)
+        # Make sure we got something
+        if component.GetNumberOfCells() <= 0:
+            break
+        components.append(component)
+        cc_filter.DeleteSpecifiedRegion(idx)
+        idx += 1
+    return components
+
+def getPointIdsOnBoundaries(poly):
+    """
+    Get the point IDs on connected boundaries
+    
+    Args:
+        poly: VTK PolyData
+    Returns:
+        id_lists: a list of Python lists, each containing the point IDs of one connected boundary (e.g., mitral opening)
+        pt_lists: a list of vtk Points, each containing the points of one connected boundary
+    """
+    edges = boundaryEdges(poly)
+    components = separateDisconnectedPolyData(edges)
+    id_lists = [None]*len(components)
+    pt_lists = [None]*len(components)
+    for i in range(len(id_lists)):
+        id_lists[i] = findPointCorrespondence(poly,components[i].GetPoints())
+        pt_lists[i] = components[i].GetPoints()
+        print('Found %d points for boundary %d\n' % (len(id_lists[i]),i))
+    return id_lists, pt_lists
+
+def projectPointsToFitPlane(points):
+    """
+    Find the best fit plane of VTK points, project the points to the plane
+
+    NOTE (REMOVED, NOT GENERALIZED): The origin of the plane is the point centroid offset by the largest positive distance of the points to the fit plane
+
+    Args:
+        points: vtkPoints
+        #ref: a reference point above the plane (helps to determine the direction of normal)
+    Returns:
+        pyPts: projected points in Python
+    """
+
+    from vtk.util.numpy_support import vtk_to_numpy
+    # find normal and origin
+    pyPts = vtk_to_numpy(points.GetData())
+    nrm = fitPlaneNormal(pyPts)
+    nrm /= np.linalg.norm(nrm)
+    ori = np.mean(pyPts, axis=0)
+
+    #if np.dot(nrm, ref-ori)<0:
+    #    nrm = -1*nrm
+
+
+    num = pyPts.shape[0]
+    #distance = np.sum((pyPts-np.repeat(ori[np.newaxis,:],num,axis=0))
+    #            * np.repeat(nrm[np.newaxis,:],num,axis=0),axis=1)
+    #ori += np.max(distance)*nrm
+
+    plane = vtk.vtkPlane()
+    plane.SetOrigin(*ori)
+    plane.SetNormal(*nrm)
+
+    for i in range(pyPts.shape[0]):
+        plane.ProjectPoint(pyPts[i,:],pyPts[i,:])
+    
+    return pyPts
+
+def changePolyDataPointsCoordinates(poly, pt_ids, pt_coords):
+    """
+    For points with ids of a VTK PolyData, change their coordinates
+
+    Args:
+        poly: vtkPolyData
+        pt_ids: id lists of the points to change, python list
+        pt_coords: corresponding point coordinates of the points to change, numpy array
+    Returns:
+        poly: vtkPolyData after changing the points coordinates
+    """
+    if len(pt_ids)!=pt_coords.shape[0]:
+        raise ValueError('Number of points do not match')
+        return
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+
+    poly_points = vtk_to_numpy(poly.GetPoints().GetData())
+    poly_points[pt_ids,:] = pt_coords
+    
+    vtkPts = vtk.vtkPoints()
+    vtkPts.SetData(numpy_to_vtk(poly_points))
+    poly.SetPoints(vtkPts)
+
+    return poly
+
+def deleteCellsFromPolyData(poly,id_list):
+    """
+    Removes cells from VTK PolyData with their id numbers
+
+    Args:
+        poly: VTK PolyData
+        id_list: python list of cell id numbers
+    Returns:
+        poly: VTK PolyData with cells removed
+    """
+    poly.BuildLinks()
+    for idx in id_list:
+        poly.DeleteCell(idx)
+    poly.RemoveDeletedCells()
+    poly.DeleteLinks()
+    return poly
+
+def removeFreeCells(poly, pt_ids):
+    """
+    Removes cells that only have one edge attached to the mesh connected to a point cell
+    For each point (identified by id numebr) on mesh, find the number of connected triangles
+    If only one triangle is found, remove this trangle
+
+    Args:
+        poly: VTK PolyData
+        pt_ids: python list of point ids
+    Returns:
+        poly: VTK PolyData with removed cells
+        pt_ids: python list of point ids after removing points on the removed cells
+    """
+    cell_list = list()
+    for idx in pt_ids:
+        id_list = vtk.vtkIdList()
+        poly.GetPointCells(idx, id_list)
+        if id_list.GetNumberOfIds()==1:
+            cell_list.append(id_list.GetId(0))
+            pt_ids.remove(idx)
+    poly = deleteCellsFromPolyData(poly, cell_list)
+    return poly, pt_ids
+
+def capPolyDataOpenings(poly):
+
