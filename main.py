@@ -367,13 +367,17 @@ def test6_2():
         model = m_c.vtk_marching_cube_multi(vtkIm, 0, 10)
         model = utils.cutPolyDataWithAnother(model, la_cutter,False)
         model = utils.cutPolyDataWithAnother(model, aa_cutter,False)
+        model = utils.smoothVTKPolydata(model,10,boundary=True)
         #improve valve opening geometry
         id_lists,pt_lists = utils.getPointIdsOnBoundaries(model)
-        for ids, pts in zip(id_lists, pt_lists):
+        for idx, (ids, pts) in enumerate(zip(id_lists, pt_lists)):
             proj_pts = utils.projectPointsToFitPlane(pts)
             model = utils.changePolyDataPointsCoordinates(model, ids, proj_pts)
-        model,_ = utils.removeFreeCells(model, [idx for sub_l in id_lists for idx in sub_l])
-        model = utils.cleanPolyData(model, 0.)
+            # Remove the free cells and update the point lists
+            model, id_lists[idx] = utils.removeFreeCells(model, [idx for sub_l in id_lists for idx in sub_l])
+            pt_lists[idx] = utils.getPolyDataPointCoordinatesFromIDs(model, id_lists[idx])
+        model = utils.smoothVTKPolydata(utils.cleanPolyData(model, 0.))
+        model = utils.capPolyDataOpenings(model, 1.5)
         #write to vtk polydata
         fn_poly = os.path.join(os.path.dirname(__file__), "4dct", os.path.basename(fn)+".vtk")
         label_io.writeVTKPolyData(model, fn_poly)
@@ -382,6 +386,43 @@ def test7():
     """
     Registration of surface mesh point set using Elastix
     Performs 3D image registration and move points based on the computed transform
+    """
+    START_PHASE = 7
+    TOTAL_PHASE = 10
+    fn = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/4dct_model/outputpoints.txt'
+    MODEL_NAME = 'phase%d.nii.gz.vtk'
+    IMAGE_NAME = 'phase%d.nii'
+    image_dir = '/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40282_20150504/wall_motion_image_volumes'
+    import registration
+    
+    ids = list(range(START_PHASE,TOTAL_PHASE+1)) + list(range(1,START_PHASE))
+    
+    # Only need to register N-1 mesh
+    for index in ids[:-1]:
+        print("REGISTERING FROM %d TO %d " % (index, index%TOTAL_PHASE+1))
+        # load surface mesh
+        fn = os.path.join(os.path.dirname(__file__),"4dct_model",MODEL_NAME % START_PHASE)
+        model = label_io.loadVTKMesh(fn)
+        fn_out = os.path.join(os.path.dirname(__file__), "4dct_model", "verts.pts")
+    
+        #ASSUMING increment is 1
+        moving_im_fn = os.path.join(image_dir, IMAGE_NAME % (index%TOTAL_PHASE+1)) 
+        fixed_im_fn =os.path.join(image_dir, IMAGE_NAME % START_PHASE)
+    
+        new_model = registration.point_image_transform(utils.resample(sitk.ReadImage(fixed_im_fn)),
+            utils.resample(sitk.ReadImage(moving_im_fn)),
+            model,
+            fn_out
+        )
+        #ASSUMING increment is 1
+        fn_poly = os.path.join(os.path.dirname(__file__), "4dct_model", MODEL_NAME % (index%TOTAL_PHASE+1))
+        label_io.writeVTKPolyData(new_model, fn_poly)
+
+def test8():
+    """
+    Registration of surface mesh point set using Elastix
+    Performs 3D image registration and move points based on the computed transform
+    Cap the surface mesh with test6_2()
     """
     START_PHASE = 7
     TOTAL_PHASE = 10
