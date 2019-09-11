@@ -226,12 +226,13 @@ def appendVTKPolydata(poly1, poly2):
     poly = cleanPolyData(appender, 0.)
     return poly
 
-def smoothVTKPolydata(poly, iteration=10):
+def smoothVTKPolydata(poly, iteration=10, boundary=False):
     """
     This function smooths a vtk polydata
 
     Args:
         poly: vtk polydata to smooth
+        boundary: boundary smooth bool
 
     Returns:
         smoothed: smoothed vtk polydata
@@ -239,6 +240,7 @@ def smoothVTKPolydata(poly, iteration=10):
 
     smoother = vtk.vtkWindowedSincPolyDataFilter()
     smoother.SetInputData(poly)
+    smoother.SetBoundarySmoothing(boundary)
     smoother.SetNumberOfIterations(iteration)
     smoother.NonManifoldSmoothingOn()
     smoother.NormalizeCoordinatesOn()
@@ -765,6 +767,23 @@ def projectPointsToFitPlane(points):
     
     return pyPts
 
+def getPolyDataPointCoordinatesFromIDs(poly, pt_ids):
+    """
+    Return the coordinates of points of the PolyData with ids
+
+    Args:
+        poly: vtkPolyData
+        pt_ids: id lists of the points
+    Returns:
+        pts: numpy array containing the point coordinates
+    """
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+
+    poly_points = vtk_to_numpy(poly.GetPoints().GetData())
+
+    pts = poly_points[pt_ids,:]
+    return pts
+
 def changePolyDataPointsCoordinates(poly, pt_ids, pt_coords):
     """
     For points with ids of a VTK PolyData, change their coordinates
@@ -830,5 +849,188 @@ def removeFreeCells(poly, pt_ids):
     poly = deleteCellsFromPolyData(poly, cell_list)
     return poly, pt_ids
 
-def capPolyDataOpenings(poly):
+def cutSurfaceWithPolygon(poly, boundary):
+    """
+    UNDER-DEVELOPMENT... ONLY WORKS FOR 2D DELAUNAY RESULTS
+    Cuts a surface with a polygon and removes cells outside the polygon
+    Only tested for 2D surface and 2D polygon
 
+    Args:
+        poly: flat surface, VTK PolyData
+        boundary: boundary edge to trim the polydaya, VTK PolyData
+    Returns:
+        poly: trimed VTK PolyData
+    """
+    #from vtk.util.numpy_support import vtk_to_numpy
+    delete_list = list()
+    #bound_pts = vtk_to_numpy(boundary.GetPoints().GetData())
+    bound_ids = findPointCorrespondence(poly,boundary.GetPoints())
+    #poly_pts = vtk_to_numpy(poly.GetPoints().GetData())
+    #ctr = np.mean(bound_pts, axis=0)
+    for idx in range(poly.GetNumberOfCells()):
+        pt_ids = vtk.vtkIdList()
+        poly.GetCellPoints(idx, pt_ids)
+
+        num = 0
+        #py_id = list()
+        for i in range(pt_ids.GetNumberOfIds()):
+            if pt_ids.GetId(i) in bound_ids:
+                num+=1
+                #py_id.append(pt_ids.GetId(i))
+        if num == 3:
+            delete_list.append(idx)
+    poly = deleteCellsFromPolyData(poly, delete_list)
+
+    return poly
+
+def deleteBadQualityCells(poly, tol):
+    """
+    Deletes cells with bad mesh quality (minimum angle)
+
+    Args:
+        poly: VTK PolyData to process
+        tol: minimum angles to threshold to delete
+    Returns:
+        poly: VTK PolyData with deleted cells
+    """
+    qfilter = vtk.vtkMeshQuality()
+    qfilter.SetInputData(poly)
+    qfilter.SetTriangleQualityMeasureToMinAngle()
+    qfilter.Update()
+    angle = qfilter.GetOutput().GetCellData().GetArray("Quality")
+    from vtk.util.numpy_support import vtk_to_numpy
+    pyangle = vtk_to_numpy(angle)
+    ids = [i for i in range(len(pyangle)) if pyangle[i]<tol]
+    print("Bad element, deleting...", ids)
+    poly = deleteCellsFromPolyData(poly,ids)
+    return poly
+
+def appendPolyData(poly1, poly2):
+    """
+    Combine two VTK PolyData objects together
+    Args:
+        poly1: first PolyData
+        poly2: second PolyData
+    Return:
+        poly: combined PolyData
+    """
+    appendFilter = vtk.vtkAppendPolyData()
+    appendFilter.AddInputData(poly1)
+    appendFilter.AddInputData(poly2)
+    appendFilter.Update()
+    cleanFilter = vtk.vtkCleanPolyData()
+    cleanFilter.SetInputData(appendFilter.GetOutput())
+    cleanFilter.SetTolerance(0.0)
+    cleanFilter.PointMergingOn()
+    cleanFilter.Update()
+    poly = cleanFilter.GetOutput()
+    return poly
+
+def tagPolyData(poly, tag):
+    """
+    Tag polydata with a tag id
+
+    Args:
+        poly: VTK PolyData
+        tag: tag id (int)
+    Returns:
+        poly: tagged PolyData
+    """
+    tags = vtk.vtkIntArray()
+    tags.SetNumberOfComponents(1)
+    tags.SetName('ModelFaceID')
+    tags.SetNumberOfValues(poly.GetNumberOfPolys())
+    print(int(tag))
+    for i in range(poly.GetNumberOfPolys()):
+        tags.SetValue(i, int(tag))
+    poly.GetCellData().SetScalars(tags)
+    return poly
+
+def capPolyDataOpenings(poly,  size):
+    """
+    Cap the PolyData openings  with acceptable mesh quality
+
+    Args:
+        poly: VTK PolyData to cap
+        size: edge size of the cap mesh
+    Returns:
+        poly: capped VTK PolyData
+    """
+    # TRY NOT USE TO USE THE POINT IDS, START FROM FEATURE EDGE DIRECTLY SINCE IT REQUIRES THE BOUNDARY POLYDATA
+    #import matplotlib.pyplot as plt
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+    import label_io
+    import os
+    def _plotPoints(points):
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(points[:,0], points[:,1], points[:,2])
+        plt.show()
+    def _addNodesToCap(vtkPts, size):
+        """
+        Add uniformed points to cap
+        """
+        points = vtk_to_numpy(vtkPts.GetData())
+        num = points.shape[0]
+        #_plotPoints(points)
+        ctr = np.mean(points, axis=0)
+        length = np.mean(np.linalg.norm(points-ctr, axis = 1))
+        r = np.linspace(0.5*size/length, (length-size*0.8)/length,np.floor(length/size))
+        addedPts = vtk.vtkPoints()
+        for rf in r:
+            newPts = vtk.vtkPoints()
+            newPts.SetData(numpy_to_vtk((points-ctr)*rf+ctr))
+            addedPts.InsertPoints(addedPts.GetNumberOfPoints()
+                                    ,newPts.GetNumberOfPoints()
+                                    ,0,newPts)
+        ptsPly = vtk.vtkPolyData()
+        ptsPly.SetPoints(addedPts)
+        vertexFilter = vtk.vtkVertexGlyphFilter()
+        vertexFilter.SetInputData(ptsPly)
+        vertexFilter.Update()
+        ptsPly = vertexFilter.GetOutput()
+        cleanedPts = cleanPolyData(ptsPly, size*0.01)
+
+        vtkPts.InsertPoints(vtkPts.GetNumberOfPoints()
+                            ,cleanedPts.GetNumberOfPoints()
+                            ,0
+                            ,cleanedPts.GetPoints())
+            
+        #_plotPoints(vtk_to_numpy(vtkPts.GetData()))
+        return vtkPts
+
+    def _delaunay2D(vtkPts):
+        """
+        Delaunay 2D on input points
+        """
+        vtkPtsPly = vtk.vtkPolyData()
+        vtkPtsPly.SetPoints(vtkPts)
+
+        delaunay = vtk.vtkDelaunay2D()
+        delaunay.SetInputData(vtkPtsPly)
+        delaunay.SetBoundingTriangulation(False)
+        delaunay.SetTolerance(0.002)
+        delaunay.Update()
+        return delaunay.GetOutput()
+    #tag polydata 
+    tag_id = 0
+    poly = tagPolyData(poly, tag_id)
+
+    edges = boundaryEdges(poly)
+    components = separateDisconnectedPolyData(edges)
+    id_lists = [None]*len(components)
+    pt_lists = [None]*len(components)
+    for i in range(len(id_lists)):
+        id_lists[i] = findPointCorrespondence(poly,components[i].GetPoints())
+        pt_lists[i] = vtk.vtkPoints()
+        pt_lists[i].DeepCopy(components[i].GetPoints())
+        print('Found %d points for boundary %d\n' % (len(id_lists[i]),i))
+    for boundary, ids, pts in zip(components, id_lists, pt_lists):
+        cap_pts = _addNodesToCap(pts, size)
+        cap = _delaunay2D(cap_pts)
+        cap = cutSurfaceWithPolygon(cap, boundary)
+        #tag the caps
+        tag_id +=1
+        cap = tagPolyData(cap, tag_id)
+        poly = appendPolyData(poly, cap)
+    return poly 
