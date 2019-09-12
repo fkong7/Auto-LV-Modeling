@@ -468,15 +468,3 @@ def test8():
    
 if __name__=="__main__":
     test8()
-    #seg_fn = os.path.join(os.path.dirname(__file__), "4dct", "phase%d.nii.gz" % 7)
-    #buildSurfaceModelFromImage([seg_fn])
-    fn = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/debug/6_bound.vtk'
-    bound = label_io.loadVTKMesh(fn)
-    print(bound)
-    for i in range(bound.GetNumberOfPoints()):
-        ids = vtk.vtkIdList()
-        bound.GetPointCells(i, ids)
-        for j in range(ids.GetNumberOfIds()):
-            pt_ids = vtk.vtkIdList()
-            bound.GetCellPoints(ids.GetId(j), pt_ids)
-            print(pt_ids)
