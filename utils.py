@@ -226,7 +226,7 @@ def appendVTKPolydata(poly1, poly2):
     poly = cleanPolyData(appender, 0.)
     return poly
 
-def smoothVTKPolydata(poly, iteration=10, boundary=False):
+def smoothVTKPolydata(poly, iteration=10, boundary=False, feature=False):
     """
     This function smooths a vtk polydata
 
@@ -241,6 +241,7 @@ def smoothVTKPolydata(poly, iteration=10, boundary=False):
     smoother = vtk.vtkWindowedSincPolyDataFilter()
     smoother.SetInputData(poly)
     smoother.SetBoundarySmoothing(boundary)
+    smoother.SetFeatureEdgeSmoothing(feature)
     smoother.SetNumberOfIterations(iteration)
     smoother.NonManifoldSmoothingOn()
     smoother.NormalizeCoordinatesOn()
@@ -722,12 +723,34 @@ def getPointIdsOnBoundaries(poly):
     edges = boundaryEdges(poly)
     components = separateDisconnectedPolyData(edges)
     id_lists = [None]*len(components)
-    pt_lists = [None]*len(components)
+    #pt_lists = [None]*len(components)
     for i in range(len(id_lists)):
         id_lists[i] = findPointCorrespondence(poly,components[i].GetPoints())
-        pt_lists[i] = components[i].GetPoints()
+        #pt_lists[i] = components[i].GetPoints()
         print('Found %d points for boundary %d\n' % (len(id_lists[i]),i))
-    return id_lists, pt_lists
+    return id_lists,components
+
+def changePolyDataPointsCoordinates(poly, pt_ids, pt_coords):
+    """
+    For points with ids of a VTK PolyData, change their coordinates
+
+    Args:
+        poly: vtkPolyData
+        pt_ids: id lists of the points to change, python list
+        pt_coords: corresponding point coordinates of the points to change, numpy array
+    Returns:
+        poly: vtkPolyData after changing the points coordinates
+    """
+    from vtk.util.numpy_support import vtk_to_numpy
+    if type(pt_coords)==vtk.vtkPoints():
+        pt_coords = vtk_to_numpy(pt_coords.GetData())
+    if len(pt_ids)!=pt_coords.shape[0]:
+        raise ValueError('Number of points do not match')
+        return
+    for i, idx in enumerate(pt_ids):
+        poly.GetPoints().SetPoint(idx, pt_coords[i,:])
+
+    return poly
 
 def projectPointsToFitPlane(points):
     """
@@ -744,10 +767,15 @@ def projectPointsToFitPlane(points):
 
     from vtk.util.numpy_support import vtk_to_numpy
     # find normal and origin
-    pyPts = vtk_to_numpy(points.GetData())
+    if type(points)==np.ndarray:
+        pyPts = points
+    else:
+        pyPts = vtk_to_numpy(points.GetData())
     nrm = fitPlaneNormal(pyPts)
     nrm /= np.linalg.norm(nrm)
     ori = np.mean(pyPts, axis=0)
+    print(ori)
+    print(nrm)
 
     #if np.dot(nrm, ref-ori)<0:
     #    nrm = -1*nrm
@@ -762,10 +790,103 @@ def projectPointsToFitPlane(points):
     plane.SetOrigin(*ori)
     plane.SetNormal(*nrm)
 
+    proj_Pts = np.zeros(pyPts.shape)
+
     for i in range(pyPts.shape[0]):
-        plane.ProjectPoint(pyPts[i,:],pyPts[i,:])
+        plane.ProjectPoint(pyPts[i,:],proj_Pts[i,:])
     
-    return pyPts
+    return proj_Pts
+
+def smoothVTKPolyline(polyline, smooth_iter):
+    """
+    smooth the points on rings, works for mitral or aorta opening like geometry
+
+    Args:
+        polyline: vtk polydata of a polyline
+        smooth_iter: smoothing iteration
+    Returns:
+        polyline: smoothed vtk polyline
+    """
+    for ITER in range(smooth_iter):
+        for i in range(polyline.GetNumberOfPoints()):
+            neighbors = vtk.vtkIdList()
+            cell_ids = vtk.vtkIdList()
+            polyline.GetPointCells(i, cell_ids)
+            for j in range(cell_ids.GetNumberOfIds()):
+                pt_ids = vtk.vtkIdList()
+                polyline.GetCellPoints(cell_ids.GetId(j), pt_ids)
+                for k in range(pt_ids.GetNumberOfIds()):
+                    idx = pt_ids.GetId(k)
+                    if idx != i:
+                        neighbors.InsertNextId(idx)
+            assert neighbors.GetNumberOfIds() == 2 , ("Found incorrect num of neighbors:", neighbors.GetNumberOfIds())
+            pt1 = polyline.GetPoints().GetPoint(neighbors.GetId(0))
+            pt2 = polyline.GetPoints().GetPoint(neighbors.GetId(1))
+            # average of the two neighbors
+            pt = 0.5*np.array(pt1)+0.5*np.array(pt2)
+            polyline.GetPoints().SetPoint(i, pt)
+    return polyline
+
+def projectOpeningToFitPlane(poly, ids, points, ITER):
+    """
+    This function projects the opening geometry to a best fit plane defined by the points on opennings. Differenet from the previous function, not only the points on openings were moved but the neighbouring nodes to maintain mesh connectivity.
+    Args:
+        poly: VTK PolyData
+        ids: boundary ids
+        points: bounary pts, vtk points or numpy
+        ITER: number of times to find connected points and move them
+    Returns:
+        poly: VTK PolyData of the modified geometry
+    """
+    
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+    #if numpy convert to vtk
+    if type(points)==np.ndarray:
+        pts = vtk.vtkPoints()
+        pts.SetData(numpy_to_vtk(points))
+    else:
+        pts = points
+    class _pointLocator:
+        # Class to find closest points
+        def __init__(self,pts):
+            ds = vtk.vtkPolyData()
+            ds.SetPoints(pts)
+            self.locator = vtk.vtkKdTreePointLocator()
+            self.locator.SetDataSet(ds)
+            self.locator.BuildLocator()
+        def findNClosestPoints(self,pt, N):
+            ids = vtk.vtkIdList()
+            self.locator.FindClosestNPoints(N, pt, ids)
+            return ids
+        
+    def _moveConnectedPoints(ids, pts, proj_pts, factor):
+        locator = _pointLocator(pts)
+        displacement = proj_pts - vtk_to_numpy(pts.GetData())
+        for i in range(pts.GetNumberOfPoints()):
+            cell_ids = vtk.vtkIdList()
+            poly.GetPointCells(ids[i], cell_ids)
+            connected_pt_ids = vtk.vtkIdList()
+            for j in range(cell_ids.GetNumberOfIds()):
+                poly.GetCellPoints(cell_ids.GetId(j), connected_pt_ids)
+                for k in range(connected_pt_ids.GetNumberOfIds()):
+                    pt_id = connected_pt_ids.GetId(k)
+                    if pt_id not in ids:
+                        ids.append(pt_id)
+                        # find direction, mean of displacement bewteen this pt and two closest points
+                        pt = poly.GetPoints().GetPoint(pt_id)
+                        pts.InsertNextPoint(pt)
+                        close_pts = locator.findNClosestPoints(pt, 2)
+                        pt += (displacement[close_pts.GetId(0),:]+displacement[close_pts.GetId(1)]) * factor/2
+                        proj_pts = np.vstack((proj_pts, pt))
+        return ids, pts, proj_pts
+    
+
+    proj_pts = projectPointsToFitPlane(pts)
+    for factor in np.linspace(0.8, 0., ITER, endpoint=False):
+        print("FACTOR: ", factor)
+        ids, pts,  proj_pts = _moveConnectedPoints(ids, pts, proj_pts, factor)
+    poly = changePolyDataPointsCoordinates(poly, ids, proj_pts)
+    return poly 
 
 def getPolyDataPointCoordinatesFromIDs(poly, pt_ids):
     """
@@ -784,30 +905,6 @@ def getPolyDataPointCoordinatesFromIDs(poly, pt_ids):
     pts = poly_points[pt_ids,:]
     return pts
 
-def changePolyDataPointsCoordinates(poly, pt_ids, pt_coords):
-    """
-    For points with ids of a VTK PolyData, change their coordinates
-
-    Args:
-        poly: vtkPolyData
-        pt_ids: id lists of the points to change, python list
-        pt_coords: corresponding point coordinates of the points to change, numpy array
-    Returns:
-        poly: vtkPolyData after changing the points coordinates
-    """
-    if len(pt_ids)!=pt_coords.shape[0]:
-        raise ValueError('Number of points do not match')
-        return
-    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
-
-    poly_points = vtk_to_numpy(poly.GetPoints().GetData())
-    poly_points[pt_ids,:] = pt_coords
-    
-    vtkPts = vtk.vtkPoints()
-    vtkPts.SetData(numpy_to_vtk(poly_points))
-    poly.SetPoints(vtkPts)
-
-    return poly
 
 def deleteCellsFromPolyData(poly,id_list):
     """
@@ -946,6 +1043,7 @@ def tagPolyData(poly, tag):
     poly.GetCellData().SetScalars(tags)
     return poly
 
+
 def capPolyDataOpenings(poly,  size):
     """
     Cap the PolyData openings  with acceptable mesh quality
@@ -1025,12 +1123,19 @@ def capPolyDataOpenings(poly,  size):
         pt_lists[i] = vtk.vtkPoints()
         pt_lists[i].DeepCopy(components[i].GetPoints())
         print('Found %d points for boundary %d\n' % (len(id_lists[i]),i))
+   
+    cap_pts_list = list()
     for boundary, ids, pts in zip(components, id_lists, pt_lists):
         cap_pts = _addNodesToCap(pts, size)
+        cap_pts_list.append(cap_pts)
         cap = _delaunay2D(cap_pts)
         cap = cutSurfaceWithPolygon(cap, boundary)
         #tag the caps
         tag_id +=1
         cap = tagPolyData(cap, tag_id)
         poly = appendPolyData(poly, cap)
-    return poly 
+    
+    cap_pts_ids = list()
+    for cap_pts in cap_pts_list:
+        cap_pts_ids.append(findPointCorrespondence(poly,cap_pts))
+    return poly, cap_pts_ids

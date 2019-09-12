@@ -288,17 +288,23 @@ def test6_2():
         fn_poly = os.path.join(os.path.dirname(__file__), "4dct", os.path.basename(fn)+".vtk")
         label_io.writeVTKPolyData(model, fn_poly)
 
-def test6_2():
+def buildSurfaceModelFromImage(fns):
     """
     Modified test6 to cut on the PolyData directly to create better defined inlet/outlet geometry
     The left atrium is cut normal to the direction defined by the normal of the mitral plane
     The amount of left atrium kept can be adjusted by a scalar factor, 
     which scales the distance between mv plane centroid and la centroid
+
+    Args:
+        fns: list containing the paths to images
+    Returns:
+        model: constructed surface mesh (VTK PolyData)
+        cap_pts_ids: node ids of the points on the caps
     """
     FACTOR_LA = 0.7
     FACTOR_AA = 1.2
+    MESH_RESOLUTION = (2.,2.,2.)
 
-    fns = [os.path.join(os.path.dirname(__file__),"4dct","phase7.nii.gz")]
     for fn in fns: 
         print(fn)
         #load label map 
@@ -306,7 +312,6 @@ def test6_2():
 
         label = utils.resample(label)
         pylabel = sitk.GetArrayFromImage(label)
-        #debug: write to disk
         try:
             os.makedirs(os.path.join(os.path.dirname(__file__), "4dct_model"))
         except Exception as e: print(e)
@@ -357,30 +362,27 @@ def test6_2():
         la_cutter = _buildCutter(label, 2, 3, FACTOR_LA, op='valve')
         aa_cutter = _buildCutter(label, 6, 3, FACTOR_AA, op='tissue')
         
-        fn_poly = os.path.join(os.path.dirname(__file__), "4dct", "aa.vtk")
-        label_io.writeVTKPolyData(aa_cutter, fn_poly)
-
         # convert to binary
         vtkIm = utils.convertVTK2binary(vtkIm)
         #run marchine cube algorithm
-        vtkIm = utils.vtkImageResample(vtkIm, (1.5,1.5,1.5),'linear')
-        model = m_c.vtk_marching_cube_multi(vtkIm, 0, 10)
+        vtkIm = utils.vtkImageResample(vtkIm, MESH_RESOLUTION,'linear')
+        model = m_c.vtk_marching_cube_multi(vtkIm, 0, 50)
         model = utils.cutPolyDataWithAnother(model, la_cutter,False)
         model = utils.cutPolyDataWithAnother(model, aa_cutter,False)
-        model = utils.smoothVTKPolydata(model,10,boundary=True)
         #improve valve opening geometry
-        id_lists,pt_lists = utils.getPointIdsOnBoundaries(model)
-        for idx, (ids, pts) in enumerate(zip(id_lists, pt_lists)):
-            proj_pts = utils.projectPointsToFitPlane(pts)
-            model = utils.changePolyDataPointsCoordinates(model, ids, proj_pts)
+        id_lists,boundaries = utils.getPointIdsOnBoundaries(model)
+        for idx, (ids, boundary) in enumerate(zip(id_lists, boundaries)):
+            boundary = utils.smoothVTKPolyline(boundary, 2)
+            model = utils.projectOpeningToFitPlane(model, ids, boundary.GetPoints(), 3)
             # Remove the free cells and update the point lists
             model, id_lists[idx] = utils.removeFreeCells(model, [idx for sub_l in id_lists for idx in sub_l])
-            pt_lists[idx] = utils.getPolyDataPointCoordinatesFromIDs(model, id_lists[idx])
         model = utils.smoothVTKPolydata(utils.cleanPolyData(model, 0.))
-        model = utils.capPolyDataOpenings(model, 1.5)
+        model,cap_pts_ids = utils.capPolyDataOpenings(model, 1.5)
         #write to vtk polydata
-        fn_poly = os.path.join(os.path.dirname(__file__), "4dct", os.path.basename(fn)+".vtk")
+        fn_poly = os.path.join(os.path.dirname(__file__), "4dct_model", os.path.basename(fn)+".vtk")
         label_io.writeVTKPolyData(model, fn_poly)
+
+        return model, cap_pts_ids
 
 def test7():
     """
@@ -432,28 +434,49 @@ def test8():
     image_dir = '/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40282_20150504/wall_motion_image_volumes'
     import registration
     
-    ids = list(range(START_PHASE,TOTAL_PHASE+1)) + list(range(1,START_PHASE))
+    # build surface mesh from segmentation at START_PHASE
+    seg_fn = os.path.join(os.path.dirname(__file__), "4dct", IMAGE_NAME % START_PHASE)
+    model, cap_pts_ids = buildSurfaceModelFromImage([seg_fn])
     
+    ids = list(range(START_PHASE,TOTAL_PHASE+1)) + list(range(1,START_PHASE))
+    ids = [9, 10]
     # Only need to register N-1 mesh
     for index in ids[:-1]:
-        print("REGISTERING FROM %d TO %d " % (index, index%TOTAL_PHASE+1))
-        # load surface mesh
-        fn = os.path.join(os.path.dirname(__file__),"4dct_model",MODEL_NAME % START_PHASE)
-        model = label_io.loadVTKMesh(fn)
-        fn_out = os.path.join(os.path.dirname(__file__), "4dct_model", "verts.pts")
+        print("REGISTERING FROM %d TO %d " % (START_PHASE, index%TOTAL_PHASE+1))
     
         #ASSUMING increment is 1
         moving_im_fn = os.path.join(image_dir, IMAGE_NAME % (index%TOTAL_PHASE+1)) 
         fixed_im_fn =os.path.join(image_dir, IMAGE_NAME % START_PHASE)
-    
+        
+        fn_out = os.path.join(os.path.dirname(__file__), "4dct_model", "verts.pts")
+
         new_model = registration.point_image_transform(utils.resample(sitk.ReadImage(fixed_im_fn)),
             utils.resample(sitk.ReadImage(moving_im_fn)),
             model,
             fn_out
         )
+        # Project the cap points so that they are co-planar
+        for pt_ids in cap_pts_ids:
+            pts = utils.getPolyDataPointCoordinatesFromIDs(new_model, pt_ids)
+            new_model = utils.projectOpeningToFitPlane(new_model, pt_ids, pts, 3)
+        #    proj_pts = utils.projectPointsToFitPlane(pts)
+        #    new_model = utils.changePolyDataPointsCoordinates(new_model, pt_ids, proj_pts)
+
         #ASSUMING increment is 1
         fn_poly = os.path.join(os.path.dirname(__file__), "4dct_model", MODEL_NAME % (index%TOTAL_PHASE+1))
         label_io.writeVTKPolyData(new_model, fn_poly)
    
 if __name__=="__main__":
-    test6_2()
+    test8()
+    #seg_fn = os.path.join(os.path.dirname(__file__), "4dct", "phase%d.nii.gz" % 7)
+    #buildSurfaceModelFromImage([seg_fn])
+    fn = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/debug/6_bound.vtk'
+    bound = label_io.loadVTKMesh(fn)
+    print(bound)
+    for i in range(bound.GetNumberOfPoints()):
+        ids = vtk.vtkIdList()
+        bound.GetPointCells(i, ids)
+        for j in range(ids.GetNumberOfIds()):
+            pt_ids = vtk.vtkIdList()
+            bound.GetCellPoints(ids.GetId(j), pt_ids)
+            print(pt_ids)
