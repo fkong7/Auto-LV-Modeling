@@ -827,12 +827,12 @@ def smoothVTKPolyline(polyline, smooth_iter):
             polyline.GetPoints().SetPoint(i, pt)
     return polyline
 
-def projectOpeningToFitPlane(poly, ids, points, ITER):
+def projectOpeningToFitPlane(poly, boundary_ids, points, ITER):
     """
     This function projects the opening geometry to a best fit plane defined by the points on opennings. Differenet from the previous function, not only the points on openings were moved but the neighbouring nodes to maintain mesh connectivity.
     Args:
         poly: VTK PolyData
-        ids: boundary ids
+        boundary_ids: boundary ids
         points: bounary pts, vtk points or numpy
         ITER: number of times to find connected points and move them
     Returns:
@@ -846,6 +846,7 @@ def projectOpeningToFitPlane(poly, ids, points, ITER):
         pts.SetData(numpy_to_vtk(points))
     else:
         pts = points
+
     class _pointLocator:
         # Class to find closest points
         def __init__(self,pts):
@@ -880,7 +881,8 @@ def projectOpeningToFitPlane(poly, ids, points, ITER):
                         proj_pts = np.vstack((proj_pts, pt))
         return ids, pts, proj_pts
     
-
+    #make a copy of the pt ids
+    ids = boundary_ids.copy()
     proj_pts = projectPointsToFitPlane(pts)
     for factor in np.linspace(0.8, 0., ITER, endpoint=False):
         print("FACTOR: ", factor)
@@ -1043,6 +1045,23 @@ def tagPolyData(poly, tag):
     poly.GetCellData().SetScalars(tags)
     return poly
 
+def fixPolydataNormals(poly):
+    """
+    Adjust the normals of PolyData
+
+    Args:
+        poly: vtk PolyData
+    Returns:
+        poly: adjusted vtk PolyData
+    """
+    normAdj = vtk.vtkPolyDataNormals()
+    normAdj.SetInputData(poly)
+    normAdj.SplittingOff()
+    normAdj.ConsistencyOn()
+    normAdj.FlipNormalsOn()
+    normAdj.Update()
+    poly = normAdj.GetOutput()
+    return poly
 
 def capPolyDataOpenings(poly,  size):
     """
@@ -1111,7 +1130,7 @@ def capPolyDataOpenings(poly,  size):
         delaunay.Update()
         return delaunay.GetOutput()
     #tag polydata 
-    tag_id = 0
+    tag_id = 1
     poly = tagPolyData(poly, tag_id)
 
     edges = boundaryEdges(poly)
@@ -1138,4 +1157,20 @@ def capPolyDataOpenings(poly,  size):
     cap_pts_ids = list()
     for cap_pts in cap_pts_list:
         cap_pts_ids.append(findPointCorrespondence(poly,cap_pts))
+    poly = fixPolydataNormals(poly)
     return poly, cap_pts_ids
+
+def getPolydataVolume(poly):
+    """
+    Compute volume of a enclosed vtk polydata
+
+    Args:
+        poly: vtk PolyData
+    Returns:
+        volume: PolyData volume
+    """
+
+    mass = vtk.vtkMassProperties()
+    mass.SetInputData()
+    volume = mass.GetVolume()
+    return volume
