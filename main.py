@@ -1,4 +1,8 @@
 import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(
+__file__), "src"))
+
 import glob
 import numpy as np
 import label_io
@@ -434,12 +438,14 @@ def test8():
     image_dir = '/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40282_20150504/wall_motion_image_volumes'
     import registration
     
+    # compute volume of all phases to select systole and diastole:
+    volume = list()
     # build surface mesh from segmentation at START_PHASE
     seg_fn = os.path.join(os.path.dirname(__file__), "4dct", IMAGE_NAME % START_PHASE)
     model, cap_pts_ids = buildSurfaceModelFromImage([seg_fn])
+    volume.append(utils.GetPolydataVolume(model))
     
     ids = list(range(START_PHASE,TOTAL_PHASE+1)) + list(range(1,START_PHASE))
-    ids = [9, 10]
     # Only need to register N-1 mesh
     for index in ids[:-1]:
         print("REGISTERING FROM %d TO %d " % (START_PHASE, index%TOTAL_PHASE+1))
@@ -459,12 +465,17 @@ def test8():
         for pt_ids in cap_pts_ids:
             pts = utils.getPolyDataPointCoordinatesFromIDs(new_model, pt_ids)
             new_model = utils.projectOpeningToFitPlane(new_model, pt_ids, pts, 3)
-        #    proj_pts = utils.projectPointsToFitPlane(pts)
-        #    new_model = utils.changePolyDataPointsCoordinates(new_model, pt_ids, proj_pts)
-
+            volume.append(utils.GetPolydataVolume(model))
         #ASSUMING increment is 1
         fn_poly = os.path.join(os.path.dirname(__file__), "4dct_model", MODEL_NAME % (index%TOTAL_PHASE+1))
         label_io.writeVTKPolyData(new_model, fn_poly)
-   
+
+        SYSTOLE_PHASE = np.argmin(volume)
+        DISTOLE_PHASE = np.argmax(volume)
+
+
 if __name__=="__main__":
-    test8()
+    #test9()
+    import subprocess
+    path_to_sv = '/Users/fanweikong/SimVascular/build/SimVascular-build/sv'
+    subprocess.check_output([path_to_sv, "--python", "--", os.path.join(os.path.dirname(__file__), "sv_main.py")])
