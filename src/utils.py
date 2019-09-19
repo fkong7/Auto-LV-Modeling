@@ -4,7 +4,6 @@ Utility functions for label map editing
 @author Fanwei Kong
 """
 import numpy as np
-import SimpleITK as sitk
 import vtk
 import scipy
 
@@ -70,6 +69,7 @@ def resample(image, resolution = (0.5, 0.5, 0.5), dim=3):
   Returns:
     newimage: resampeled SimpleITK image
   """
+  import SimpleITK as sitk
   resample = sitk.ResampleImageFilter()
   resample.SetInterpolator(sitk.sitkNearestNeighbor)
   resample.SetOutputDirection(image.GetDirection())
@@ -95,6 +95,7 @@ def convert2binary(labels):
     Returns:
         pyLabel: ndnumpy array
     """
+    import SimpleITK as sitk
     pyLabel = sitk.GetArrayFromImage(labels)
     pyLabel[np.where(pyLabel!=0)] = 1
     
@@ -1171,6 +1172,6 @@ def getPolydataVolume(poly):
     """
 
     mass = vtk.vtkMassProperties()
-    mass.SetInputData()
+    mass.SetInputData(poly)
     volume = mass.GetVolume()
     return volume
