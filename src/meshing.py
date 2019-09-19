@@ -24,6 +24,7 @@ def meshPolyData(fn, fn_out, args):
     msh.NewMesh()
     for key in args:
         msh.SetMeshOptions(key,[args[key]])
+   # msh.SetSizeFunctionBasedMesh(args['MeshSizingFunction'],'MeshSizingFunction')
     msh.GenerateMesh()
     #Save mesh to file
     msh.WriteMesh(fn_out)

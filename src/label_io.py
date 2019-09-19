@@ -4,7 +4,6 @@ IO functions for importing and exporting label maps and mesh surfaces
 @author: Fanwei Kong
 
 """
-import SimpleITK as sitk
 import numpy as np
 import os
 import vtk
@@ -20,6 +19,7 @@ def loadLabelMap2Py(fn):
         label: numpy array of the label map
         spacing: spacing information of the label map
     """
+    import SimpleITK as sitk
     mask = sitk.ReadImage(fn)
     label = sitk.GetArrayFromImage(mask)
     spacing = mask.GetSpacing()
@@ -36,6 +36,7 @@ def loadLabelMap(fn):
     Return:
         label: label map as a sitk image
     """
+    import SimpleITK as sitk
     label = sitk.ReadImage(fn)
 
     return label
@@ -51,6 +52,7 @@ def exportPy2Sitk(npArr, sitkIm):
         outSitkIm: output sitk image
 
     """
+    import SimpleITK as sitk
     outSitkIm = sitk.GetImageFromArray(npArr)
     outSitkIm.SetSpacing(sitkIm.GetSpacing())
     outSitkIm.SetOrigin(sitkIm.GetOrigin())
@@ -67,6 +69,7 @@ def writeSitkIm(sitkIm, fn):
         None
 
     """
+    import SimpleITK as sitk
     writer = sitk.ImageFileWriter()
     writer.SetFileName(fn)
     writer.Execute(sitkIm)
@@ -192,7 +195,9 @@ def exportSitk2VTK(sitkIm):
         sitkIm: simple itk image
     Returns:
         imageData: vtk image
+import SimpleITK as sitk
     """
+    import SimpleITK as sitk
     img = sitk.GetArrayFromImage(sitkIm)
     vtkArray = exportPython2VTK(img)
     imageData = vtk.vtkImageData()
