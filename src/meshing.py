@@ -1,12 +1,12 @@
 import os
 from sv import *
 
-def meshPolyData(fn, fn_out, args):
+def meshPolyData(fn, fns_out, args):
     """
     Use SimVascular to mesh a file containing a VTK PolyData and write the volumetric mesh to disk
     Args:
         fn: file name of the VTK PolyData
-        fn_out: file name of the output mesh
+        fns_out: file names of the output mesh (poly_fn, ug_fn)
         args: meshing options, python dic
     Returns:
         None
@@ -34,18 +34,12 @@ def meshPolyData(fn, fn_out, args):
     #Save mesh to file
     msh.WriteMesh(fn_out)
    
+    poly_fn, ug_fn = fn_outs
     if args['SurfaceMeshFlag']:
-        poly_fn = os.path.splitext(fn_out)[0]+'_surface.vtk'
-        if Repository.Exists(poly_fn):
-            Repository.Delete(poly_fn)
         msh.GetPolyData(poly_fn)
-    Repository.WriteVtkPolyData(poly_fn, "ascii", poly_fn)
     if args['VolumeMeshFlag']:
-        ug_fn = os.path.splitext(fn_out)[0]+'_volume.vtk'
-        if Repository.Exists(ug_fn):
-            Repository.Delete(ug_fn)
         msh.GetUnstructuredGrid(ug_fn)
-        Repository.WriteVtkUnstructuredGrid(ug_fn,"ascii",ug_fn)
+    return (poly_fn, ug_fn)
 
 def capPolyDataWithIds(poly, poly_name, capped_name, start=1, write=False, remesh=True):
     """
