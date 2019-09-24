@@ -3,7 +3,6 @@ Use marching cube algorithm to create iso-surface of label map
 
 @author Fanwei Kong
 """
-from skimage import measure
 import vtk
 import utils
 import numpy as np
@@ -16,6 +15,7 @@ def marching_cube(label, tol):
     Returns
         mesh: tuple containing outputs of marching cube algorithm
     """
+    from skimage import measure
 
     verts, faces, normals, values = measure.marching_cubes_lewiner(label, tol)
     

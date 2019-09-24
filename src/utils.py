@@ -5,7 +5,6 @@ Utility functions for label map editing
 """
 import numpy as np
 import vtk
-import scipy
 
 ##########################
 ## Numpy Utility functions
@@ -20,6 +19,7 @@ def fitPlaneNormal(points_input):
     Returns:
         normal: normal of the fitting plane
     """
+    from scipy.optimize import minimize
     import functools
     def _cross(a, b):
         """
@@ -45,7 +45,7 @@ def fitPlaneNormal(points_input):
         return result
     fun = functools.partial(_error, points=points_input)
     params0 = [0, 0, 0]
-    res = scipy.optimize.minimize(fun, params0)
+    res = minimize(fun, params0)
     a = res.x[0]
     b = res.x[1]
     c = res.x[2]

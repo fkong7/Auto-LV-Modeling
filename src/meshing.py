@@ -32,9 +32,9 @@ def meshPolyData(fn, fns_out, args):
    # msh.SetSizeFunctionBasedMesh(args['MeshSizingFunction'],'MeshSizingFunction')
     msh.GenerateMesh()
     #Save mesh to file
-    msh.WriteMesh(fn_out)
+    msh.WriteMesh(fns_out[0])
    
-    poly_fn, ug_fn = fn_outs
+    poly_fn, ug_fn = fns_out
     if args['SurfaceMeshFlag']:
         msh.GetPolyData(poly_fn)
     if args['VolumeMeshFlag']:

@@ -6,8 +6,9 @@ __file__), "src"))
 import glob
 import numpy as np
 import label_io
+from image_processing import lvImage
+from models import leftVentricle
 from marching_cube import marching_cube, vtk_marching_cube
-from plot import plot_surface
 import utils
 import vtk
 
@@ -27,72 +28,24 @@ def buildSurfaceModelFromImage(fns, fns_out):
         model: constructed surface mesh (VTK PolyData)
         cap_pts_ids: node ids of the points on the caps
     """
-    import SimpleITK as sitk
     FACTOR_LA = 0.7
     FACTOR_AA = 1.2
     MESH_RESOLUTION = (2.,2.,2.)
 
     for fn in fns: 
-        #load label map 
-        label = label_io.loadLabelMap(fn)
 
-        label = utils.resample(label)
-        pylabel = sitk.GetArrayFromImage(label)
-        #remove myocardium, RV, RA and PA
-        for tissue in [1, 4, 5,7]:
-            pylabel = utils.removeClass(pylabel, tissue, 0)
-        vtkIm = label_io.exportSitk2VTK(label_io.exportPy2Sitk(pylabel, label))
-        
-        import marching_cube as m_c
-        
-        # Build Cutter for LA
-        def _buildCutter(label,region_id, adjacent_id, FACTOR, op='valve'):
-            """
-            Build cutter for aorta and la
+        image = lvImage(fn)
+        image.process([1,4,5,7])
 
-            Args:
-                label: original SimpleITK image
-                op: 'valve' or 'tissue', option for normal direction
-            """
-            cut_Im = label_io.exportSitk2VTK(label)
-            #locate centroid of mitral plane or aortic plane
-            pts = utils.locateRegionBoundary(cut_Im, adjacent_id, region_id)
-            ctr_valve = np.mean(pts, axis=0)
-            #centroid of left atrium or aorta
-            ctr = utils.getCentroid(cut_Im, region_id)
-            #center and nrm of the cutting plane
-            length = np.linalg.norm(ctr-ctr_valve)
-            nrm_tissue = (ctr - ctr_valve)/length
-            nrm_valve_plane = utils.fitPlaneNormal(pts)
-            #check normal direction
-            if op=='valve':
-                nrm = nrm_valve_plane
-            elif op=='tissue':
-                nrm = nrm_tissue
-            else:
-                raise ValueError("Incorrect option")
-            if np.dot(nrm_tissue, nrm_valve_plane)<0:
-                nrm =  -1 *nrm
-            ori = ctr_valve + length * FACTOR * nrm/np.linalg.norm(nrm)
-        
-            #dilate by a little bit
-            cut_Im = utils.labelDilateErode(utils.recolorVTKPixelsByPlane(cut_Im, ori, -1.*nrm, 0), region_id, 0, 4)
-            # marching cube
-            cutter = m_c.vtk_marching_cube(cut_Im, region_id,50)
-
-            return cutter
-        
-        la_cutter = _buildCutter(label, 2, 3, FACTOR_LA, op='valve')
-        aa_cutter = _buildCutter(label, 6, 3, FACTOR_AA, op='tissue')
-        
-        # convert to binary
-        vtkIm = utils.convertVTK2binary(vtkIm)
-        #run marchine cube algorithm
-        vtkIm = utils.vtkImageResample(vtkIm, MESH_RESOLUTION,'linear')
-        model = leftVentricle(m_c.vtk_marching_cube_multi(vtkIm, 0, 50))
+        la_cutter = image.buildCutter(2, 3, FACTOR_LA, op='valve')
+        aa_cutter = image.buildCutter(6, 3, FACTOR_AA, op='tissue')
+        image.convert2binary()
+        image.resample(MESH_RESOLUTION, 'linear')
+        model = leftVentricle(image.generate_surface(0, 50))
+        #process models
         model.processWall(la_cutter, aa_cutter)
         model.processCap(1.5) 
-        fn = os.pathjoin(os.path.dirname(__file__), "debug", "temp.vtk")
+        fn = os.path.join(os.path.dirname(__file__), "debug", "temp.vtk")
         model.writeSurfaceMesh(fn)
         model.remesh(2., fn, fns_out)
         model.writeSurfaceMesh(fns_out[0])
@@ -187,6 +140,10 @@ def test1():
     subprocess.check_output([path_to_sv, "--python", "--", os.path.join(os.path.dirname(__file__), "sv_main.py"),"--fn", fn, "--fn_out", fn_out])
 
 if __name__=="__main__":
+
+    from pip._internal import main as pipmain
+    pipmain(['install', 'scipy'])
+
     PATIENT_ID = 'MACS40282_20150504'
     START_PHASE = 6
     TOTAL_PHASE = 10
@@ -205,7 +162,7 @@ if __name__=="__main__":
     seg_fn = os.path.join('/Users/fanweikong/Documents/ImageData/4DCCTA/', PATIENT_ID, 'wall_motion_labels', SEG_IMAGE_NAME % START_PHASE)
     fn_tempPts = os.path.join(output_dir, "surfaces", 'outputpoints.txt')
     
-    fn_poly = os.path.join(output_dir, MODEL_NAME % START_PHASE)
-    fn_ug = os.path.join(output_dir, "volumes", 'vol_'+ MODEL_NAME % diastole_phase)
+    fn_poly = os.path.join(output_dir, "surfaces", MODEL_NAME % START_PHASE)
+    fn_ug = os.path.join(output_dir, "volumes", 'vol_'+ MODEL_NAME % START_PHASE)
     model = buildSurfaceModelFromImage([seg_fn], (fn_poly, fn_ug))
     #diastole_phase = registration(START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, os.path.join(output_dir, "surfaces"), seg_fn, fn_tempPts)
