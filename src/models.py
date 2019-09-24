@@ -3,7 +3,10 @@ import numpy as np
 import sys
 import vtk
 import utils
+import label_io
 from sv import *
+
+import meshing
 
 from abc import ABCMeta, abstractmethod
 
@@ -46,7 +49,7 @@ class leftVentricle(Geometry):
                 'Optimization': 3,
                 'QualityRatio': 1.4
         }
-        poly_fn, ug_fn = meshing.meshPolyData(fn, fn_out, mesh_ops)
+        poly_fn, ug_fn = meshing.meshPolyData(fn, fns_out, mesh_ops)
         self.poly = Repository.ExportToVtk(poly_fn)
         self.ug = Repository.ExportToVtk(ug_fn)
         return poly_fn, ug_fn 

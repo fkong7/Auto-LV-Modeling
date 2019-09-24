@@ -28,17 +28,26 @@ def loadLabelMap2Py(fn):
 
 def loadLabelMap(fn):
     """ 
-    This function imports the label map as sitk image.
+    This function imports the label map as vtk image.
 
     Args: 
         fn: filename of the label map
 
     Return:
-        label: label map as a sitk image
+        label: label map as a vtk image
     """
-    import SimpleITK as sitk
-    label = sitk.ReadImage(fn)
+    _, ext = os.path.splitext(fn)
 
+    if ext=='.vti':
+        reader = vtk.vtkXMLImageDataReader()
+    elif ext=='.nii' or ext=='.nii.gz':
+        reader = vtk.vtkNIFTIImageReader()
+    else:
+        raise IOError("File extension is not recognized")
+    
+    reader.SetFileName(fn)
+    reader.Update()
+    label = reader.GetOutput()
     return label
 
 def exportPy2Sitk(npArr, sitkIm):
