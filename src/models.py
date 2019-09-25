@@ -17,8 +17,14 @@ class leftVentricle(Geometry):
     
     def __init__(self, vtk_poly):
         self.poly = vtk_poly
-    
+        self.wall_processed = False
+        self.cap_processed = False
+        self.cap_pts_ids = None
+
     def processWall(self, la_cutter, aa_cutter):
+        if self.wall_processed:
+            print("Left ventricle wall has been processed!")
+            return
         # cut with la and aorta cutter:
         self.poly = utils.cutPolyDataWithAnother(self.poly, la_cutter,False)
         self.poly = utils.cutPolyDataWithAnother(self.poly, aa_cutter,False)
@@ -31,9 +37,17 @@ class leftVentricle(Geometry):
             # Remove the free cells and update the point lists
             self.poly, id_lists[idx] = utils.removeFreeCells(self.poly, [idx for sub_l in id_lists for idx in sub_l])
         self.poly = utils.smoothVTKPolydata(utils.cleanPolyData(self.poly, 0.))
-    
+
+        self.wall_processed = True
+        return
+
     def processCap(self, edge_size):
+        if self.cap_processed:
+            print("Caps have been processed!")
+            return
         self.poly, self.cap_pts_ids = utils.capPolyDataOpenings(self.poly, edge_size)
+        self.cap_processed = True
+        return
 
     def remesh(self, edge_size, fn, fns_out):
 
@@ -55,11 +69,13 @@ class leftVentricle(Geometry):
         return poly_fn, ug_fn 
    
     def update(self, new_model):
-
+        if self.cap_pts_ids is None:
+            raise TypeError("Need to cap the model before updating with deformed model")
         # Project the cap points so that they are co-planar
         for pt_ids in self.cap_pts_ids:
             pts = utils.getPolyDataPointCoordinatesFromIDs(new_model, pt_ids)
             self.poly = utils.projectOpeningToFitPlane(new_model, pt_ids, pts, 3)
+        return new_model
 
     def getVolume(self):
         return utils.getPolydataVolume(self.poly)

@@ -17,7 +17,7 @@ class lvImage(Images):
     def __init__(self, fn):
         self.label = label_io.loadLabelMap(fn)
     def process(self, remove_list):
-        self.label = utils.vtkImageResample(self.label, spacing=(0.5, 0.5, 0.5), opt='linear')
+        self.label = utils.vtkImageResample(self.label, spacing=(0.5, 0.5, 0.5), opt='NN')
         from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
         pylabel = vtk_to_numpy(self.label.GetPointData().GetScalars())
         #remove myocardium, RV, RA and PA

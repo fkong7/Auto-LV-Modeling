@@ -40,14 +40,33 @@ def loadLabelMap(fn):
 
     if ext=='.vti':
         reader = vtk.vtkXMLImageDataReader()
+        reader.SetFileName(fn)
+        reader.Update()
+        label = reader.GetOutput()
     elif ext=='.nii' or ext=='.nii.gz':
         reader = vtk.vtkNIFTIImageReader()
+        reader.SetFileName(fn)
+        reader.Update()
+        
+        from utils import vtkImageResample
+        image = reader.GetOutput()
+        matrix = reader.GetQFormMatrix()
+        if matrix is None:
+            matrix = reader.GetSFormMatrix()
+        matrix.Invert()
+        # only care about origin shift here
+        for i in range(3):
+            matrix.SetElement(i,i,1)
+        reslice = vtk.vtkImageReslice()
+        reslice.SetInputData(image)
+        reslice.SetResliceAxes(matrix)
+        reslice.SetInterpolationModeToLinear()
+        reslice.Update()
+        
+        label = reslice.GetOutput()
     else:
         raise IOError("File extension is not recognized")
     
-    reader.SetFileName(fn)
-    reader.Update()
-    label = reader.GetOutput()
     return label
 
 def exportPy2Sitk(npArr, sitkIm):
