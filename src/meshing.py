@@ -16,7 +16,10 @@ def meshPolyData(fn, fns_out, args):
     
     #Create mesh object
     msh = MeshObject.pyMeshObject()
-    msh.NewObject(fn+'mesh')
+    if Repository.Exists(fn+'mesh'):
+        msh.GetMesh(fn+'mesh')
+    else:
+        msh.NewObject(fn+'mesh')
     
     #Load Model
     msh.LoadModel(fn)
@@ -32,7 +35,7 @@ def meshPolyData(fn, fns_out, args):
    # msh.SetSizeFunctionBasedMesh(args['MeshSizingFunction'],'MeshSizingFunction')
     msh.GenerateMesh()
     #Save mesh to file
-    msh.WriteMesh(fns_out[0])
+    #msh.WriteMesh(fns_out[0])
    
     poly_fn, ug_fn = fns_out
     if args['SurfaceMeshFlag']:

@@ -88,7 +88,7 @@ class leftVentricle(Geometry):
         # Project the cap points so that they are co-planar
         for pt_ids in self.cap_pts_ids:
             pts = utils.getPolyDataPointCoordinatesFromIDs(new_model, pt_ids)
-            self.poly = utils.projectOpeningToFitPlane(new_model, pt_ids, pts, 3)
+            new_model = utils.projectOpeningToFitPlane(new_model, pt_ids, pts, 3)
         return new_model
 
     def getVolume(self):
