@@ -6,15 +6,25 @@ import utils
 import label_io
 import marching_cube as m_c
 
-from abc import ABCMeta, abstractmethod
 
-class Images(object, metaclass=ABCMeta):
-    pass
-
-class lvImage(Images):
-
+class Images(object):
     def __init__(self, fn):
         self.label = label_io.loadLabelMap(fn)
+   
+    def convert2binary(self):
+        self.label = utils.convertVTK2binary(self.label)
+
+    def resample(self, resolution, mode):
+        self.label = utils.vtkImageResample(self.label, resolution, mode)
+
+    def get_image(self):
+        return self.label
+
+    def generate_surface(self, region_id, smooth_iter):
+        return m_c.vtk_marching_cube_multi(self.label, region_id, smooth_iter)
+
+class lvImage(Images):
+    
     def process(self, remove_list):
         self.label = utils.vtkImageResample(self.label, spacing=(0.5, 0.5, 0.5), opt='NN')
         from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
@@ -61,14 +71,3 @@ class lvImage(Images):
 
         return cutter
 
-    def convert2binary(self):
-        self.label = utils.convertVTK2binary(self.label)
-
-    def resample(self, resolution, mode):
-        self.label = utils.vtkImageResample(self.label, resolution, mode)
-
-    def get_image(self):
-        return self.label
-
-    def generate_surface(self, region_id, smooth_iter):
-        return m_c.vtk_marching_cube_multi(self.label, region_id, smooth_iter)
