@@ -1155,11 +1155,11 @@ def capPolyDataOpenings(poly,  size):
         cap = tagPolyData(cap, tag_id)
         poly = appendPolyData(poly, cap)
     
-    cap_pts_ids = list()
-    for cap_pts in cap_pts_list:
-        cap_pts_ids.append(findPointCorrespondence(poly,cap_pts))
+    #cap_pts_ids = list()
+    #for cap_pts in cap_pts_list:
+    #    cap_pts_ids.append(findPointCorrespondence(poly,cap_pts))
     poly = fixPolydataNormals(poly)
-    return poly, cap_pts_ids
+    return poly
 
 def getPolydataVolume(poly):
     """
@@ -1175,3 +1175,23 @@ def getPolydataVolume(poly):
     mass.SetInputData(poly)
     volume = mass.GetVolume()
     return volume
+
+def thresholdPolyData(poly, attr, threshold):
+    """
+    Get the polydata after thresholding based on the input attribute
+
+    Args:
+        poly: vtk PolyData to apply threshold
+        atrr: attribute of the cell array
+        threshold: (min, max) 
+    Returns:
+
+        output: resulted vtk PolyData
+    """
+    surface_thresh = vtk.vtkThreshold()
+    surface_thresh.SetInputData(poly)
+    surface_thresh.SetInputArrayToProcess(0,0,0,1,attr)
+    surface_thresh.ThresholdBetween(*threshold)
+    surface_thresh.Update()
+    return surface_thresh.GetOutput()
+

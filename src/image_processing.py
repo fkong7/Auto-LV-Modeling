@@ -5,7 +5,6 @@ import vtk
 import utils
 import label_io
 import marching_cube as m_c
-from sv import *
 
 from abc import ABCMeta, abstractmethod
 

@@ -6,15 +6,14 @@ __file__), "src"))
 import glob
 import numpy as np
 import label_io
-from image_processing import lvImage
 from models import leftVentricle
 from marching_cube import marching_cube, vtk_marching_cube
 import utils
-import registration
+from registration import Registration
 import vtk
 import SimpleITK as sitk
 
-def registration(poly_fn, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, output_dir):
+def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, image_dir, output_dir, write=False):
     """
     Registration of surface mesh point set using Elastix
     Performs 3D image registration and move points based on the computed transform
@@ -23,7 +22,6 @@ def registration(poly_fn, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, outp
     # compute volume of all phases to select systole and diastole:
     volume = list()
     
-    lvmodel = leftVentricle(label_io.loadVTKMesh(poly_fn))
     volume.append(lvmodel.getVolume())
 
     ids = list(range(START_PHASE,TOTAL_PHASE)) + list(range(0,START_PHASE))
@@ -40,30 +38,39 @@ def registration(poly_fn, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, outp
 
         register.updateMovingImage(moving_im_fn)
         register.updateFixedImage(fixed_im_fn)
-        register.computeTransform()
 
-        fn_out = os.path.join(output_dir, "verts.pts")
-        new_lvmodel = register.polydata_image_transform(lvmodel, fn_out) 
+        try:
+            os.makedirs(os.path.join(output_dir, "registration"))
+        except Exception as e: print(e)
+        fn_out = os.path.join(os.path.join(output_dir, "registration"), "verts.pts")
+
+        fn_paras = os.path.join(output_dir, "registration", str(START_PHASE)+"to"+str((index+1)%TOTAL_PHASE)+'.txt')
+        new_lvmodel = register.polydata_image_transform(lvmodel, fn_out, fn_paras)
+        if write:
+            register.writeParameterMap(fn_paras)
 
         #ASSUMING increment is 1
         fn_poly = os.path.join(output_dir, MODEL_NAME % ((index+1)%TOTAL_PHASE))
         new_lvmodel.writeSurfaceMesh(fn_poly)
         volume.append(new_lvmodel.getVolume())
 
-    SYSTOLE_PHASE = ids[np.argmin(volume)]
-    DIASTOLE_PHASE = ids[np.argmax(volume)]
-    print("systole, diastole: ", SYSTOLE_PHASE, DIASTOLE_PHASE)
-    return DIASTOLE_PHASE
+    np.save(os.path.join(output_dir, "volume.npy"), volume)
+    return
 
 if __name__=='__main__':
+    import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--json_fn', nargs=1, help='Name of the json file')
+    
+    parser.add_argument('--json_fn', help="Name of the json file")
+    parser.add_argument('--write', default=False, action='store_true')
     args = parser.parse_args()
+    
+    paras = label_io.loadJsonArgs(args.json_fn)
+    image_dir = os.path.join(paras['im_top_dir'] , paras['patient_id'], paras['im_folder_name'])
+    output_dir = os.path.join(paras['out_dir'], paras['patient_id'], "surfaces")
+    
+    fn_poly = os.path.join(output_dir, paras['model_output'] % paras['start_phase'])
 
-    import json
-
-    with open(json_fn) as data_file:
-        data = json.load(data_file)
-
-     
-    diasole = registration(poly_fn, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, output_dir)
+    #
+    lvmodel = leftVentricle(label_io.loadVTKMesh(fn_poly))
+    registration(lvmodel, paras['start_phase'],paras['total_phase'], paras['model_output'], paras['im_name'], image_dir,output_dir, args.write)

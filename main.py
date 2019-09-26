@@ -14,7 +14,7 @@ import vtk
 
 
 
-def buildSurfaceModelFromImage(fns, fns_out):
+def buildSurfaceModelFromImage(fns, poly_fn, ug_fn=None):
     """
     Modified test6 to cut on the PolyData directly to create better defined inlet/outlet geometry
     The left atrium is cut normal to the direction defined by the normal of the mitral plane
@@ -47,9 +47,8 @@ def buildSurfaceModelFromImage(fns, fns_out):
         model.processCap(1.5) 
         fn = os.path.join(os.path.dirname(__file__), "debug", "temp.vtk")
         model.writeSurfaceMesh(fn)
-        model.remesh(1.5, fn, fns_out)
-        model.writeSurfaceMesh(fns_out[0])
-        #model.writeVolumeMesh(fns_out[1])
+        model.remesh(1.5, fn, poly_fn, ug_fn)
+        model.writeSurfaceMesh(poly_fn)
         return model
 
 
@@ -97,26 +96,27 @@ if __name__=="__main__":
 
     from pip._internal import main as pipmain
     pipmain(['install', 'scipy'])
+   
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--json_fn', nargs=1, help='Name of the json file')
+    args = parser.parse_args()
+    
+    paras = label_io.loadJsonArgs(args.json_fn[0])
 
-    PATIENT_ID = 'MACS40282_20150504'
-    START_PHASE = 6
-    TOTAL_PHASE = 10
-    MODEL_NAME = 'phase%d.nii.vtk'
-    IMAGE_NAME = 'phase%d.nii'
-    SEG_IMAGE_NAME = 'phase%d_pm.nii'
-    image_dir = '/Users/fanweikong/Documents/ImageData/4DCCTA/%s/wall_motion_image_volumes' % PATIENT_ID
-    output_dir = os.path.join(os.path.dirname(__file__), "debug")
+    image_dir = os.path.join(paras['im_top_dir'] , paras['patient_id'], paras['im_folder_name'])
+    output_dir = os.path.join(paras['out_dir'], paras['patient_id'])
     try:
         os.makedirs(os.path.join(output_dir, "surfaces"))
     except Exception as e: print(e)
     try:
         os.makedirs(os.path.join(output_dir, "volumes"))
     except Exception as e: print(e)
-
-    seg_fn = os.path.join('/Users/fanweikong/Documents/ImageData/4DCCTA/', PATIENT_ID, 'wall_motion_labels', SEG_IMAGE_NAME % START_PHASE)
+    
+    seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], paras['seg_name'] % paras['start_phase'])
     fn_tempPts = os.path.join(output_dir, "surfaces", 'outputpoints.txt')
     
-    fn_poly = os.path.join(output_dir, "surfaces", MODEL_NAME % START_PHASE)
-    fn_ug = os.path.join(output_dir, "volumes", 'vol_'+ MODEL_NAME % START_PHASE)
-    model = buildSurfaceModelFromImage([seg_fn], (fn_poly, fn_ug))
-    #diastole_phase = registration(START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, os.path.join(output_dir, "surfaces"), seg_fn, fn_tempPts)
+    fn_poly = os.path.join(output_dir, "surfaces", paras['model_output'] % paras['start_phase'])
+    model = buildSurfaceModelFromImage([seg_fn], fn_poly)
+
+

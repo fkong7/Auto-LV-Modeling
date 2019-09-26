@@ -323,3 +323,29 @@ def readElastixPointOuptut(fn):
     print('Reading %d points from file %s' % (pts.GetNumberOfPoints(), fn))
     return pts
 
+def loadJsonArgs(fn):
+    """
+    Load the .json file containing input values
+
+    Args:
+        fn: file name
+    Returns:
+        args: argument dictionary
+    """
+    import json
+    with open(fn) as data_file:
+        data = json.load(data_file)
+
+    args = {}
+
+    args['patient_id'] = data['Patient ID']
+    args['start_phase'] = data['Start Phase']
+    args['total_phase'] = data['Total Phase']
+    args['im_name'] = data["Image Name"]
+    args['model_output']=data["Output Surface Model Name"]
+    args['seg_name'] = data["Segmentation Name"]
+    args['im_top_dir'] = data["Image Top Dir"]
+    args['seg_folder_name'] = data["Segmentation Folder Name"]
+    args['im_folder_name'] = data["Image Folder Name"]
+    args['out_dir'] = data["Output Dir Name"]
+    return args

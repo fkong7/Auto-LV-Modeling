@@ -4,9 +4,7 @@ import sys
 import vtk
 import utils
 import label_io
-from sv import *
 
-import meshing
 
 from abc import ABCMeta, abstractmethod
 
@@ -45,12 +43,22 @@ class leftVentricle(Geometry):
         if self.cap_processed:
             print("Caps have been processed!")
             return
-        self.poly, self.cap_pts_ids = utils.capPolyDataOpenings(self.poly, edge_size)
+        self.poly = utils.capPolyDataOpenings(self.poly, edge_size)
         self.cap_processed = True
         return
 
-    def remesh(self, edge_size, fn, fns_out):
+    def splitRegion(self, region_id):
+        return utils.thresholdPolyData(self.poly, 'ModelFaceID', (region_id, region_id))
 
+    def getCapIds(self):
+        self.cap_pts_ids = list()
+        # good to assume region id mitral=2, aortic=3
+        for cap_id in (2,3):
+            self.cap_pts_ids.append(utils.findPointCorrespondence(self.poly, self.splitRegion(cap_id).GetPoints()))
+   
+    def remesh(self, edge_size, fn, poly_fn=None, ug_fn=None):
+        from sv import Repository
+        import meshing
         # generate volumetric mesh:
         mesh_ops = {
                 'SurfaceMeshFlag': True,
@@ -63,14 +71,20 @@ class leftVentricle(Geometry):
                 'Optimization': 3,
                 'QualityRatio': 1.4
         }
-        poly_fn, ug_fn = meshing.meshPolyData(fn, fns_out, mesh_ops)
-        self.poly = Repository.ExportToVtk(poly_fn)
-        self.ug = Repository.ExportToVtk(ug_fn)
+        if poly_fn is None:
+            mesh_ops['SurfaceMeshFlag']=False
+        if ug_fn is None:
+            mesh_ops['VolumeMeshFlag']=False
+        meshing.meshPolyData(fn, (poly_fn, ug_fn), mesh_ops)
+        if poly_fn is not None:
+            self.poly = Repository.ExportToVtk(poly_fn)
+        if ug_fn is not None:
+            self.ug = Repository.ExportToVtk(ug_fn)
         return poly_fn, ug_fn 
    
     def update(self, new_model):
         if self.cap_pts_ids is None:
-            raise TypeError("Need to cap the model before updating with deformed model")
+            self.getCapIds()
         # Project the cap points so that they are co-planar
         for pt_ids in self.cap_pts_ids:
             pts = utils.getPolyDataPointCoordinatesFromIDs(new_model, pt_ids)
