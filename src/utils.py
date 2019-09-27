@@ -1193,5 +1193,8 @@ def thresholdPolyData(poly, attr, threshold):
     surface_thresh.SetInputArrayToProcess(0,0,0,1,attr)
     surface_thresh.ThresholdBetween(*threshold)
     surface_thresh.Update()
-    return surface_thresh.GetOutput()
+    surf_filter = vtk.vtkDataSetSurfaceFilter()
+    surf_filter.SetInputData(surface_thresh.GetOutput())
+    surf_filter.Update()
+    return surf_filter.GetOutput()
 

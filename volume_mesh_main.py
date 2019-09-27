@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     lvmodel = models.leftVentricle(label_io.loadVTKMesh(poly_fn))
     
-    output_vol = os.path.join(paras['out_dir'], paras['patient_id'],"volumes", "vol_phase%d.vtu"%phase)
+    output_vol = os.path.join(paras['out_dir'], paras['patient_id'], paras['patient_id']+'-mesh-complete')
     lvmodel.remesh(2., poly_fn, poly_fn=None, ug_fn=output_vol)
-    lvmodel.writeVolumeMesh(output_vol)
+    lvmodel.writeMeshComplete(output_vol)
 

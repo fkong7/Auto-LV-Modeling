@@ -16,7 +16,10 @@ class Geometry(object):
     
     def writeVolumeMesh(self, fn):
         label_io.writeVTUFile(self.ug, fn)
-   
+
+    def splitRegion(self, region_id, attr='ModelFaceID'):
+        return utils.thresholdPolyData(self.poly, attr, (region_id, region_id))
+    
     def remesh(self, edge_size, fn, poly_fn=None, ug_fn=None):
         from sv import Repository
         import meshing
@@ -42,7 +45,10 @@ class Geometry(object):
         if ug_fn is not None:
             self.ug = Repository.ExportToVtk(ug_fn)
         return poly_fn, ug_fn 
-
+    
+    def writeMeshComplete(self, path):
+        pass
+    
 class leftVentricle(Geometry):
     
     def __init__(self, vtk_poly):
@@ -79,8 +85,6 @@ class leftVentricle(Geometry):
         self.cap_processed = True
         return
 
-    def splitRegion(self, region_id):
-        return utils.thresholdPolyData(self.poly, 'ModelFaceID', (region_id, region_id))
 
     def getCapIds(self):
         self.cap_pts_ids = list()
@@ -97,4 +101,37 @@ class leftVentricle(Geometry):
             pts = utils.getPolyDataPointCoordinatesFromIDs(new_model, pt_ids)
             new_model = utils.projectOpeningToFitPlane(new_model, pt_ids, pts, 3)
         return new_model
+
+    def writeMeshComplete(self, path):
+        """
+        Args: 
+            path: path to the output folder
+        """
+        if (self.poly is None) or (self.ug is None):
+            raise RuntimeError("No volume mesh has been generated.")
+            return
+        
+        try:
+            os.makedirs(os.path.join(path))
+        except Exception as e: print(e)
+        
+        fn_poly = os.path.join(path, 'mesh-complete.exterior.vtp')
+        fn_vol = os.path.join(path, 'mesh-complete.mesh.vtu')
+        self.writeVolumeMesh(fn_vol)
+        self.writeSurfaceMesh(fn_poly)
+
+        fn_wall = os.path.join(path, 'walls_combined.vtp')
+        label_io.writeVTKPolyData(self.splitRegion(1),fn_wall)
+        try:
+            os.makedirs(os.path.join(path, 'mesh-surfaces'))
+        except Exception as e: print(e)
+
+        for i in range(3):
+            face = self.splitRegion(i+1)
+            face_fn = os.path.join(path,'mesh-surfaces','noname_%d.vtp' % (i+1))
+            label_io.writeVTKPolyData(face, face_fn)
+        return
+
+        
+
 
