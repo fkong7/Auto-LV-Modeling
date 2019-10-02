@@ -77,7 +77,7 @@ def plot_embedding(X, y, title=None,classes=["ct", "mr"]):
     if title is not None:
         plt.title(title)
 
-def preProcessImage(img_fn, mask_fn, m, view, size):
+def preProcessImage(img_fn, mask_fn, m, view, size=None):
     from skimage.transform import resize
     """
     pre-process image and labels to feed into models 
@@ -94,10 +94,13 @@ def preProcessImage(img_fn, mask_fn, m, view, size):
     label_vol = np.moveaxis(label_vol, view, 0)
     IDs = np.max(np.max(label_vol,axis=-1),axis=-1)==0
     sliced = np.moveaxis(img_vol,view,0)[~IDs,:,:]
-    sliced = np.moveaxis(resize(sliced, (size,256,256), order=1), 0, view)
-                
+    if size is not None: #rescale the view axis
+        shape = (size, 256, 256)
+    else:
+        shape = (sliced.shape[0], 256, 256)
+    sliced = np.moveaxis(resize(sliced, shape, order=1), 0, view)
     mask_sliced = label_vol[~IDs,:,:]
-    mask_sliced = np.moveaxis(resize(mask_sliced, (size,256,256), order=1), 0, view)
+    mask_sliced = np.moveaxis(resize(mask_sliced, shape, order=1), 0, view)
                       
     return sliced, mask_sliced
 
@@ -109,9 +112,9 @@ def main():
     save_figname = os.path.join(os.path.dirname(save_model_path), "layer_"+layername+'.png')
     np_fn_layer = os.path.join(os.path.dirname(save_model_path), "layer_"+layername+'_layer.npy')
     np_fn_label = os.path.join(os.path.dirname(save_model_path), "layer_"+layername+'_label.npy')
-
-
-    trial_num = 3 # for debug
+    view = 0
+    num_slices = 40
+    trial_num = 24 # for debug
     #save_model_path = '/content/gdrive/My Drive/DeepLearning/2DUnet-git/Logs/MMWHS_small_aug/ct_only/weights_multi-all-axial_small2.hdf5'
     #save_model_path = '/content/gdrive/My Drive/DeepLearning/2DUnet-git/Logs/MMWHS_small_aug/mr_only/weights_multi-all-axial_small2.hdf5'
     
@@ -120,7 +123,8 @@ def main():
     inputs, outputs = UNet2D(img_shape, 8)
     unet = models.Model(inputs=[inputs], outputs=[outputs])
     unet.load_weights(save_model_path)
-    modality = ["ct", "mr"]
+    #modality = ["ct", "mr"]
+    modality = ["mr", "ct"]
 
     # MPI
     comm = MPI.COMM_WORLD
@@ -133,7 +137,9 @@ def main():
         split_sizes = np.zeros(total) #initialize to sum up with all modality
     for m in modality:
         imgVol_fn, mask_fn = getTrainNLabelNames(data_folder, m)
-    
+        if trial_num > 0: # DEBUG
+            imgVol_fn = imgVol_fn[:trial_num]
+            mask_fn = mask_fn[:trial_num]
         # MPI 
         num_vol_per_core = int(np.floor(len(imgVol_fn)/comm.Get_size()))
         extra = len(imgVol_fn) % comm.Get_size()
@@ -160,39 +166,59 @@ def main():
         outputs[m] = []
         for i in range(len(filenames["x_"+m])):
             print(filenames["x_"+m][i], filenames["y_"+m][i])
-            features,_ = preProcessImage(filenames["x_"+m][i], filenames["y_"+m][i], modality[0], 0, 40)
+            features,_ = preProcessImage(filenames["x_"+m][i], filenames["y_"+m][i], modality[0], view, num_slices)
             layer_output = get_layer_output([np.expand_dims(features, axis=-1)])
+            # down-size to fit within memory
+            # outputs[m].append(resize(layer_output[0], tuple(int(x/2) for x in layer_output[0].shape)).flatten())
             outputs[m].append(layer_output[0].flatten())
         outputs[m] = np.asarray(outputs[m])
-        print(outputs[m].shape)
 
 
     # MPI GATHTER
-    comm.barrier()
+    comm.Barrier()
+    output_data = {}
     send_buff = {}
     send_buff['layer'] = np.concatenate(tuple(outputs[m] for m in modality))
     send_buff['label'] = np.concatenate([np.ones(outputs[modality[i]].shape[0])*i for i in range(len(modality))])
+    print(send_buff['layer'])
+    print(np.max(send_buff['layer']))
     if rank==0:
-        split_sizes_output = split_sizes * np.prod(send_buff.shape[1:])
+        print("Start gathering")
+        split_sizes_output = split_sizes * np.prod(send_buff['layer'].shape[1:])
+        print("split_sizes_output: ", split_sizes_output)
         displacement_output = {}
-        displacement_output['layer'] = np.insert(np.cumsum(split_sizes_input),0,0)[0:-1]
+        displacement_output['layer'] = np.insert(np.cumsum(split_sizes_output),0,0)[0:-1]
         displacement_output['label'] = np.insert(np.cumsum(split_sizes), 0, 0)[0:-1]
-        output_data = {}
-        output_data['layer'] = np.zeros([np.sum(split_sizes), np.prod(send_buff.shape[1:])])
-        output_data['label'] = np.zeros(np.sum(split_sizes))
-
-    comm.gatherv(send_buff['layer'],[output_data['layer'],split_sizes_output,displacements_output['layer'],MPI.DOUBLE], root=0) #Gather output data together
-    comm.gatherv(send_buff['label'],[output_data['label'],split_sizes,displacements_output['label'],MPI.DOUBLE], root=0) #Gather output data together
+        output_data['layer'] = np.zeros([int(np.sum(split_sizes)), int(np.prod(send_buff['layer'].shape[1:]))])
+        output_data['label'] = np.zeros(int(np.sum(split_sizes)))
+    else:
+        split_sizes_output = None
+        displacement_output = None
+        split_sizes = None
+        output_data['layer'] = None
+        output_data['label'] = None
+        
+    split_sizes = comm.bcast(split_sizes, root=0)
+    split_sizes_output = comm.bcast(split_sizes_output, root=0)
+    displacement_output = comm.bcast(displacement_output, root=0)
+    print(displacement_output)
+    comm.Barrier()
+    comm.Gatherv(send_buff['layer'],[output_data['layer'],split_sizes_output,displacement_output['layer'],MPI.DOUBLE], root=0) #Gather output data together
+    comm.Gatherv(send_buff['label'],[output_data['label'],split_sizes,displacement_output['label'],MPI.DOUBLE], root=0) #Gather output data together
     
+    comm.Barrier()
     if rank==0:
+        print(output_data['layer'])
+        print(np.max(output_data['layer']))
+        np.save(np_fn_layer, output_data['layer'])
+        np.save(np_fn_label, output_data['label'])
         # t-SNE embedding of the digits dataset
         print("Computing t-SNE embedding")
         tsne = manifold.TSNE(n_components=2, init='pca', random_state=0)
         X_tsne = tsne.fit_transform(output_data['layer'])
         plot_embedding(X_tsne, output_data['label'],
-                       "t-SNE embedding of the feature maps")
+                       "t-SNE embedding of the feature maps",
+                       classes=modality)
         plt.savefig(save_figname, bbox_inches = "tight")
-        np.save(np_fn_layer, output_data['layer'])
-        np.save(np_fn_label, output_data['label'])
 if __name__ =="__main__":
     main()

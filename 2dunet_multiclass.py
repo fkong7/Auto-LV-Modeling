@@ -59,21 +59,19 @@ import sys
 batch_size = 10
 #epochs = 100
 
-#modality = ["ct","mr"]
-modality = ["mr"]
-#im_base_name = 'MMWHS_small_13'
-#base_name = 'MMWHS_small_13'
+modality = ["ct","mr"]
+#modality = ["mr"]
 im_base_name = sys.argv[1]
 base_name = sys.argv[2]
 seed = int(sys.argv[3])
 num_class = int(sys.argv[4])
 epochs = int(sys.argv[5])
 channel = int(sys.argv[6])
+view = int(sys.argv[7])
 img_shape = (256, 256, channel)
 
 
 data_folder = '/global/scratch/fanwei_kong/DeepLearning/ImageData/%s' % im_base_name
-view = 0
 view_names = ['axial', 'coronal', 'sagittal']
 data_folder_out = ['/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s2_train' % (im_base_name,view_names[view]), '/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s2_train' % (im_base_name,view_names[view])]
 data_val_folder_out = ['/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s2_val' % (im_base_name,view_names[view]),'/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s2_val' % (im_base_name,view_names[view])]
@@ -162,7 +160,8 @@ inputs, outputs = UNet2D(img_shape, num_class)
 
 model = models.Model(inputs=[inputs], outputs=[outputs])
 
-adam = Adam(lr=0.02, beta_1=0.9, beta_2=0.999, epsilon=None, decay=1e-6, amsgrad=False)
+lr = 0.02
+adam = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=None, decay=lr/epochs, amsgrad=False)
 model.compile(optimizer=adam, loss=bce_dice_loss, metrics=[dice_loss])
 
 model.summary()

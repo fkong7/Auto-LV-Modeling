@@ -30,13 +30,15 @@ def blankSpaces(y_train_filenames_ct, y_train_filenames_mr):
 def main():
 
     modality = ["ct", "mr"]
-    data_folder = '/Users/fanweikong/Documents/ImageData/MMWHS_small/'
+    data_folder = '/global/scratch/fanwei_kong/DeepLearning/ImageData/MMWHS_small'
     fdr_postfix = '_train'
-    output_data_folder = '/Users/fanweikong/Documents/ImageData/MMWHS_small_aug'
+    output_data_folder = '/global/scratch/fanwei_kong/DeepLearning/ImageData/MMWHS_CrossValidation/run_aligned/fold0'
+    # TO-DO: NEED TO CHECK/FIX THIS BEFORE NEXT RUNS
     if fdr_postfix == '_train':
         ids = range(0,12)
     elif fdr_postfix =='_val':
         ids = range(12,16)
+        #ids = range(0,4)
 
     for m in modality:
         try:
@@ -83,23 +85,23 @@ def main():
         
     for m in modality:
       num = len(filenames_dic[m+'_x'])
-      aug_num = 10
+      aug_num = 0
       for i in ids:
           fn = os.path.join(output_data_folder, m+fdr_postfix, os.path.basename(filenames_dic[m+'_x'][i]))
           img,_ = resample_spacing(filenames_dic[m+'_x'][i], order=1)
-          _writeIm(fn, img)
+          sitk.WriteImage(img, fn)
 
           fn = os.path.join(output_data_folder, m+fdr_postfix+'_masks', os.path.basename(filenames_dic[m+'_y'][i]))
           mask,_ = resample_spacing(filenames_dic[m+'_y'][i], order=0)
-          _writeIm(fn, mask)
+          sitk.WriteImage(mask, fn)
           
           for j in range(aug_num):
               mask, scale_factor = _augment(filenames_dic[m+'_y'][i], range_adjust, ratios[m][i,:], order=0)
               fn =  os.path.join(output_data_folder, m+fdr_postfix+'_masks', m+'_aug_'+str(i)+'_'+str(j)+'_label.nii.gz')
-              _writeIm(fn, mask)
+              sitk.WriteImage(mask, fn)
               img, _ = _augment(filenames_dic[m+'_x'][i], range_adjust, ratios[m][i,:], scale_factor=scale_factor, order=1)
               fn =  os.path.join(output_data_folder, m+fdr_postfix, m+'_aug_'+str(i)+'_'+str(j)+'_image.nii.gz')
-              _writeIm(fn, img)
+              sitk.WriteImage(img, fn)
 
 
 if __name__ == '__main__':
