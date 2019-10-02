@@ -9,7 +9,7 @@ import tensorflow as tf
 from mpi4py import MPI
 from utils import np_to_tfrecords
 from utils import getTrainNLabelNames
-from preProcess import swapLabels, RescaleIntensity, HistogramEqualization
+from preProcess import swapLabels, RescaleIntensity, HistogramEqualization, resample_spacing
 import argparse
 
 print('Start...')
@@ -39,7 +39,6 @@ data_folder = '/global/scratch/fanwei_kong/DeepLearning/ImageData/' + base_name
 print(data_folder)
 view_names = ['axial', 'coronal', 'sagittal']
 data_folder_out = '/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s2%s' % (base_name, view_names[view],fn)
-swapped = True #whether the orientation of mr is corrected
 
 if channel>1:
     data_folder_out += '_multi%d' %  channel
@@ -48,7 +47,7 @@ if channel>1:
 
 
 
-def data_preprocess(modality,data_folder,view, data_folder_out, comm, rank, swapped=False):
+def data_preprocess(modality,data_folder,view, data_folder_out, comm, rank):
   train_img_path = []
   train_mask_path = []
   train_weights = []
@@ -73,14 +72,11 @@ def data_preprocess(modality,data_folder,view, data_folder_out, comm, rank, swap
     for i in range(len(imgVol_fn)):
       img_path = imgVol_fn[i]
       mask_path = mask_fn[i]
-      imgVol = sitk.GetArrayFromImage(sitk.ReadImage(img_path))  # numpy array
+      imgVol = sitk.GetArrayFromImage(resample_spacing(sitk.ReadImage(img_path), order=1))  # numpy array
       #imgVol = HistogramEqualization(imgVol)
       imgVol = RescaleIntensity(imgVol, m, intensity)
-      maskVol = sitk.GetArrayFromImage(sitk.ReadImage(mask_path))  # numpy array
+      maskVol = sitk.GetArrayFromImage(resample_spacing(sitk.ReadImage(mask_path),order=0))  # numpy array
       maskVol = swapLabels(maskVol)
-      if not swapped and m =="mr":
-        imgVol = np.moveaxis(imgVol,0,-1)
-        maskVol = np.moveaxis(maskVol,0,-1)
       print("number of image slices in this view %d" % imgVol.shape[view])
       #remove the blank images with a probability - find the index first
       IDs = np.max(np.max(np.moveaxis(maskVol,view,0),axis=-1),axis=-1)==0
@@ -118,4 +114,4 @@ if rank == 0:
     except Exception as e: print(e)
 comm.barrier()
 
-data_preprocess(modality,data_folder,view, data_folder_out,comm,rank, swapped)
+data_preprocess(modality,data_folder,view, data_folder_out,comm,rank)

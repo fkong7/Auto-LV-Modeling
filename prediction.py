@@ -58,17 +58,20 @@ def writeDiceScores(csv_path,dice_outs):
 
 class Prediction:
     #This is a class to get 3D volumetric prediction from the 2DUNet model
-    def __init__(self, unet, model,modality,view,image_vol,label_vol):
+    def __init__(self, unet, model,modality,view,image_fn,label_fn):
         self.unet=unet
         self.models=model
         self.modality=modality
         self.views=view
-        self.image_vol = image_vol
-        self.label_vol = label_vol
+        self.original_im = sitk.ReadImage(image_fn)
+        self.image_vol = resample_spacing(image_fn, order=1)[0]
+        try:
+            self.label_vol = sitk.ReadImage(label_fn)
+        except:
+            self.label_vol = None
         self.prediction = None
         self.dice_score = None
         self.original_shape = None
-        self.image_info = (image_vol.GetOrigin(), image_vol.GetSpacing(), image_vol.GetDirection())
         assert len(self.models)==len(self.views), "Missing view attributes for models"
 
     def volume_prediction_average(self, size):
@@ -107,45 +110,39 @@ class Prediction:
 
     def dice(self):
         label_vol = sitk.GetArrayFromImage(self.label_vol)
-        self.dice_score = dice_score(self.prediction, label_vol)
+        self.dice_score = dice_score(sitk.GetArrayFromImage(self.pred_label), label_vol)
         return self.dice_score
     
     def resample_prediction(self):
         #resample prediction so it matches the original image
         print(self.prediction.shape)
         im = sitk.GetImageFromArray(self.prediction)
-        #transformed = isometric_transform(im, self.label_vol,np.eye(3),order=0,target=self.label_vol.GetDirection())
-        transformed = centering(im, self.label_vol, order=0)
-        self.prediction = sitk.GetArrayFromImage(transformed)
-        print(self.prediction.shape)
-        print(sitk.GetArrayFromImage(self.label_vol).shape)
-        return self.prediction
+        im.SetSpacing(self.image_vol.GetSpacing())
+        im.SetOrigin(self.image_vol.GetOrigin())
+        im.SetDirection(self.image_vol.GetDirection())
+        self.pred_label = centering(im, self.original_im, order=0)
+        return self.pred_label
 
     def write_prediction(self, out_fn):
-        ori, space, direc = self.image_info
-        out_im = sitk.GetImageFromArray(self.prediction)
-        out_im.SetOrigin(ori)
-        out_im.SetSpacing(space)
-        out_im.SetDirection(direc)
         try:
             os.makedirs(os.path.dirname(out_fn))
         except:
             pass
-        sitk.WriteImage(sitk.Cast(out_im, sitk.sitkInt16), out_fn)
+        sitk.WriteImage(sitk.Cast(self.pred_label, sitk.sitkInt16), out_fn)
 
 def main():
-    modality = ["ct","mr"]
-    #im_base_folder = "4DCT"
-    im_base_folder = "MMWHS_small"
+    modality = ["ct"]
+    im_base_folder = "4DCT"
+    #im_base_folder = "MMWHS_small"
     home_dir = '/global/scratch/fanwei_kong/DeepLearning/'
     data_folder = os.path.join(home_dir, 'ImageData', im_base_folder)
-    folder_postfix = "4DCT_20150504_test_debug"
+    folder_postfix = "4DCT_20150504_test"
     #folder_postfix = "ensemble_test"
     model_postfix = "small2"
     base_folder = ["MMWHS_CrossValidation/run_aligned/fold0_0","MMWHS_CrossValidation/run_aligned/fold0_0","MMWHS_CrossValidation/run_aligned/fold0_0","MMWHS_CrossValidation/run_aligned/fold0_0"]
-    base_folder = base_folder[0:2]
+    #base_folder = base_folder[0:2]
     names = ['axial', 'coronal', 'sagittal']
-    view_attributes = [1]
+    view_attributes = [0,1,2]
     view_names = [names[i] for i in view_attributes]
     data_out_folder =home_dir + '2DUNet/Logs/%s/prediction_%s' % (base_folder[-1], folder_postfix)
     try:
@@ -162,31 +159,20 @@ def main():
     #load image filenames
     filenames = {}
     for m in modality:
-        im_loader = ImageLoader(m, data_folder, fn='_train', fn_mask='_train_masks', ext='*.nii.gz')
+        im_loader = ImageLoader(m, data_folder, fn='_20150504_test', fn_mask=None, ext='*.nii')
         x_filenames, y_filenames = im_loader.load_imagefiles()
         dice_list = []
 
         for i in range(len(x_filenames)):
             print("processing "+x_filenames[i])
             models = [home_dir + '2DUNet/Logs/%s/weights_multi-all-%s_%s.hdf5' % (base_folder[j], view_names[j], model_postfix) for j in range(len(view_attributes))]
-            #img, _ = resample_spacing(x_filenames[i], order=1)
-            print(models)
-            #sitk.WriteImage(img, os.path.join(data_out_folder, m+'_im_'+os.path.basename(x_filenames[i])))
-            img = sitk.ReadImage(x_filenames[i])
-            print(y_filenames)
-            if y_filenames[i] is not None:
-                mask = sitk.ReadImage(y_filenames[i])
-            else:
-                mask = None
-            #mask, _ = resample_spacing(y_filenames[i], order=0)
-            predict = Prediction(unet, models,m,view_attributes,img,mask)
+            predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i])
             predict.volume_prediction_average(256)
-            predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
-            #predict.resample_prediction()
-            if mask is not None:
+            predict.resample_prediction()
+            if y_filenames[i] is not None:
                 dice_list.append(predict.dice())
             
-            #predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
+            predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
             del predict 
         if len(dice_list) >0:
             csv_path = home_dir + '2DUNet/Logs/%s/%s_test-%s.csv' % (base_folder[-1], m , folder_postfix) 
