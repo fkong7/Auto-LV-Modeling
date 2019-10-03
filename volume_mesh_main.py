@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
     volume_fn = np.load(os.path.join(output_dir, "volume.npy"))
     if args.phase == -1:
-        phase = int(np.argmax(volume_fn))
+        phase = volume_fn[:,0][int(np.argmax(volume_fn[:,1]))]
     else:
         phase = args.phase
     poly_fn = os.path.join(output_dir, paras['model_output'] % phase)

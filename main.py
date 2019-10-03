@@ -76,6 +76,9 @@ if __name__=="__main__":
     fn_tempPts = os.path.join(output_dir, "surfaces", 'outputpoints.txt')
     
     fn_poly = os.path.join(output_dir, "surfaces", paras['model_output'] % paras['start_phase'])
-    model = buildSurfaceModelFromImage([seg_fn], fn_poly)
+
+    #run volume mesh to generate ids but not using it
+    fn_ug = 'temp'
+    model = buildSurfaceModelFromImage([seg_fn], fn_poly, fn_ug)
 
 

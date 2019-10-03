@@ -4,9 +4,9 @@
     "Total Phase": 10,
     "Image Name": "phase%d.nii",
     "Output Surface Model Name": "phase%d.nii.vtk",
-    "Output Dir Name": "/Users/fanweikong/Documents/Modeling/SurfaceModeling",
+    "Output Dir Name": "/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based",
     "Segmentation Name": "phase%d_pm.nii",
     "Image Top Dir": "/Users/fanweikong/Documents/ImageData/4DCCTA",
     "Segmentation Folder Name": "wall_motion_labels",
-    "Image Folder Name": "wall_motion_image_volumes"
+    "Image Folder Name": "wall_motion_labels"
 }

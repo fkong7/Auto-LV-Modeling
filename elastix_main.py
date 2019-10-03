@@ -22,7 +22,7 @@ def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, imag
     # compute volume of all phases to select systole and diastole:
     volume = list()
     
-    volume.append(lvmodel.getVolume())
+    volume.append([START_PHASE,lvmodel.getVolume()])
 
     ids = list(range(START_PHASE,TOTAL_PHASE)) + list(range(0,START_PHASE))
 
@@ -52,7 +52,7 @@ def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, imag
         #ASSUMING increment is 1
         fn_poly = os.path.join(output_dir, MODEL_NAME % ((index+1)%TOTAL_PHASE))
         new_lvmodel.writeSurfaceMesh(fn_poly)
-        volume.append(new_lvmodel.getVolume())
+        volume.append([(index+1)%TOTAL_PHASE,new_lvmodel.getVolume()])
 
     np.save(os.path.join(output_dir, "volume.npy"), volume)
     return
