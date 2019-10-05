@@ -72,10 +72,10 @@ def data_preprocess(modality,data_folder,view, data_folder_out, comm, rank):
     for i in range(len(imgVol_fn)):
       img_path = imgVol_fn[i]
       mask_path = mask_fn[i]
-      imgVol = sitk.GetArrayFromImage(resample_spacing(sitk.ReadImage(img_path), order=1))  # numpy array
+      imgVol = sitk.GetArrayFromImage(resample_spacing(img_path, order=1)[0])  # numpy array
       #imgVol = HistogramEqualization(imgVol)
       imgVol = RescaleIntensity(imgVol, m, intensity)
-      maskVol = sitk.GetArrayFromImage(resample_spacing(sitk.ReadImage(mask_path),order=0))  # numpy array
+      maskVol = sitk.GetArrayFromImage(resample_spacing(mask_path,order=0)[0])  # numpy array
       maskVol = swapLabels(maskVol)
       print("number of image slices in this view %d" % imgVol.shape[view])
       #remove the blank images with a probability - find the index first

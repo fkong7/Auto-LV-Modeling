@@ -109,7 +109,9 @@ class Prediction:
         return self.prediction
 
     def dice(self):
-        label_vol = sitk.GetArrayFromImage(self.label_vol)
+        resampled = resample_spacing(self.label_vol, order=0)[0]
+        centered = centering(resampled, self.original_im, order=0)
+        label_vol = sitk.GetArrayFromImage(centered)
         self.dice_score = dice_score(sitk.GetArrayFromImage(self.pred_label), label_vol)
         return self.dice_score
     
@@ -130,19 +132,18 @@ class Prediction:
             pass
         sitk.WriteImage(sitk.Cast(self.pred_label, sitk.sitkInt16), out_fn)
 
-def main():
-    modality = ["ct"]
-    im_base_folder = "4DCT"
+def main(view_attributes, folder_postfix):
+    modality = ["ct", "mr"]
+    im_base_folder = "MMWHS"
     #im_base_folder = "MMWHS_small"
     home_dir = '/global/scratch/fanwei_kong/DeepLearning/'
     data_folder = os.path.join(home_dir, 'ImageData', im_base_folder)
-    folder_postfix = "4DCT_20150504_test"
-    #folder_postfix = "ensemble_test"
+    #folder_postfix = "4DCT_20150504_test"
     model_postfix = "small2"
-    base_folder = ["MMWHS_CrossValidation/run_aligned/fold0_0","MMWHS_CrossValidation/run_aligned/fold0_0","MMWHS_CrossValidation/run_aligned/fold0_0","MMWHS_CrossValidation/run_aligned/fold0_0"]
-    #base_folder = base_folder[0:2]
+    #base_folder = ["MMWHS_small_aug/ct_mr_combined"] * (len(view_attributes)+1)
+    base_folder = ["MMWHS/total_run"] * (len(view_attributes)+1)
+    #base_folder = ["MMWHS_small_aug/ct_mr_combined"] * (len(view_attributes)+1)
     names = ['axial', 'coronal', 'sagittal']
-    view_attributes = [0,1,2]
     view_names = [names[i] for i in view_attributes]
     data_out_folder =home_dir + '2DUNet/Logs/%s/prediction_%s' % (base_folder[-1], folder_postfix)
     try:
@@ -159,7 +160,7 @@ def main():
     #load image filenames
     filenames = {}
     for m in modality:
-        im_loader = ImageLoader(m, data_folder, fn='_20150504_test', fn_mask=None, ext='*.nii')
+        im_loader = ImageLoader(m, data_folder, fn='_test', fn_mask='_test_masks', ext='*.nii.gz')
         x_filenames, y_filenames = im_loader.load_imagefiles()
         dice_list = []
 
@@ -179,4 +180,7 @@ def main():
             writeDiceScores(csv_path, dice_list)
 
 if __name__ == '__main__':
-    main()
+    main([0,1,2], 'ensemble_test')
+    main([0], 'axial_test')
+    main([1], 'coronal_test')
+    main([2], 'sagittal_test')
