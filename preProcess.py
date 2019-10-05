@@ -154,8 +154,11 @@ def isometric_transform(image, ref_img, orig_direction, order=1, target=None):
   #affine.SetMatrix(image.GetDirection())
   return transform_func(image, ref_img, affine, order)
 
-def resample_spacing(sitkIm_fn, resolution=0.5, dim=3, order=1):
-  image = sitk.ReadImage(sitkIm_fn)
+def resample_spacing(sitkIm, resolution=0.5, dim=3, order=1):
+  if type(sitkIm) is str:
+    image = sitk.ReadImage(sitkIm)
+  else:
+    image = sitkIm
   orig_direction = image.GetDirection()
   orig_size = np.array(image.GetSize(), dtype=np.int)
   orig_spacing = np.array(image.GetSpacing())

@@ -30,7 +30,6 @@ from utils import getTrainNLabelNames
 from preProcess import swapLabels
 from preProcess import RescaleIntensity
 from utils import np_to_tfrecords
-from preProcess import data_preprocess
 
 from sampling import sample
 from sampling import bootstrapping
@@ -108,19 +107,22 @@ def buildImageDataset(data_folder_out, modality, seed):
       index = sample(list(range(len(filenames[i]))), nums[i])
       x_train_filenames+=[filenames[i][j] for j in index]
     
-    x_train_filenames = bootstrapping(x_train_filenames)
+    #x_train_filenames = bootstrapping(x_train_filenames)
 
     return x_train_filenames
 
 x_train_filenames = buildImageDataset(data_folder_out, modality, seed)
 x_val_filenames = buildImageDataset(data_val_folder_out, modality, seed)
+print("Number of training examples after sampling: {}".format(len(x_train_filenames)))
+print("Number of validation examples after sampling: {}".format(len(x_val_filenames)))
+
+if len(x_val_filenames) ==0:
+    x_train_filenames, x_val_filenames = train_test_split(x_train_filenames, test_size=0.2, random_state=seed)
+    print("Number of training examples after sampling: {}".format(len(x_train_filenames)))
+    print("Number of validation examples after sampling: {}".format(len(x_val_filenames)))
+    
 num_train_examples = len(x_train_filenames)
 num_val_examples = len(x_val_filenames)
-print("Number of training examples after sampling: {}".format(num_train_examples))
-print("Number of validation examples after sampling: {}".format(num_val_examples))
-
-
-
 
 
 """## Set up train and validation datasets
@@ -137,23 +139,23 @@ tr_cfg = {
 tr_preprocessing_fn = functools.partial(_augment, **tr_cfg)
 
 val_cfg = {
-    'resize': [img_shape[0], img_shape[1]],
+    'resize': [img_shape[0], img_shape[1]]
 }
 val_preprocessing_fn = functools.partial(_augment, **val_cfg)
 
 train_ds = get_baseline_dataset(x_train_filenames, preproc_fn=tr_preprocessing_fn,
                                 batch_size=batch_size)
-val_ds = get_baseline_dataset(x_train_filenames, preproc_fn=val_preprocessing_fn,
+val_ds = get_baseline_dataset(x_val_filenames, preproc_fn=val_preprocessing_fn,
                               batch_size=batch_size)
 
 """# DEBUG """
-data_aug_iter = val_ds.make_one_shot_iterator()
-next_element = data_aug_iter.get_next()
-with tf.Session() as sess: 
-    batch_of_imgs, label = sess.run(next_element)
-    print("****DEBUG PRINT****")
-    print(batch_of_imgs.shape)
-    print(label.shape)
+#data_aug_iter = val_ds.make_one_shot_iterator()
+#next_element = data_aug_iter.get_next()
+#with tf.Session() as sess: 
+#    batch_of_imgs, label = sess.run(next_element)
+#    print("****DEBUG PRINT****")
+#    print(batch_of_imgs.shape)
+#    print(label.shape)
 
 """# Build the model"""
 inputs, outputs = UNet2D(img_shape, num_class)
@@ -161,7 +163,7 @@ inputs, outputs = UNet2D(img_shape, num_class)
 model = models.Model(inputs=[inputs], outputs=[outputs])
 
 lr = 0.02
-adam = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=None, decay=lr/epochs, amsgrad=False)
+adam = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=None, decay=1e-6, amsgrad=False)
 model.compile(optimizer=adam, loss=bce_dice_loss, metrics=[dice_loss])
 
 model.summary()
@@ -184,6 +186,7 @@ history = model.fit(train_ds,
                    validation_data=val_ds,
                    validation_steps=int(np.ceil(num_val_examples / float(batch_size))),
                    callbacks=[cp])
+
 
 model.save_weights(save_model_path)
 with open(save_loss_path+"history", 'wb') as handle: # saving the history 
