@@ -31,9 +31,18 @@
 module load python
 module load tensorflow/1.12.0-py36-pip-gpu
 module load cuda
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction.py \
+#    --image ImageData/MMWHS \
+#    --output 2DUNet/Logs/MMWHS/total_run3/test_ensemble \
+#    --model 2DUNet/Logs/MMWHS/total_run3 \
+#    --view 0 1 2 \
+#    --modality ct mr \
+#    --mode test
+
 python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction.py \
     --image ImageData/MMWHS \
-    --output 2DUNet/Logs/MMWHS/total_run3/test_ensemble \
+    --output 2DUNet/Logs/MMWHS/total_run3/test_axial \
     --model 2DUNet/Logs/MMWHS/total_run3 \
-    --view 0 1 2 \
-    --modality ct mr
+    --view 0\
+    --modality ct mr \
+    --mode test
