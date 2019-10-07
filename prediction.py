@@ -89,7 +89,7 @@ class Prediction:
         else:
             label_vol = np.zeros(img_vol.shape)
         
-        self.original_shape = label_vol.shape
+        self.original_shape = img_vol.shape
         
         prob = np.zeros((*self.original_shape,8))
         unique_views = np.unique(self.views)
@@ -135,7 +135,7 @@ class Prediction:
             pass
         sitk.WriteImage(sitk.Cast(self.pred_label, sitk.sitkInt16), out_fn)
 
-def main(modality, data_folder, data_out_folder, model_folder, view_attributes):
+def main(modality, data_folder, data_out_folder, model_folder, view_attributes, mode):
     model_postfix = "small2"
     base_folder = [model_folder] * (len(view_attributes)+1)
     names = ['axial', 'coronal', 'sagittal']
@@ -153,7 +153,7 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes):
     #load image filenames
     filenames = {}
     for m in modality:
-        im_loader = ImageLoader(m, data_folder, fn='_test', fn_mask='_test_masks', ext='*.nii.gz')
+        im_loader = ImageLoader(m, data_folder, fn='_test', fn_mask=None if mode=='test' else '_test_masks', ext='*.nii.gz')
         x_filenames, y_filenames = im_loader.load_imagefiles()
         dice_list = []
 
@@ -179,7 +179,8 @@ if __name__ == '__main__':
     parser.add_argument('--model',  help='Name of the folder containing the trained models')
     parser.add_argument('--view', type=int, nargs='+', help='List of views for single or ensemble prediction, split by space. For example, 0 1 2  axial(0), coronal(1), sagittal(2)')
     parser.add_argument('--modality', nargs='+', help='Name of the modality, mr, ct, split by space')
+    parser.add_argument('--mode', help='Test or validation (without or with ground truth label')
     args = parser.parse_args()
     print('Finished parsing...')
     
-    main(args.modality, args.image, args.output, args.model, args.view)
+    main(args.modality, args.image, args.output, args.model, args.view, args.mode)
