@@ -12,6 +12,7 @@ from loss import bce_dice_loss, dice_loss
 from tensorflow.python.keras import backend as K
 from model import UNet2D
 from imageLoader import ImageLoader
+import argparse
 
 def model_output_no_resize(model, im_vol, view, modality):
     im_vol = np.moveaxis(im_vol, view, 0)
@@ -109,9 +110,8 @@ class Prediction:
         return self.prediction
 
     def dice(self):
-        resampled = resample_spacing(self.label_vol, order=0)[0]
-        centered = centering(resampled, self.original_im, order=0)
-        label_vol = sitk.GetArrayFromImage(centered)
+        #assuming groud truth label has the same origin, spacing and orientation as input image
+        label_vol = sitk.GetArrayFromImage(self.label_vol)
         self.dice_score = dice_score(sitk.GetArrayFromImage(self.pred_label), label_vol)
         return self.dice_score
     
@@ -132,22 +132,12 @@ class Prediction:
             pass
         sitk.WriteImage(sitk.Cast(self.pred_label, sitk.sitkInt16), out_fn)
 
-def main(view_attributes, folder_postfix):
-    modality = ["ct", "mr"]
-    im_base_folder = "MMWHS"
-    #im_base_folder = "MMWHS_small"
-    home_dir = '/global/scratch/fanwei_kong/DeepLearning/'
-    data_folder = os.path.join(home_dir, 'ImageData', im_base_folder)
-    #folder_postfix = "4DCT_20150504_test"
+def main(modality, data_folder, data_out_folder, model_folder, view_attributes):
     model_postfix = "small2"
-    #base_folder = ["MMWHS_small_aug/ct_mr_combined"] * (len(view_attributes)+1)
-    base_folder = ["MMWHS/total_run"] * (len(view_attributes)+1)
-    #base_folder = ["MMWHS_small_aug/ct_mr_combined"] * (len(view_attributes)+1)
+    base_folder = [model_folder] * (len(view_attributes)+1)
     names = ['axial', 'coronal', 'sagittal']
     view_names = [names[i] for i in view_attributes]
-    data_out_folder =home_dir + '2DUNet/Logs/%s/prediction_%s' % (base_folder[-1], folder_postfix)
     try:
-      os.mkdir(home_dir+'2DUNet/Logs/%s' % base_folder[-1])
       os.mkdir(data_out_folder)
     except Exception as e: print(e)
     
@@ -166,7 +156,7 @@ def main(view_attributes, folder_postfix):
 
         for i in range(len(x_filenames)):
             print("processing "+x_filenames[i])
-            models = [home_dir + '2DUNet/Logs/%s/weights_multi-all-%s_%s.hdf5' % (base_folder[j], view_names[j], model_postfix) for j in range(len(view_attributes))]
+            models = [os.path.realpath(model_folder) + '/weights_multi-all-%s_%s.hdf5' % (view_names[j], model_postfix) for j in range(len(view_attributes))]
             predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i])
             predict.volume_prediction_average(256)
             predict.resample_prediction()
@@ -176,11 +166,17 @@ def main(view_attributes, folder_postfix):
             predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
             del predict 
         if len(dice_list) >0:
-            csv_path = home_dir + '2DUNet/Logs/%s/%s_test-%s.csv' % (base_folder[-1], m , folder_postfix) 
+            csv_path = os.path.join(data_out_folder, '%s_test-%s.csv' % (base_folder[-1], m))
             writeDiceScores(csv_path, dice_list)
 
 if __name__ == '__main__':
-    main([0,1,2], 'ensemble_test')
-    main([0], 'axial_test')
-    main([1], 'coronal_test')
-    main([2], 'sagittal_test')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--image',  help='Name of the folder containing the image data')
+    parser.add_argument('--output',  help='Name of the output folder')
+    parser.add_argument('--model',  help='Name of the folder containing the trained models')
+    parser.add_argument('--view', type=int, nargs='+', help='List of views for single or ensemble prediction, split by space. For example, 0 1 2  axial(0), coronal(1), sagittal(2)')
+    parser.add_argument('--modality', nargs='+', help='Name of the modality, mr, ct, split by space')
+    args = parser.parse_args()
+    print('Finished parsing...')
+    
+    main(args.modality, args.image, args.output, args.model, args.view)

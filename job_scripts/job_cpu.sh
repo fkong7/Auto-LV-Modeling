@@ -25,31 +25,15 @@
 #
 ## Command(s) to run (example):
 module load gcc openmpi python
-module load tensorflow/1.12.0-py36-pip-gpu
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold1 --view 0 --modality ct --out_folder _train --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold1 --view 0 --modality ct --out_folder _val --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold1 --view 1 --modality ct --out_folder _train --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold1 --view 1 --modality ct --out_folder _val --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold1 --view 2 --modality ct --out_folder _train --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold1 --view 2 --modality ct --out_folder _val --n_channel 3 --intensity 512 -512
+#module load tensorflow/1.12.0-py36-pip-gpu
+module load tensorflow
 
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold2 --view 0 --modality ct --out_folder _train --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold2 --view 0 --modality ct --out_folder _val --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold2 --view 1 --modality ct --out_folder _train --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold2 --view 1 --modality ct --out_folder _val --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold2 --view 2 --modality ct --out_folder _train --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold2 --view 2 --modality ct --out_folder _val --n_channel 3 --intensity 512 -512
-
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold3 --view 0 --modality ct --out_folder _train --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold3 --view 0 --modality ct --out_folder _val --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold3 --view 1 --modality ct --out_folder _train --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold3 --view 1 --modality ct --out_folder _val --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold3 --view 2 --modality ct --out_folder _train --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold3 --view 2 --modality ct --out_folder _val --n_channel 3 --intensity 512 -512
-
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold4 --view 0 --modality ct --out_folder _train --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold4 --view 0 --modality ct --out_folder _val --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold4 --view 1 --modality ct --out_folder _train --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold4 --view 1 --modality ct --out_folder _val --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold4 --view 2 --modality ct --out_folder _train --n_channel 3 --intensity 512 -512
-mpirun -n 24 python /global/scratch/fanwei_kong/2DUNet/image2tfrecords.py --folder Kits19_CrossValidation/run0/fold4 --view 2 --modality ct --out_folder _val --n_channel 3 --intensity 512 -512
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction_ensemble.py
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction.py
+#python /global/scratch/fanwei_kong/2DUNet/partition.py
+mpirun -n 24 python /global/scratch/fanwei_kong/DeepLearning/2DUNet/image2tfrecords.py --folder MMWHS --view 0 --modality ct mr --out_folder _train --n_channel 1
+#mpirun -n 24 python /global/scratch/fanwei_kong/DeepLearning/2DUNet/image2tfrecords.py --folder MMWHS_2 --view 0 --modality ct mr --out_folder _val --n_channel 1
+mpirun -n 24 python /global/scratch/fanwei_kong/DeepLearning/2DUNet/image2tfrecords.py --folder MMWHS --view 1 --modality ct mr --out_folder _train --n_channel 1
+#mpirun -n 24 python /global/scratch/fanwei_kong/DeepLearning/2DUNet/image2tfrecords.py --folder MMWHS_2 --view 1 --modality ct mr --out_folder _val --n_channel 1
+mpirun -n 24 python /global/scratch/fanwei_kong/DeepLearning/2DUNet/image2tfrecords.py --folder MMWHS --view 2 --modality ct mr --out_folder _train --n_channel 1
+#mpirun -n 24 python /global/scratch/fanwei_kong/DeepLearning/2DUNet/image2tfrecords.py --folder MMWHS_2 --view 2 --modality ct mr --out_folder _val --n_channel 1
