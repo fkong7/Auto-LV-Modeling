@@ -24,10 +24,16 @@
 #SBATCH --gres=gpu:1
 #
 # Wall clock limit:
-#SBATCH --time=06:30:00
+#SBATCH --time=04:30:00
 #
 ## Command(s) to run (example):
-module load gcc openmpi python
+#module load gcc openmpi python
+module load python
 module load tensorflow/1.12.0-py36-pip-gpu
 module load cuda
-python /global/scratch/fanwei_kong/2DUNet/2dunet_prediction.py
+python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction.py \
+    --image ImageData/MMWHS \
+    --output 2DUNet/Logs/MMWHS/total_run3/test_ensemble \
+    --model 2DUNet/Logs/MMWHS/total_run3 \
+    --view 0 1 2 \
+    --modality ct mr

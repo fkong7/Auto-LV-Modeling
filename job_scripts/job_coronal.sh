@@ -30,23 +30,8 @@
 module load python
 module load tensorflow/1.12.0-py36-pip-gpu
 module load cuda
-python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold0 Kits19_CrossValidation/run0/fold0_0_multi3 41 3 60 3
-#python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold0 Kits19_CrossValidation/run0/fold0_1 21 3 60
-#python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold0 Kits19_CrossValidation/run0/fold0_2 11 3 60
-
-python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold1 Kits19_CrossValidation/run0/fold1_0_multi3 41 3 60 3
-#python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold1 Kits19_CrossValidation/run0/fold1_1 21 3 60
-#python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold1 Kits19_CrossValidation/run0/fold1_2 11 3 60
-
-python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold2 Kits19_CrossValidation/run0/fold2_0_multi3 41 3 60 3
-#python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold2 Kits19_CrossValidation/run0/fold2_1 21 3 60
-#python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold2 Kits19_CrossValidation/run0/fold2_2 11 3 60
-
-python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold3 Kits19_CrossValidation/run0/fold3_0_multi3 41 3 60 3
-#python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold3 Kits19_CrossValidation/run0/fold3_1 21 3 60
-#python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold3 Kits19_CrossValidation/run0/fold3_2 11 3 60
-
-python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold4 Kits19_CrossValidation/run0/fold4_0_multi3 41 3 60 3
-#python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold4 Kits19_CrossValidation/run0/fold4_1 21 3 60
-#python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py Kits19_CrossValidation/run0/fold4 Kits19_CrossValidation/run0/fold4_2 11 3 60
+python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py MMWHS MMWHS/total_run3 41 8 500 1 1
+#python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py MMWHS_CrossValidation/run0/fold0 MMWHS_CrossValidation/run0/fold0_0 41
+#python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py MMWHS_CrossValidation/run0/fold0 MMWHS_CrossValidation/run0/fold0_1 21
+#python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_coronal.py MMWHS_CrossValidation/run0/fold0 MMWHS_CrossValidation/run0/fold0_2 11
 
