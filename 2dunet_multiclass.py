@@ -4,6 +4,8 @@
 import os
 import glob
 import functools
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -51,7 +53,6 @@ from loss import bce_dice_loss
 from tensorflow.python.keras.optimizers import Adam
 
 from pickle import dump
-import sys
 """# Set up"""
 
 #num_class = 8

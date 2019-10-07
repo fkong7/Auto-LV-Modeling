@@ -1,5 +1,8 @@
 import os
 import numpy as np
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
+
 
 import tensorflow as tf
 import tensorflow.contrib as tfcontrib
