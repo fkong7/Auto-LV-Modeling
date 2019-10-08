@@ -32,27 +32,29 @@ def predictVol(prob,labels):
 
 from scipy.spatial.distance import dice
 def dice_score(pred, true):
-  pred = pred.astype(np.int)
-  true = true.astype(np.int)  
-  num_class = np.unique(true)
-  dice_out = [None]*len(num_class)
-  
-  for i in range(len(num_class)):
-    pred_i = pred==num_class[i]
-    true_i = true==num_class[i]
-    print(pred_i.shape)
-    print(true_i.shape)
-    sim = 1 - dice(pred_i.reshape(-1), true_i.reshape(-1))
-    dice_out[i] = sim
+    pred = pred.astype(np.int)
+    true = true.astype(np.int)  
+    num_class = np.unique(true)
     
-  return dice_out
+    #change to one hot
+    pred_one_hot = np.zeros((np.prod(pred.shape), len(num_class)))
+    true_one_hot = np.zeros((np.prod(pred.shape), len(num_class)))
+    dice_out = [None]*len(num_class)
+    for i in range(len(num_class)):
+        pred_one_hot[:, i] = (pred==num_class[i]).reshape(-1)
+        true_one_hot[:, i] = (true==num_class[i]).reshape(-1)
+        if i ==0:
+            continue
+        dice_out[i] = 1-dice(pred_one_hot[:,i], true_one_hot[:,i]) 
+    dice_out[0] = 1 - dice(pred_one_hot.reshape(-1), true_one_hot.reshape(-1))
+    return dice_out
 
 
 import csv
 def writeDiceScores(csv_path,dice_outs): 
     with open(csv_path, 'w') as writeFile:
         writer = csv.writer(writeFile)
-        writer.writerow( ('Bg 0', 'myo 205', 'la 420', 'lv 500', 'ra 550', 'rv 600', 'aa 820', 'pa 850') )
+        writer.writerow( ('Total', 'myo 205', 'la 420', 'lv 500', 'ra 550', 'rv 600', 'aa 820', 'pa 850') )
         for i in range(len(dice_outs)):
             writer.writerow(tuple(dice_outs[i]))
             print(dice_outs[i])
@@ -136,6 +138,11 @@ class Prediction:
         sitk.WriteImage(sitk.Cast(self.pred_label, sitk.sitkInt16), out_fn)
 
 def main(modality, data_folder, data_out_folder, model_folder, view_attributes, mode):
+    print(modality)
+    print(view_attributes)
+    print(mode)
+    print(os.path.join(data_out_folder, '%s_test.csv' % "ct"))
+
     model_postfix = "small2"
     base_folder = [model_folder] * (len(view_attributes)+1)
     names = ['axial', 'coronal', 'sagittal']
@@ -169,7 +176,7 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
             predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
             del predict 
         if len(dice_list) >0:
-            csv_path = os.path.join(data_out_folder, '%s_test-%s.csv' % (base_folder[-1], m))
+            csv_path = os.path.join(data_out_folder, '%s_test.csv' % m)
             writeDiceScores(csv_path, dice_list)
 
 if __name__ == '__main__':
