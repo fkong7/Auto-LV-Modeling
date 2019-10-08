@@ -172,7 +172,7 @@ model.summary()
 """ Setup model checkpoint """
 
 cp = tf.keras.callbacks.ModelCheckpoint(filepath=save_model_path, monitor='val_dice_loss', save_best_only=True, verbose=1)
-
+lr_schedule = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_dice_loss', factor=0.5, patience=10, min_lr=0.001)
 # Alternatively, load the weights directly: model.load_weights(save_model_path)
 try:
   model = models.load_model(save_model_path, custom_objects={'bce_dice_loss': bce_dice_loss, 'dice_loss': dice_loss})
@@ -186,7 +186,7 @@ history = model.fit(train_ds,
                    epochs=epochs,
                    validation_data=val_ds,
                    validation_steps=int(np.ceil(num_val_examples / float(batch_size))),
-                   callbacks=[cp])
+                   callbacks=[cp, lr_schedule])
 
 
 model.save_weights(save_model_path)
