@@ -212,6 +212,8 @@ def swapLabelsBack(labels,pred):
     
 
 def RescaleIntensity(slice_im,m,limit):
+    if type(slice_im) != np.ndarray:
+        raise RuntimeError("Input image is not numpy array")
     #slice_im: numpy array
     #m: modality, ct or mr
     if m =="ct":
@@ -222,6 +224,7 @@ def RescaleIntensity(slice_im,m,limit):
         #(slice_im-threshold-np.min(slice_im))/threshold
         slice_im = slice_im/threshold
     elif m=="mr":
+        slice_im[slice_im>limit[0]*2] = limit[0]*2
         rng = np.max(slice_im) - np.min(slice_im)
         slice_im -= np.min(slice_im)
         slice_im = slice_im/rng*2

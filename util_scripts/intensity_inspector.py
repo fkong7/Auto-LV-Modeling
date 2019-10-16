@@ -2,12 +2,11 @@ import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "../src"))
 import numpy as np
-import pandas as pd
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
 from imageLoader import ImageLoader
 from preProcess import RescaleIntensity
-
+import tensorflow
 def mean_intensity(image, label,m,limit):
     """
     Output the mean intensity corresponding to each structure
@@ -33,14 +32,14 @@ def mean_intensity(image, label,m,limit):
     print(values)
     return values
 
-if __name__ == '__main__':
-
+def intensity_plots():
+    import pandas as pd
     im_dir = '/Users/fanweikong/Documents/ImageData/MMWHS'
     modality = ["ct", "mr"]
-
+    keys = ["ct", "mr", "mr_test_good", "mr_test_bad"]
     intensity = {}
-    for m in modality:
-        im_loader = ImageLoader(m, im_dir, fn='_train', fn_mask='_train_masks')
+    def get_mean_intensity(folder_names, m, key, intensity):
+        im_loader = ImageLoader(m, im_dir, fn=folder_names[0], fn_mask=folder_names[1])
         im_loader.load_imagefiles()
         values = []
         for x, y in zip(im_loader.x_filenames, im_loader.y_filenames):
@@ -51,19 +50,73 @@ if __name__ == '__main__':
             except Exception as e:
                 print(e)
                 values = mean_intensity(im, label, m, [750, -750])
-        intensity[m] = values
+        intensity[key] = values
+        return intensity
+    for m in modality:
+        intensity = get_mean_intensity(['_train', '_train_masks'],m , m, intensity)
+    
+    #adding testing set
+    intensity = get_mean_intensity(['_special_test', '_special_test_masks'], "mr", keys[2], intensity)
+    intensity = get_mean_intensity(['_special_test2', '_special_test2_masks'], "mr", keys[3], intensity)
 
     #plotting
     structure_names=['Myo', 'LV', 'LA', 'RA', 'RV', 'AA', 'PA']
-    df_mr = pd.DataFrame(intensity["mr"], columns=structure_names)
-    df_ct = pd.DataFrame(intensity["ct"], columns=structure_names)
-    df_mr['Key'] = "mr"
-    df_ct['Key'] = "ct"
-    print(df_mr)
-    print(df_ct)
+    dfs = [None] * len(keys)
+    for i, k in enumerate(keys):
+        dfs[i] = pd.DataFrame(intensity[k], columns=structure_names)
+        dfs[i]['Key'] = k
     
-    df = pd.concat([df_ct,df_mr],keys=['ct','mr'])
-    group = df.groupby(['Key'])
-    boxplot = group.boxplot()
+    df = pd.concat([d for d in dfs],keys=keys)
+
+    fig, axes = plt.subplots(1,4)
+    group = df.groupby(['Key'], sort=False)
+    for m, ax in zip(keys,axes):
+        for i in range(intensity[m].shape[0]):
+            y = intensity[m][i,:]
+            ax.plot(np.array(range(1,len(structure_names)+1)), y, marker='o')
+            ax.set_ylim([-1,1])
+    boxplot = group.boxplot(ax=axes)
     plt.show()
+
+def tf_intensity_augmentation(tr_img, label_img, num_class, changeIntensity=False):
+    import tensorflow as tf 
+    if changeIntensity:
+        for i in range(1,8):
+            scale = tf.random_uniform([], 0.8, 1.2)
+            shift = tf.random_uniform([], -0.2, 0.2)
+            scaled = tr_img*scale + shift
+            tr_img = tf.where(label_img==i, scaled, tr_img)
+    return tr_img, label_img
+
+def tf_test():
+    import tensorflow as tf 
+    img_fn = '/Users/fanweikong/Documents/ImageData/MMWHS/mr_train/mr_train_1001_image.nii.gz'
+    label_fn = '/Users/fanweikong/Documents/ImageData/MMWHS/mr_train_masks/mr_train_1001_label.nii.gz'
+    from skimage.transform import resize
+    import preProcess
+    img = RescaleIntensity(sitk.GetArrayFromImage(preProcess.resample_spacing(img_fn)[0]), "mr", [750, -750])
+    label = sitk.GetArrayFromImage(preProcess.resample_spacing(label_fn, order=0)[0])
     
+    print("ok")
+    tf_img = tf.placeholder(tf.float32, shape=img.shape)
+    tf_label = tf.placeholder(tf.int32, shape=label.shape)
+    tr_img_aug, tr_label_aug = tf_intensity_augmentation(tf_img, tf_label, True)
+    print("ok2")
+    with tf.Session() as sess:
+        out_im, out_label = sess.run([tr_img_aug, tr_label_aug], feed_dict={tf_img: img, tf_label: label})
+        print(out_im.shape, out_label.shape)
+        fig, axes = plt.subplots(2,3)
+        for i in range(axes.shape[0]):
+            loc = 50
+            incr = 40
+            axes[i][0].imshow(img[loc+incr*(i+1),:,:], cmap='gray')
+            axes[i][0].axis('off')
+            axes[i][1].imshow(out_im[loc+incr*(i+1),:,:],cmap='gray')
+            axes[i][1].axis('off')
+            axes[i][2].imshow(out_label[loc+incr*(i+1),:,:],cmap='gray')
+            axes[i][2].axis('off')
+        
+        plt.show()
+
+if __name__ == '__main__':
+   tf_test()
