@@ -40,6 +40,7 @@ def changeIntensity_img(tr_img, label_img, changeIntensity=False):
     
   return tr_img, label_img
 
+"""##Scale the image intensity for different cardiac structures"""
 """## Assembling our transformations into our augment function"""
 
 def _augment(img,
