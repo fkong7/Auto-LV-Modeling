@@ -50,7 +50,7 @@ def changeIntensity_img(tr_img, label_img, change):
 
 """##Scale the image intensity for different cardiac structures"""
 def change_class_intensity_img(tr_img, label_img, change, num_class):
-    if change:
+    if change and num_class:
         for i in range(1, num_class):
             scale = tf.random_uniform([], change['scale'][0], change['scale'][1])
             shift = tf.random_uniform([], change['shift'][0], change['shift'][1])
