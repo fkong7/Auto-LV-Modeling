@@ -131,10 +131,10 @@ Note that we apply image augmentation to our training dataset but not our valida
 """
 
 tr_cfg = {
-    'num_class': num_class,
+    #'num_class': num_class,
     'resize': [img_shape[0], img_shape[1]],
     'horizontal_flip': True,
-    'rotation': 90,
+    #'rotation': 10.,
     'changeIntensity': {"scale": [0.9, 1.1],"shift": [-0.1, 0.1]}, 
     'width_shift_range': 0.2,
     'height_shift_range': 0.2
@@ -175,7 +175,7 @@ model.summary()
 
 cp = tf.keras.callbacks.ModelCheckpoint(filepath=save_model_path, monitor='val_dice_loss', save_best_only=True, verbose=1)
 lr_schedule = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_dice_loss', factor=0.5, patience=10, min_lr=0.001)
-erly_stp = tf.keras.callbacks.EarlyStopping(monitor='val_dice_loss', patience=50)
+erly_stp = tf.keras.callbacks.EarlyStopping(monitor='val_dice_loss', patience=30)
 # Alternatively, load the weights directly: model.load_weights(save_model_path)
 try:
   model = models.load_model(save_model_path, custom_objects={'bce_dice_loss': bce_dice_loss, 'dice_loss': dice_loss})

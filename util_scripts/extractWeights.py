@@ -16,7 +16,8 @@ def saveWeights(model_fn,save_fn):
 if __name__ == '__main__':
     view_names = ['axial', 'coronal', 'sagittal']
     dir_path = '/global/scratch/fanwei_kong/2DUNet/Logs'
-    base_name = ['MMWHS_small_btstrp','MMWHS_small_btstrp2','MMWHS_small_btstrp3']
+    #base_name = ['MMWHS_small_btstrp','MMWHS_small_btstrp2','MMWHS_small_btstrp3']
+    base_name = ['MMWHS_2/total_run3']
     for folder in base_name:
         for view in view_names:
             model_name =  'multi-all-%s_small2.hdf5' % view
