@@ -8,6 +8,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 import numpy as np
+import random
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 mpl.rcParams['axes.grid'] = False
@@ -48,7 +49,7 @@ from model import UNet2D
 
 from loss import dice_coeff
 from loss import dice_loss
-from loss import bce_dice_loss
+from loss import bce_dice_loss, weighted_bce_dice_loss
 
 from tensorflow.python.keras.optimizers import Adam
 
@@ -59,8 +60,8 @@ from pickle import dump
 batch_size = 10
 #epochs = 100
 
-modality = ["ct","mr"]
-#modality = ["mr"]
+#modality = ["ct","mr"]
+modality = ["mr"]
 im_base_name = sys.argv[1]
 base_name = sys.argv[2]
 seed = int(sys.argv[3])
@@ -70,6 +71,9 @@ channel = int(sys.argv[6])
 view = int(sys.argv[7])
 img_shape = (256, 256, channel)
 
+#WEIGHT ADJUSTMENTS
+weights = np.ones(num_class)
+weights[0] = 0.05
 
 data_folder = '/global/scratch/fanwei_kong/DeepLearning/ImageData/%s' % im_base_name
 view_names = ['axial', 'coronal', 'sagittal']
@@ -98,6 +102,8 @@ def buildImageDataset(data_folder_out, modality, seed):
       filenames[i], _ = getTrainNLabelNames(data_folder_out[i], m, ext='*.tfrecords')
       nums[i] = len(filenames[i])
       x_train_filenames+=filenames[i]
+      #shuffle
+      random.shuffle(x_train_filenames)
       
     print("Number of images obtained for training and validation: " + str(nums))
     
@@ -167,7 +173,7 @@ model = models.Model(inputs=[inputs], outputs=[outputs])
 
 lr = 0.02
 adam = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=None, decay=1e-6, amsgrad=False)
-model.compile(optimizer=adam, loss=bce_dice_loss, metrics=[dice_loss])
+model.compile(optimizer=adam, loss=weighted_bce_dice_loss(weights), metrics=[dice_loss])
 
 model.summary()
 
