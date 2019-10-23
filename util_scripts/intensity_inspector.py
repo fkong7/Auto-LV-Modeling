@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from imageLoader import ImageLoader
 import preProcess
 from preProcess import RescaleIntensity
-import tensorflow
 def pre_process(image, label, m, limit):
 
     py_im = RescaleIntensity(sitk.GetArrayFromImage(image), m, limit)
@@ -34,39 +33,32 @@ def mean_intensity(py_im, py_label):
             continue
         mask = py_label == lb
         values = np.append(values, np.mean(py_im[mask]))
-    print(values)
     return values
 
 def intensity_plots():
     import pandas as pd
-    im_dir = '/Users/fanweikong/Documents/ImageData/MMWHS'
-    modality = ["ct", "mr"]
-    keys = ["ct", "mr", "mr_test_good", "mr_test_bad"]
+    im_dir = '/Users/fanweikong/Documents/ImageData/MMWHS_2'
+    modality = ["ct", "mr", "ct", "mr", "mr", "mr"]
+    folders = ['_train', '_train', '_val', '_val', '_special_test', '_special_test2']
+    keys = ["ct", "mr", "ct_val", "mr_val", "mr_test_good", "mr_test_bad"]
     intensity = {}
     def get_mean_intensity(folder_names, m, key, intensity):
         im_loader = ImageLoader(m, im_dir, fn=folder_names[0], fn_mask=folder_names[1])
         im_loader.load_imagefiles()
-        values = []
+        values = np.zeros((0,7))
         for x, y in zip(im_loader.x_filenames, im_loader.y_filenames):
             #im = sitk.ReadImage(x)
             #label = sitk.ReadImage(y)
+            print(x, y)
             im, label = tf_test(x, y)
-            
             #im, label = pre_process(im, label, m, [750, -750])
-            try:
-                values = np.vstack((mean_intensity(im, label)))
-            except Exception as e:
-                print(e)
-                values = mean_intensity(im, label)
+            values = np.vstack((values, mean_intensity(im, label)))
+            print(values.shape)
+        print(values.shape)
         intensity[key] = values
         return intensity
-    for m in modality:
-        intensity = get_mean_intensity(['_train', '_train_masks'],m , m, intensity)
-    
-    #adding testing set
-    intensity = get_mean_intensity(['_special_test', '_special_test_masks'], "mr", keys[2], intensity)
-    intensity = get_mean_intensity(['_special_test2', '_special_test2_masks'], "mr", keys[3], intensity)
-
+    for m, key,  folder in zip(modality, keys, folders):
+        intensity = get_mean_intensity([folder, folder+'_masks'], m, key, intensity)
     #plotting
     structure_names=['Myo', 'LV', 'LA', 'RA', 'RV', 'AA', 'PA']
     dfs = [None] * len(keys)
@@ -76,9 +68,10 @@ def intensity_plots():
     
     df = pd.concat([d for d in dfs],keys=keys)
 
-    fig, axes = plt.subplots(1,4)
+    fig, axes = plt.subplots(1,len(keys))
     group = df.groupby(['Key'], sort=False)
     for m, ax in zip(keys,axes):
+        print(intensity[m])
         for i in range(intensity[m].shape[0]):
             y = intensity[m][i,:]
             ax.plot(np.array(range(1,len(structure_names)+1)), y, marker='o')
@@ -91,9 +84,10 @@ def tf_intensity_augmentation(tr_img, label_img, num_class, changeIntensity):
     lb = [0, 550, 600, 205, 420, 500, 820, 850]
     if changeIntensity:
         for i in range(1,num_class):
-            scale = tf.random_uniform([], 0.8, 1.2)
-            shift = tf.random_uniform([], -0.2, 0.2)
-            scaled = tr_img*scale + shift
+            scale = tf.random_uniform([], 0.2, 0.3)
+            pick = tf.random_uniform([], -0.9, 0.9)
+            scaled = (pick - tr_img)*scale + tr_img
+            #scaled = tr_img * scale
             tr_img = tf.where(tf.equal(label_img,lb[i]), scaled, tr_img)
     return tr_img, label_img
 
@@ -101,7 +95,7 @@ def tf_test(img_fn, label_fn):
     import tensorflow as tf 
     img = RescaleIntensity(sitk.GetArrayFromImage(preProcess.resample_spacing(img_fn)[0]), "mr", [750, -750])
     label = sitk.GetArrayFromImage(preProcess.resample_spacing(label_fn, order=0)[0])
-    
+    label[label==421] = 420    
     tf_img = tf.placeholder(tf.float32, shape=img.shape)
     tf_label = tf.placeholder(tf.int32, shape=label.shape)
     tr_img_aug, tr_label_aug= tf_intensity_augmentation(tf_img, tf_label, 8, changeIntensity=True)

@@ -224,9 +224,17 @@ def RescaleIntensity(slice_im,m,limit):
         #(slice_im-threshold-np.min(slice_im))/threshold
         slice_im = slice_im/threshold
     elif m=="mr":
-        slice_im[slice_im>limit[0]*2] = limit[0]*2
-        rng = np.max(slice_im) - np.min(slice_im)
-        slice_im -= np.min(slice_im)
+        #slice_im[slice_im>limit[0]*2] = limit[0]*2
+        #rng = np.max(slice_im) - np.min(slice_im)
+        pls = np.unique(slice_im)
+        #upper = np.percentile(pls, 99)
+        #lower = np.percentile(pls, 10)
+        upper = np.percentile(slice_im, 99)
+        lower = np.percentile(slice_im, 20)
+        slice_im[slice_im>upper] = upper
+        slice_im[slice_im<lower] = lower
+        slice_im -= int(lower)
+        rng = upper - lower
         slice_im = slice_im/rng*2
         slice_im -= 1
     return slice_im
