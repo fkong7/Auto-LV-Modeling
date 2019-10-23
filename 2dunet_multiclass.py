@@ -173,6 +173,7 @@ model = models.Model(inputs=[inputs], outputs=[outputs])
 
 lr = 0.02
 adam = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=None, decay=1e-6, amsgrad=False)
+#model.compile(optimizer=adam, loss=bce_dice_loss, metrics=[dice_loss])
 model.compile(optimizer=adam, loss=weighted_bce_dice_loss(weights), metrics=[dice_loss])
 
 model.summary()
