@@ -5,21 +5,26 @@ import numpy as np
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
 from imageLoader import ImageLoader
+import preProcess
 from preProcess import RescaleIntensity
 import tensorflow
-def mean_intensity(image, label,m,limit):
+def pre_process(image, label, m, limit):
+
+    py_im = RescaleIntensity(sitk.GetArrayFromImage(image), m, limit)
+    py_label = sitk.GetArrayFromImage(label)
+    py_label[py_label==421] =420
+    return py_im, py_label
+
+def mean_intensity(py_im, py_label):
     """
     Output the mean intensity corresponding to each structure
 
     Args:
-        image: SimpleITK image, input image
-        label: SimpleITK image, input label
+        image: numpy image, input image
+        label: numpy image, input label
     Returns:
         values: np array of intensity values
     """
-    py_im = RescaleIntensity(sitk.GetArrayFromImage(image), m, limit)
-    py_label = sitk.GetArrayFromImage(label)
-    py_label[py_label==421] =420
     assert py_label.shape == py_im.shape, "Image and label dimension do not match."
     labels = np.unique(py_label)
 
@@ -43,13 +48,16 @@ def intensity_plots():
         im_loader.load_imagefiles()
         values = []
         for x, y in zip(im_loader.x_filenames, im_loader.y_filenames):
-            im = sitk.ReadImage(x)
-            label = sitk.ReadImage(y)
+            #im = sitk.ReadImage(x)
+            #label = sitk.ReadImage(y)
+            im, label = tf_test(x, y)
+            
+            #im, label = pre_process(im, label, m, [750, -750])
             try:
-                values = np.vstack((mean_intensity(im, label, m, [750, -750]), values))
+                values = np.vstack((mean_intensity(im, label)))
             except Exception as e:
                 print(e)
-                values = mean_intensity(im, label, m, [750, -750])
+                values = mean_intensity(im, label)
         intensity[key] = values
         return intensity
     for m in modality:
@@ -78,45 +86,40 @@ def intensity_plots():
     boxplot = group.boxplot(ax=axes)
     plt.show()
 
-def tf_intensity_augmentation(tr_img, label_img, num_class, changeIntensity=False):
+def tf_intensity_augmentation(tr_img, label_img, num_class, changeIntensity):
     import tensorflow as tf 
+    lb = [0, 550, 600, 205, 420, 500, 820, 850]
     if changeIntensity:
-        for i in range(1,8):
+        for i in range(1,num_class):
             scale = tf.random_uniform([], 0.8, 1.2)
             shift = tf.random_uniform([], -0.2, 0.2)
             scaled = tr_img*scale + shift
-            tr_img = tf.where(label_img==i, scaled, tr_img)
+            tr_img = tf.where(tf.equal(label_img,lb[i]), scaled, tr_img)
     return tr_img, label_img
 
-def tf_test():
+def tf_test(img_fn, label_fn):
     import tensorflow as tf 
-    img_fn = '/Users/fanweikong/Documents/ImageData/MMWHS/mr_train/mr_train_1001_image.nii.gz'
-    label_fn = '/Users/fanweikong/Documents/ImageData/MMWHS/mr_train_masks/mr_train_1001_label.nii.gz'
-    from skimage.transform import resize
-    import preProcess
     img = RescaleIntensity(sitk.GetArrayFromImage(preProcess.resample_spacing(img_fn)[0]), "mr", [750, -750])
     label = sitk.GetArrayFromImage(preProcess.resample_spacing(label_fn, order=0)[0])
     
-    print("ok")
     tf_img = tf.placeholder(tf.float32, shape=img.shape)
     tf_label = tf.placeholder(tf.int32, shape=label.shape)
-    tr_img_aug, tr_label_aug = tf_intensity_augmentation(tf_img, tf_label, True)
-    print("ok2")
+    tr_img_aug, tr_label_aug= tf_intensity_augmentation(tf_img, tf_label, 8, changeIntensity=True)
     with tf.Session() as sess:
         out_im, out_label = sess.run([tr_img_aug, tr_label_aug], feed_dict={tf_img: img, tf_label: label})
-        print(out_im.shape, out_label.shape)
-        fig, axes = plt.subplots(2,3)
-        for i in range(axes.shape[0]):
-            loc = 50
-            incr = 40
-            axes[i][0].imshow(img[loc+incr*(i+1),:,:], cmap='gray')
-            axes[i][0].axis('off')
-            axes[i][1].imshow(out_im[loc+incr*(i+1),:,:],cmap='gray')
-            axes[i][1].axis('off')
-            axes[i][2].imshow(out_label[loc+incr*(i+1),:,:],cmap='gray')
-            axes[i][2].axis('off')
-        
-        plt.show()
-
+    #    fig, axes = plt.subplots(2,3)
+    #    for i in range(axes.shape[0]):
+    #        loc = 50
+    #        incr = 40
+    #        axes[i][0].imshow(img[loc+incr*(i+1),:,:], cmap='gray')
+    #        axes[i][0].axis('off')
+    #        axes[i][1].imshow(out_im[loc+incr*(i+1),:,:],cmap='gray')
+    #        axes[i][1].axis('off')
+    #        axes[i][2].imshow(out_label[loc+incr*(i+1),:,:],cmap='gray')
+    #        axes[i][2].axis('off')
+    #    
+    #    plt.show()
+    return out_im, out_label
 if __name__ == '__main__':
-   tf_test()
+    #tf_test()
+    intensity_plots()
