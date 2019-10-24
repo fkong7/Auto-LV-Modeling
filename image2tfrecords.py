@@ -18,6 +18,7 @@ parser.add_argument('--folder', nargs=1, help='Name of the folder containing the
 parser.add_argument('--view', nargs=1, type=int, help='Which views 0, 1, 2, axial, coronal, sagittal')
 parser.add_argument('--modality', nargs='+', help='Name of the modality, mr, ct, split by space')
 parser.add_argument('--out_folder', nargs='?', default='_train', help='Folder postfix of the folder to look for')
+parser.add_argument('--attr', help='Attribute of the output folder')
 parser.add_argument('--n_channel', nargs='?', const=1, default=1, type=int, help='Number of channels')
 parser.add_argument('--intensity',nargs='+', type=int, default=[750,-750], help='Intensity range to clip to [upper, lower]')
 print('Finished parsing...')
@@ -34,11 +35,12 @@ view = args.view[0]
 fn = args.out_folder
 channel = args.n_channel
 intensity = args.intensity
+attr = args.attr
 
 data_folder = '/global/scratch/fanwei_kong/DeepLearning/ImageData/' + base_name
 print(data_folder)
 view_names = ['axial', 'coronal', 'sagittal']
-data_folder_out = '/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s2%s' % (base_name, view_names[view],fn)
+data_folder_out = '/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s%s%s' % (base_name, attr, view_names[view],fn)
 
 if channel>1:
     data_folder_out += '_multi%d' %  channel
