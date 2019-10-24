@@ -54,22 +54,34 @@ from loss import bce_dice_loss, weighted_bce_dice_loss
 from tensorflow.python.keras.optimizers import Adam
 
 from pickle import dump
+import argparse
 """# Set up"""
 
-#num_class = 8
-batch_size = 10
-#epochs = 100
+parser = argparse.ArgumentParser()
+parser.add_argument('--image',  help='Name of the folder containing the image data')
+parser.add_argument('--attr', help='Attribute name of the folders containing 2d slices')
+parser.add_argument('--output',  help='Name of the output folder')
+parser.add_argument('--view', type=int, help='view id, axial(0), coronal(1), sagittal(2)')
+parser.add_argument('--modality', nargs='+', help='Name of the modality, mr, ct, split by space')
+parser.add_argument('--num_epoch', type=int, help='Maximum number of epochs to run')
+parser.add_argument('--num_class', type=int, help='Number of classes')
+parser.add_argument('--channel', type=int, default=1, help='Number of channels of input images')
+parser.add_argument('--seed', type=int, default=41, help='Randome seed')
+parser.add_argument('--batch_size', type=int, default=10, help='Batch size')
+args = parser.parse_args()
+print('Finished parsing...')
 
-#modality = ["ct","mr"]
-modality = ["mr"]
-im_base_name = sys.argv[1]
-base_name = sys.argv[2]
-seed = int(sys.argv[3])
-num_class = int(sys.argv[4])
-epochs = int(sys.argv[5])
-channel = int(sys.argv[6])
-view = int(sys.argv[7])
+modality = args.modality
+im_base_name = args.image
+base_name = args.output
+seed = args.seed
+num_class = args.num_class
+epochs = args.num_epoch
+channel = args.channel
+view = args.view
 img_shape = (256, 256, channel)
+batch_size = args.batch_size
+attr = args.attr
 
 #WEIGHT ADJUSTMENTS
 weights = np.ones(num_class)
@@ -77,8 +89,8 @@ weights[0] = 0.05
 
 data_folder = '/global/scratch/fanwei_kong/DeepLearning/ImageData/%s' % im_base_name
 view_names = ['axial', 'coronal', 'sagittal']
-data_folder_out = ['/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s2_train' % (im_base_name,view_names[view]), '/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s2_train' % (im_base_name,view_names[view])]
-data_val_folder_out = ['/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s2_val' % (im_base_name,view_names[view]),'/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s2_val' % (im_base_name,view_names[view])]
+data_folder_out = ['/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s%s_train' % (im_base_name, attr,view_names[view])]*2
+data_val_folder_out = ['/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s%s_val' % (im_base_name, attr,view_names[view])]*2
 if channel>1:
    data_folder_out += '_multi%d' % channel
    data_val_folder_out += '_multi%d' % channel
@@ -171,10 +183,10 @@ inputs, outputs = UNet2D(img_shape, num_class)
 
 model = models.Model(inputs=[inputs], outputs=[outputs])
 
-lr = 0.02
+lr = 0.05
 adam = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=None, decay=1e-6, amsgrad=False)
-#model.compile(optimizer=adam, loss=bce_dice_loss, metrics=[dice_loss])
-model.compile(optimizer=adam, loss=weighted_bce_dice_loss(weights), metrics=[dice_loss])
+model.compile(optimizer=adam, loss=bce_dice_loss, metrics=[dice_loss])
+#model.compile(optimizer=adam, loss=weighted_bce_dice_loss(weights), metrics=[dice_loss])
 
 model.summary()
 
