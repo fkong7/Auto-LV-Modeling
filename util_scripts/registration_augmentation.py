@@ -96,8 +96,7 @@ class Registration:
         sitk.WriteImage(transformixImageFilter.GetResultImage(), fns['out_label'])
 
 
-if __name__ == '__main__':
-
+def registration():
     fn_dir = '/Users/fanweikong/Documents/ImageData/MMWHS'
     modality = ["ct", "mr"]
 
@@ -124,6 +123,44 @@ if __name__ == '__main__':
             except Exception as e: print(e)
         print(paras_fn)
 
+def transform():
+    import random
+    aug_num = 10
+    map_dir ='/Users/fanweikong/Documents/ImageData/MMWHS'
+    fn_dir = '/Users/fanweikong/Documents/ImageData/MMWHS_small'
+    out_dir = '/Users/fanweikong/Documents/ImageData/MMWHS_register_aug'
+    try:
+        os.makedirs(out_dir)
+        os.makedirs(os.path.join(out_dir, 'ct_train'))
+        os.makedirs(os.path.join(out_dir, 'ct_train_masks'))
+        os.makedirs(os.path.join(out_dir, 'mr_train'))
+        os.makrdirs(os.path.join(out_dir, 'mr_train_masks'))
+    except Exception as e: print(e)
+    # find transformation maps
+    paras_fns = []
+    modality = [ "mr"]
+    for m in modality:
+        paras_fns += sorted(glob.glob(os.path.join(map_dir, m+'_train', '*.txt')))
+    paras_fns = [os.path.splitext(paras_fn)[0][:-2]+'.txt' for paras_fn in paras_fns]
+    ## get unique fns
+    paras_fn = list(set(paras_fns))
+    paras_fn = ['/Users/fanweikong/Documents/ImageData/MMWHS/ct_train/ct_train_1001_image.niiTOct_train_1002_image.nii.txt']
+    print(paras_fn)
 
+    register = Registration()
+    # find volumes to transform
+    for m in modality:
+        im_fns, label_fns = utils.getTrainNLabelNames(fn_dir, m, ext='*.nii.gz',fn='_train')
+        for i, (x, y) in enumerate(zip(im_fns, label_fns)):
+            for j in range(aug_num):
+                fns = {'in_im': x, 
+                        'in_label': y,
+                        'out_im': os.path.join(out_dir, m+'_train', m+'_aug_%d_%d_image.nii.gz' % ( i, j)),
+                        'out_label': os.path.join(out_dir, m+'_train_masks', m+'_aug_%d_%d_label.nii.gz' % (i, j))
+                        }
+                
+                register.image_transform(fns, random.choice(paras_fn))
 
-
+if __name__ == '__main__':
+    #registration()
+    transform()
