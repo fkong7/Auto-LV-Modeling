@@ -101,18 +101,18 @@ def tf_test(img_fn, label_fn):
     tr_img_aug, tr_label_aug= tf_intensity_augmentation(tf_img, tf_label, 8, changeIntensity=True)
     with tf.Session() as sess:
         out_im, out_label = sess.run([tr_img_aug, tr_label_aug], feed_dict={tf_img: img, tf_label: label})
-    #    fig, axes = plt.subplots(2,3)
-    #    for i in range(axes.shape[0]):
-    #        loc = 50
-    #        incr = 40
-    #        axes[i][0].imshow(img[loc+incr*(i+1),:,:], cmap='gray')
-    #        axes[i][0].axis('off')
-    #        axes[i][1].imshow(out_im[loc+incr*(i+1),:,:],cmap='gray')
-    #        axes[i][1].axis('off')
-    #        axes[i][2].imshow(out_label[loc+incr*(i+1),:,:],cmap='gray')
-    #        axes[i][2].axis('off')
-    #    
-    #    plt.show()
+        fig, axes = plt.subplots(2,3)
+        for i in range(axes.shape[0]):
+            loc = 50
+            incr = 40
+            axes[i][0].imshow(img[loc+incr*(i+1),:,:], cmap='gray')
+            axes[i][0].axis('off')
+            axes[i][1].imshow(out_im[loc+incr*(i+1),:,:],cmap='gray')
+            axes[i][1].axis('off')
+            axes[i][2].imshow(out_label[loc+incr*(i+1),:,:],cmap='gray')
+            axes[i][2].axis('off')
+        
+        plt.show()
     return out_im, out_label
 if __name__ == '__main__':
     #tf_test()
