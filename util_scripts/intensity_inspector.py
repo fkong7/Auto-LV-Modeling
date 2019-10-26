@@ -47,14 +47,16 @@ def intensity_plots():
         im_loader.load_imagefiles()
         values = np.zeros((0,7))
         for x, y in zip(im_loader.x_filenames, im_loader.y_filenames):
-            #im = sitk.ReadImage(x)
-            #label = sitk.ReadImage(y)
-            print(x, y)
-            im, label = tf_test(x, y)
-            #im, label = pre_process(im, label, m, [750, -750])
-            values = np.vstack((values, mean_intensity(im, label)))
-            print(values.shape)
-        print(values.shape)
+            im = sitk.ReadImage(x)
+            label = sitk.ReadImage(y)
+            im, label = pre_process(im, label, m, [750, -750])
+            #try histogram equalization
+#            im = preProcess.HistogramEqualization(im)
+            #im, label = apply_intensity_map(im , label)
+            class_intensity = mean_intensity(im, label)
+            print(x)
+            print("Max, min: ", np.max(class_intensity), np.min(class_intensity))
+            values = np.vstack((values, class_intensity))
         intensity[key] = values
         return intensity
     for m, key,  folder in zip(modality, keys, folders):
@@ -78,6 +80,39 @@ def intensity_plots():
             ax.set_ylim([-1,1])
     boxplot = group.boxplot(ax=axes)
     plt.show()
+
+def apply_intensity_map(tr_img, label_img):
+    from scipy import interpolate
+    from scipy.ndimage import gaussian_filter
+    # compute the mean intensity of each class, perturb them and compute a smooth intensity mapping
+    
+    means =  mean_intensity(tr_img, label_img)
+    perturbed = np.clip(np.random.normal(means, 0.15*np.ones(len(means))), -1., 1.)
+    print(means)
+    print(perturbed)
+    # add min and max to map the full range
+    means = np.append(np.insert(means, 0, np.min(tr_img)), np.max(tr_img))
+    perturbed = np.append(np.insert(perturbed, 0, np.min(tr_img)), np.max(tr_img))
+    f = interpolate.interp1d(means, perturbed, kind='slinear')
+    out_img = gaussian_filter(f(tr_img), sigma=1)
+    #plt.figure()
+    #x = np.linspace(-1,1,20)
+    #y = f(x)
+    #plt.plot(x, y)
+    #plt.show()
+    #fig, axes = plt.subplots(2,3)
+    #for i in range(axes.shape[0]):
+    #    loc = 50
+    #    incr = 40
+    #    axes[i][0].imshow(tr_img[loc+incr*(i+1),:,:], cmap='gray')
+    #    axes[i][0].axis('off')
+    #    axes[i][1].imshow(out_img[loc+incr*(i+1),:,:],cmap='gray')
+    #    axes[i][1].axis('off')
+    #    axes[i][2].imshow(label_img[loc+incr*(i+1),:,:],cmap='gray')
+    #    axes[i][2].axis('off')
+    #
+    #plt.show()
+    return out_img, label_img
 
 def tf_intensity_augmentation(tr_img, label_img, num_class, changeIntensity):
     import tensorflow as tf 
