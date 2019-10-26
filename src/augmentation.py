@@ -45,7 +45,7 @@ def changeIntensity_img(tr_img, label_img, change):
     scale = tf.random_uniform([], change['scale'][0], change['scale'][1])
     shift = tf.random_uniform([], change['shift'][0], change['shift'][1])
     tr_img = tr_img*scale+shift
-#    tr_img = tf.clip_by_value(tr_img, -1., 1.)
+    tr_img = tf.clip_by_value(tr_img, -1., 1.)
   return tr_img, label_img
 
 """##Scale the image intensity for different cardiac structures"""
@@ -54,7 +54,7 @@ def change_class_intensity_img(tr_img, label_img, change, num_class):
         for i in range(1, num_class):
             scale = tf.random_uniform([], change['scale'][0], change['scale'][1])
             shift = tf.random_uniform([], change['shift'][0], change['shift'][1])
-            scaled = tr_img*scale+shift
+            scaled = (shift - tr_img)*scale + tr_img
             tr_img = tf.where(tf.equal(label_img,i), scaled, tr_img)
     return tr_img, label_img
 """## Assembling our transformations into our augment function"""

@@ -68,6 +68,7 @@ parser.add_argument('--num_class', type=int, help='Number of classes')
 parser.add_argument('--channel', type=int, default=1, help='Number of channels of input images')
 parser.add_argument('--seed', type=int, default=41, help='Randome seed')
 parser.add_argument('--batch_size', type=int, default=10, help='Batch size')
+parser.add_argument('--lr', type=float, help='Learning rate')
 args = parser.parse_args()
 print('Finished parsing...')
 
@@ -82,6 +83,7 @@ view = args.view
 img_shape = (256, 256, channel)
 batch_size = args.batch_size
 attr = args.attr
+lr = args.lr
 
 #WEIGHT ADJUSTMENTS
 weights = np.ones(num_class)
@@ -183,7 +185,6 @@ inputs, outputs = UNet2D(img_shape, num_class)
 
 model = models.Model(inputs=[inputs], outputs=[outputs])
 
-lr = 0.05
 adam = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=None, decay=1e-6, amsgrad=False)
 model.compile(optimizer=adam, loss=bce_dice_loss, metrics=[dice_loss])
 #model.compile(optimizer=adam, loss=weighted_bce_dice_loss(weights), metrics=[dice_loss])
@@ -193,7 +194,7 @@ model.summary()
 """ Setup model checkpoint """
 
 cp = tf.keras.callbacks.ModelCheckpoint(filepath=save_model_path, monitor='val_dice_loss', save_best_only=True, verbose=1)
-lr_schedule = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_dice_loss', factor=0.5, patience=10, min_lr=0.001)
+lr_schedule = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_dice_loss', factor=0.8, patience=10, min_lr=0.00005)
 erly_stp = tf.keras.callbacks.EarlyStopping(monitor='val_dice_loss', patience=30)
 # Alternatively, load the weights directly: model.load_weights(save_model_path)
 try:
