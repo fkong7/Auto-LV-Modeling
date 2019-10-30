@@ -87,7 +87,8 @@ def apply_intensity_map(tr_img, label_img):
     # compute the mean intensity of each class, perturb them and compute a smooth intensity mapping
     
     means =  mean_intensity(tr_img, label_img)
-    perturbed = np.clip(np.random.normal(means, 0.15*np.ones(len(means))), -1., 1.)
+    rng = np.max(tr_img) - np.min(tr_img)
+    perturbed = np.clip(np.random.normal(means, 0.15*rng*0.5*np.ones(len(means))), np.min(tr_img), np.max(tr_img))
     print(means)
     print(perturbed)
     # add min and max to map the full range

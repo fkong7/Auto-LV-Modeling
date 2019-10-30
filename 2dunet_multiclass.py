@@ -194,7 +194,7 @@ model.summary()
 """ Setup model checkpoint """
 
 cp = tf.keras.callbacks.ModelCheckpoint(filepath=save_model_path, monitor='val_dice_loss', save_best_only=True, verbose=1)
-lr_schedule = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_dice_loss', factor=0.8, patience=10, min_lr=0.00005)
+lr_schedule = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_dice_loss', factor=0.8, patience=5, min_lr=0.000005)
 erly_stp = tf.keras.callbacks.EarlyStopping(monitor='val_dice_loss', patience=30)
 # Alternatively, load the weights directly: model.load_weights(save_model_path)
 try:

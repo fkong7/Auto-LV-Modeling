@@ -13,6 +13,7 @@ from skimage.transform import resize
 from utils import getTrainNLabelNames, writeIm, sample_in_range
 from skimage.transform import resize
 from preProcess import resample_scale, resample_spacing, cropMask
+from intensity_inspector import apply_intensity_map
 import argparse
 """
 This scripts generate scaled image volumes to match the size of heart from ct and mr
@@ -42,9 +43,9 @@ def main(args):
     aug_num = args.aug_num
     # TO-DO: NEED TO CHECK/FIX THIS BEFORE NEXT RUNS
     if fdr_postfix == '_train':
-        ids = range(0,16)
+        ids = range(1,19)
     elif fdr_postfix =='_val':
-        ids = range(16,20)
+        ids = [0, 19]
         #ids = range(0,4)
 
     for m in modality:
@@ -106,6 +107,14 @@ def main(args):
               fn =  os.path.join(output_data_folder, m+fdr_postfix+'_masks', m+'_aug_'+str(i)+'_'+str(j)+'_label.nii.gz')
               sitk.WriteImage(mask, fn)
               img, _ = _augment(filenames_dic[m+'_x'][i], range_adjust, ratios[m][i,:], scale_factor=scale_factor, order=1)
+              #apply intensity augmentation
+              if args.intensity:
+                  print("Applying intensity augmentation!")
+                  py_img, _ = apply_intensity_map(sitk.GetArrayFromImage(img), sitk.GetArrayFromImage(mask))
+                  img = sitk.GetImageFromArray(py_img)
+                  img.SetOrigin(mask.GetOrigin())
+                  img.SetDirection(mask.GetDirection())
+                  img.SetSpacing(mask.GetSpacing())
               fn =  os.path.join(output_data_folder, m+fdr_postfix, m+'_aug_'+str(i)+'_'+str(j)+'_image.nii.gz')
               sitk.WriteImage(img, fn)
 
@@ -117,5 +126,6 @@ if __name__ == '__main__':
     parser.add_argument('--output',  help='Name of the output folder')
     parser.add_argument('--folder_attr',  help='Name of the image folder _train or _val')
     parser.add_argument('--aug_num',  type=int, help='Number of augmented volumes per image')
+    parser.add_argument('--intensity', dest='intensity', action='store_true', help='If to apply intensity augmentation')
     args = parser.parse_args()
     main(args)
