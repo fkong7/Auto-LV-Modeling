@@ -66,6 +66,14 @@ def main(args):
     #find the blank spaces for image volumes 
     ratios = {}
     ratios['ct'], ratios['mr'] = blankSpaces(filenames_dic['ct_y'], filenames_dic['mr_y'])
+    #debug, show scale plots:
+    import pandas as pd
+    df = pd.DataFrame.from_dict(ratios)
+    plt.figure()
+    df.boxplot()
+    plt.show()
+    import sys
+    sys.exit()
 
     for m in modality:
     	ratios[m] = ratios[m].reshape(int(len(ratios[m])/3),3)
