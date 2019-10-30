@@ -19,7 +19,7 @@ def dice_loss(y_true, y_pred):
     y_true_one_hot = tf.one_hot(tf.cast(y_true,tf.int32), num_class)
     loss = 0.
     for i in range(num_class):
-      loss += (1 - dice_coeff(y_true_one_hot[:,:,:,:,i], y_pred[:,:,:,i]))
+      loss += (1 - dice_coeff_mean(y_true_one_hot[:,:,:,:,i], y_pred[:,:,:,i]))
     return loss
   
 def dice_coeff_mean(y_true, y_pred):
