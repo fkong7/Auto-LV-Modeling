@@ -36,14 +36,14 @@ def loadLabelMap(fn):
     Return:
         label: label map as a vtk image
     """
-    _, ext = os.path.splitext(fn)
+    _, ext = fn.split(os.extsep, 1)  
 
-    if ext=='.vti':
+    if ext=='vti':
         reader = vtk.vtkXMLImageDataReader()
         reader.SetFileName(fn)
         reader.Update()
         label = reader.GetOutput()
-    elif ext=='.nii' or ext=='.nii.gz':
+    elif ext=='nii' or ext=='nii.gz':
         reader = vtk.vtkNIFTIImageReader()
         reader.SetFileName(fn)
         reader.Update()
@@ -348,4 +348,7 @@ def loadJsonArgs(fn):
     args['seg_folder_name'] = data["Segmentation Folder Name"]
     args['im_folder_name'] = data["Image Folder Name"]
     args['out_dir'] = data["Output Dir Name"]
+    args['num_interpolation']=data["Number of Interpolations"]
+    args['num_cycle'] = data["Number of Cardiac Cycles"]
+    args['duration'] = data["Cycle Duration (s)"]
     return args
