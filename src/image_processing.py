@@ -6,7 +6,7 @@ import utils
 import label_io
 import marching_cube as m_c
 
-
+#TO-DO improve compatibility with label ids, line 32
 class Images(object):
     def __init__(self, fn):
         self.label = label_io.loadLabelMap(fn)
@@ -19,6 +19,9 @@ class Images(object):
 
     def get_image(self):
         return self.label
+    
+    def write_image(self,fn):
+        label_io.writeVTKImage(self.label, fn)
 
     def generate_surface(self, region_id, smooth_iter):
         return m_c.vtk_marching_cube_multi(self.label, region_id, smooth_iter)
@@ -29,6 +32,7 @@ class lvImage(Images):
         self.label = utils.vtkImageResample(self.label, spacing=(0.5, 0.5, 0.5), opt='NN')
         from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
         pylabel = vtk_to_numpy(self.label.GetPointData().GetScalars())
+        pylabel = utils.swapLabels(pylabel)
         #remove myocardium, RV, RA and PA
         for tissue in remove_list:
             pylabel = utils.removeClass(pylabel, tissue, 0)
