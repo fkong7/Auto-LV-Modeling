@@ -9,7 +9,14 @@ import vtk
 ##########################
 ## Numpy Utility functions
 ##########################
-
+def swapLabels(pyImage):
+    """
+    Swap label ids
+    """
+    ids = np.unique(pyImage)
+    for i, v in enumerate(ids):
+        pyImage[pyImage==v] = i
+    return pyImage
 def fitPlaneNormal(points_input):
     """
     Fit a plane to a point set

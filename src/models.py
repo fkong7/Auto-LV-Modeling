@@ -64,7 +64,7 @@ class leftVentricle(Geometry):
         # cut with la and aorta cutter:
         self.poly = utils.cutPolyDataWithAnother(self.poly, la_cutter,False)
         self.poly = utils.cutPolyDataWithAnother(self.poly, aa_cutter,False)
-
+        label_io.writeVTKPolyData(self.poly, '/Users/fanweikong/Downloads/test.vtp')
         #improve valve opening geometry
         id_lists,boundaries = utils.getPointIdsOnBoundaries(self.poly)
         for idx, (ids, boundary) in enumerate(zip(id_lists, boundaries)):

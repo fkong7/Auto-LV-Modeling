@@ -13,7 +13,7 @@ import utils
 import vtk
 
 
-def buildSurfaceModelFromImage(fns, poly_fn, ug_fn=None):
+def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=2,aa_id=6):
     """
     Modified test6 to cut on the PolyData directly to create better defined inlet/outlet geometry
     The left atrium is cut normal to the direction defined by the normal of the mitral plane
@@ -31,15 +31,16 @@ def buildSurfaceModelFromImage(fns, poly_fn, ug_fn=None):
     FACTOR_AA = 1.2
     MESH_RESOLUTION = (1.5,1.5,1.5)
 
-    for fn in fns: 
+    for fn, poly_fn in zip(fns,poly_fns): 
 
         image = lvImage(fn)
-        image.process([1,4,5,7])
+        image.process(remove_ids)
 
-        la_cutter = image.buildCutter(2, 3, FACTOR_LA, op='valve')
-        aa_cutter = image.buildCutter(6, 3, FACTOR_AA, op='tissue')
+        la_cutter = image.buildCutter(la_id, 3, FACTOR_LA, op='valve')
+        aa_cutter = image.buildCutter(aa_id, 3, FACTOR_AA, op='tissue')
         image.convert2binary()
         image.resample(MESH_RESOLUTION, 'linear')
+        image.write_image('/Users/fanweikong/Downloads/test.vti')
         model = leftVentricle(image.generate_surface(0, 50))
         #process models
         model.processWall(la_cutter, aa_cutter)
@@ -48,7 +49,6 @@ def buildSurfaceModelFromImage(fns, poly_fn, ug_fn=None):
         model.writeSurfaceMesh(fn)
         model.remesh(1.5, fn, poly_fn, ug_fn)
         model.writeSurfaceMesh(poly_fn)
-        return model
 
 
 if __name__=="__main__":
@@ -79,6 +79,6 @@ if __name__=="__main__":
 
     #run volume mesh to generate ids but not using it
     fn_ug = 'temp'
-    model = buildSurfaceModelFromImage([seg_fn], fn_poly, fn_ug)
+    buildSurfaceModelFromImage([seg_fn], [fn_poly], fn_ug)
 
 
