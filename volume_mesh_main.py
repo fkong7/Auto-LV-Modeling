@@ -6,8 +6,10 @@ import numpy as np
 import meshing
 import models
 import label_io
+import time
 
 if __name__ == '__main__':
+    start = time.time()
     parser = argparse.ArgumentParser()
     
     parser.add_argument('--json_fn', help="Name of the json file")
@@ -30,4 +32,5 @@ if __name__ == '__main__':
     output_vol = os.path.join(paras['out_dir'], paras['patient_id'], paras['patient_id']+'-mesh-complete')
     lvmodel.remesh(2., poly_fn, poly_fn=None, ug_fn=output_vol)
     lvmodel.writeMeshComplete(output_vol)
-
+    end = time.time()
+    print("Time spent in volume_mesh_main.py: ", end-start)

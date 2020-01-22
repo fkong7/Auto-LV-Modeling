@@ -12,6 +12,7 @@ import utils
 from registration import Registration
 import vtk
 import SimpleITK as sitk
+import time
 
 def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, image_dir, output_dir, write=False):
     """
@@ -58,6 +59,7 @@ def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, imag
     return
 
 if __name__=='__main__':
+    start = time.time()
     import argparse
     parser = argparse.ArgumentParser()
     
@@ -74,3 +76,5 @@ if __name__=='__main__':
     #
     lvmodel = leftVentricle(label_io.loadVTKMesh(fn_poly))
     registration(lvmodel, paras['start_phase'],paras['total_phase'], paras['model_output'], paras['im_name'], image_dir,output_dir, args.write)
+    end = time.time()
+    print("Time spent in elastix_main.py: ", end- start)
