@@ -413,7 +413,7 @@ def getCentroid(im, label_id):
     centroid = np.mean(spacing * ids + origin, axis=0)
     return centroid
 
-def locateRegionBoundary(im, label_id1, label_id2):
+def locateRegionBoundaryIDs(im, label_id1, label_id2, size = 1.):
     """
     Locate the boundary coordinates between two regions with different labels
     
@@ -423,14 +423,14 @@ def locateRegionBoundary(im, label_id1, label_id2):
         label_id2: class id of 2nd region
         
     Returns
-        points: coordinates of the boundary points
+        ids: ids of the boundary points
     """
     dilateErode = vtk.vtkImageDilateErode3D()
     dilateErode.SetInputData(im)
     dilateErode.SetDilateValue(label_id1)
     dilateErode.SetErodeValue(label_id2)
     
-    kernel_size = np.rint(1./np.array(im.GetSpacing())).astype(int)
+    kernel_size = np.rint(size/np.array(im.GetSpacing())).astype(int)
     print(kernel_size)
     dilateErode.SetKernelSize(*kernel_size)
     dilateErode.Update()
@@ -442,11 +442,27 @@ def locateRegionBoundary(im, label_id1, label_id2):
     pyIm_new = vtk_to_numpy(newIm.GetPointData().GetScalars()).reshape(z, y, x).transpose(2, 1, 0)
     pyIm = vtk_to_numpy(im.GetPointData().GetScalars()).reshape(z, y, x).transpose(2, 1, 0)
     ids = np.array(np.where(pyIm_new-pyIm!=0)).transpose()
+    return ids
 
+
+def locateRegionBoundary(im, label_id1, label_id2, size=1.):
+    """
+    Locate the boundary coordinates between two regions with different labels
+    
+    Args:
+        im: vtkImage of the label map
+        label_id1: class id of 1st region
+        label_id2: class id of 2nd region
+        
+    Returns
+        points: coordinates of the boundary points
+    """
+    ids = locateRegionBoundaryIDs(im, label_id1, label_id2, size)
+    
     total_num = len(ids)
     
-    origin = np.tile(newIm.GetOrigin(), total_num).reshape(total_num,3)
-    spacing = np.tile(newIm.GetSpacing(), total_num).reshape(total_num,3)
+    origin = np.tile(im.GetOrigin(), total_num).reshape(total_num,3)
+    spacing = np.tile(im.GetSpacing(), total_num).reshape(total_num,3)
     points = ids * spacing + origin
     return points
 
@@ -528,6 +544,27 @@ def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id):
     labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel))
 
     return labels
+
+def recolorVTKPixelsByIds(labels, ids, bg_id):
+    """
+    Change the pixel values of the specified ids to background pixel value
+
+    Args:
+        labels: VTK image
+        ids: ids to change
+        bg_id: class id to change to
+    Returns: editted VTK image
+    """
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+    x, y, z = labels.GetDimensions()
+    pyLabel = vtk_to_numpy(labels.GetPointData().GetScalars()).reshape(z, y, x).transpose(2, 1, 0)
+  
+    for i in ids:
+        pyLabel[i[0], i[1], i[2]] = bg_id
+    labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel.transpose(2,1,0).flatten()))
+
+    return labels
+
 
 def recolorVTKPixelsByPlaneByRegion(labels, ori, nrm, region_id, bg_id):
     """
@@ -637,6 +674,7 @@ def cutPolyDataWithAnother(poly1, poly2, inside=False):
     clipper.SetInputData(poly1)
     #clipper.SetInsideOut(inside)
     clipper.SetExtractInside(inside)
+    clipper.SetExtractBoundaryCells(True)
     clipper.Update()
 
     connectivity = vtk.vtkPolyDataConnectivityFilter()

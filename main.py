@@ -11,7 +11,7 @@ from models import leftVentricle
 from marching_cube import marching_cube, vtk_marching_cube
 import utils
 import vtk
-
+import time
 
 def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=2,aa_id=6):
     """
@@ -38,9 +38,13 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
 
         la_cutter = image.buildCutter(la_id, 3, FACTOR_LA, op='valve')
         aa_cutter = image.buildCutter(aa_id, 3, FACTOR_AA, op='tissue')
-        image.convert2binary()
+        la_fn = '/Users/fanweikong/Downloads/la.vtp'
+        label_io.writeVTKPolyData(la_cutter, la_fn)
+        aa_fn = '/Users/fanweikong/Downloads/aa.vtp'
+        label_io.writeVTKPolyData(aa_cutter, aa_fn)
         image.resample(MESH_RESOLUTION, 'linear')
-        image.write_image('/Users/fanweikong/Downloads/test.vti')
+        image.convert2binary()
+        #image.write_image('/Users/fanweikong/Downloads/test.vti')
         model = leftVentricle(image.generate_surface(0, 50))
         #process models
         model.processWall(la_cutter, aa_cutter)
@@ -52,7 +56,7 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
 
 
 if __name__=="__main__":
-
+    start = time.time()
     from pip._internal import main as pipmain
     pipmain(['install', 'scipy'])
    
@@ -72,13 +76,16 @@ if __name__=="__main__":
         os.makedirs(os.path.join(output_dir, "volumes"))
     except Exception as e: print(e)
     
-    seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], paras['seg_name'] % paras['start_phase'])
+    #seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], paras['seg_name'] % paras['start_phase'])
+    seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], paras['seg_name'])
     fn_tempPts = os.path.join(output_dir, "surfaces", 'outputpoints.txt')
     
-    fn_poly = os.path.join(output_dir, "surfaces", paras['model_output'] % paras['start_phase'])
+    #fn_poly = os.path.join(output_dir, "surfaces", paras['model_output'] % paras['start_phase'])
+    fn_poly = os.path.join(output_dir, "surfaces", paras['model_output'])
 
     #run volume mesh to generate ids but not using it
     fn_ug = 'temp'
     buildSurfaceModelFromImage([seg_fn], [fn_poly], fn_ug)
 
-
+    end = time.time()
+    print("Time spend in main.py: ", end-start)
