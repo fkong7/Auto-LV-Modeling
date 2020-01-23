@@ -47,23 +47,28 @@ def loadLabelMap(fn):
         reader = vtk.vtkNIFTIImageReader()
         reader.SetFileName(fn)
         reader.Update()
-        
-        from utils import vtkImageResample
+
         image = reader.GetOutput()
         matrix = reader.GetQFormMatrix()
         if matrix is None:
             matrix = reader.GetSFormMatrix()
         matrix.Invert()
-        # only care about origin shift here
-        for i in range(3):
-            matrix.SetElement(i,i,1)
         reslice = vtk.vtkImageReslice()
         reslice.SetInputData(image)
         reslice.SetResliceAxes(matrix)
         reslice.SetInterpolationModeToLinear()
         reslice.Update()
-        
-        label = reslice.GetOutput()
+        reslice2 = vtk.vtkImageReslice()
+        reslice2.SetInputData(reslice.GetOutput())
+        matrix = vtk.vtkMatrix4x4()
+        for i in range(4):
+            matrix.SetElement(i,i,1)
+        matrix.SetElement(0,0,-1)
+        matrix.SetElement(1,1,-1)
+        reslice2.SetResliceAxes(matrix)
+        reslice2.SetInterpolationModeToLinear()
+        reslice2.Update()
+        label = reslice2.GetOutput()
     else:
         raise IOError("File extension is not recognized")
     
