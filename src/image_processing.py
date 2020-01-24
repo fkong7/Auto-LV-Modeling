@@ -30,7 +30,8 @@ class lvImage(Images):
     
     def process(self, remove_list):
         self.write_image('/Users/fanweikong/Downloads/test0.vti') 
-        self.label = utils.vtkImageResample(self.label, spacing=(0.5, 0.5, 0.5), opt='NN')
+        #self.label = utils.vtkImageResample(self.label, spacing=(0.5, 0.5, 0.5), opt='NN')
+        self.write_image('/Users/fanweikong/Downloads/test1.vti') 
         from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
         pylabel = vtk_to_numpy(self.label.GetPointData().GetScalars())
         pylabel = utils.swapLabels(pylabel)
@@ -38,9 +39,12 @@ class lvImage(Images):
         for tissue in remove_list:
             pylabel = utils.removeClass(pylabel, tissue, 0)
         self.label.GetPointData().SetScalars(numpy_to_vtk(pylabel))
+        self.write_image('/Users/fanweikong/Downloads/test2.vti') 
         # remove connections between AA and LA
-        ids = utils.locateRegionBoundaryIDs(self.label, 2, 6, size=4.)
+        ids = utils.locateRegionBoundaryIDs(self.label, 2, 6, size=3.)
+        ids = np.vstack((ids, utils.locateRegionBoundaryIDs(self.label, 6, 2, size=6.)))
         self.label = utils.recolorVTKPixelsByIds(self.label, ids, 0)
+        self.write_image('/Users/fanweikong/Downloads/test3.vti') 
     def buildCutter(self, region_id, adjacent_id, FACTOR, op='valve', smooth_iter=50):
         """
         Build cutter for aorta and la
@@ -80,7 +84,7 @@ class lvImage(Images):
         print("NRM: ", nrm)
         print("----------------------")
         #dilate by a little bit
-        cut_Im = utils.labelDilateErode(utils.recolorVTKPixelsByPlane(cut_Im, ori, -1.*nrm, 0), region_id, 0, 2.5)
+        cut_Im = utils.labelDilateErode(utils.recolorVTKPixelsByPlane(cut_Im, ori, -1.*nrm, 0), region_id, 0, 3)
         debug_fn = '/Users/fanweikong/Downloads/cut_'+str(region_id) + '.vti'
         label_io.writeVTKImage(cut_Im, debug_fn)
         

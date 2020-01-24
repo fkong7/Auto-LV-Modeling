@@ -20,12 +20,13 @@ def meshPolyData(fn, fns_out, args):
         msh.GetMesh(fn+'mesh')
     else:
         msh.NewObject(fn+'mesh')
-    
+   
     #Load Model
     msh.LoadModel(fn)
+    
     #Create new mesh
     msh.NewMesh()
-    msh.SetWalls([1,2,3])
+    msh.SetWalls([1])
     print("GetModelFaceInfo")
     print(msh.GetModelFaceInfo())
     
@@ -85,7 +86,7 @@ def remeshPolyData(poly_name, remeshed_name, hmin, hmax,write=False):
         return
 
     MeshUtil.Remesh(poly_name, remeshed_name, hmin, hmax)
-    if write:
-        Repository.WriteVtkPolyData(remeshed_name, 'ascii', remeshed_name)
+    if write is not None:
+        Repository.WriteVtkPolyData(remeshed_name, 'ascii', write)
     return
 
