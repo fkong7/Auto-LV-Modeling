@@ -56,7 +56,7 @@ def loadLabelMap(fn):
         reslice = vtk.vtkImageReslice()
         reslice.SetInputData(image)
         reslice.SetResliceAxes(matrix)
-        reslice.SetInterpolationModeToLinear()
+        reslice.SetInterpolationModeToNearestNeighbor()
         reslice.Update()
         reslice2 = vtk.vtkImageReslice()
         reslice2.SetInputData(reslice.GetOutput())
@@ -66,7 +66,7 @@ def loadLabelMap(fn):
         matrix.SetElement(0,0,-1)
         matrix.SetElement(1,1,-1)
         reslice2.SetResliceAxes(matrix)
-        reslice2.SetInterpolationModeToLinear()
+        reslice2.SetInterpolationModeToNearestNeighbor()
         reslice2.Update()
         label = reslice2.GetOutput()
     else:

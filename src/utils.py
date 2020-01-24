@@ -14,6 +14,7 @@ def swapLabels(pyImage):
     Swap label ids
     """
     ids = np.unique(pyImage)
+    print("UNIQUE IDS: ", ids)
     for i, v in enumerate(ids):
         pyImage[pyImage==v] = i
     return pyImage
@@ -287,18 +288,19 @@ def booleanVTKPolyData(poly1, poly2, keyword):
 
     return boolean.GetOutput()
 
-def fillHole(poly):
+def fillHole(poly, size=10000000.):
     """
     Fill holes in VTK PolyData
     
     Args:
         poly: VTK PolyData to fill
+        size: max size of the hole to fill
     Returns:
         poly: filled VTK PolyData
     """
     filler = vtk.vtkFillHolesFilter()
     filler.SetInputData(poly)
-    filler.SetHoleSize(100000000.)
+    filler.SetHoleSize(size)
     filler.Update()
     
     return filler.GetOutput()
@@ -334,12 +336,11 @@ def gaussianSmoothVTKImage(im, stdev):
     """
     smoother = vtk.vtkImageGaussianSmooth()
     smoother.SetInputData(im)
-    print(im.GetSpacing())
     smoother.SetRadiusFactors(np.array(im.GetSpacing())*stdev)
     smoother.Update()
     return smoother.GetOutput()
 
-def labelDilateErode(im, label_id, bg_id,thickness):
+def labelDilateErode(im, label_id, bg_id, size):
     """
     Dilates a label
     
@@ -347,7 +348,7 @@ def labelDilateErode(im, label_id, bg_id,thickness):
         im: vtkImage of the label map
         label_id: class id to erode
         bg_id: class id of backgroud to dilate
-        thickness: thickness of the erosion in physical unit
+        size: num of pixels of the erosion in physical unit
     Returns
         newIm: vtkImage with dilated tissue structure
     """
@@ -356,8 +357,9 @@ def labelDilateErode(im, label_id, bg_id,thickness):
     dilateErode.SetDilateValue(label_id)
     dilateErode.SetErodeValue(bg_id)
     
-    kernel_size = np.rint(thickness/np.array(im.GetSpacing())).astype(int)
-    print(kernel_size)
+    #kernel_size = np.rint(thickness/np.array(im.GetSpacing())).astype(int)
+    #print(kernel_size)
+    kernel_size = (np.ones(3) * size).astype(int)
     dilateErode.SetKernelSize(*kernel_size)
     dilateErode.Update()
     newIm = dilateErode.GetOutput()
@@ -430,7 +432,8 @@ def locateRegionBoundaryIDs(im, label_id1, label_id2, size = 1.):
     dilateErode.SetDilateValue(label_id1)
     dilateErode.SetErodeValue(label_id2)
     
-    kernel_size = np.rint(size/np.array(im.GetSpacing())).astype(int)
+    #kernel_size = np.rint(size/np.array(im.GetSpacing())).astype(int)
+    kernel_size = (np.ones(3)*size).astype(int)
     print(kernel_size)
     dilateErode.SetKernelSize(*kernel_size)
     dilateErode.Update()
@@ -600,7 +603,6 @@ def recolorVTKPixelsByPlaneByRegion(labels, ori, nrm, region_id, bg_id):
     for i in remove_indices:
         pyLabel[i[0],i[1],i[2]] = bg_id
 
-    print(pyLabel.shape)
     labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel.transpose(2,1,0).flatten()))
 
     return labels
@@ -820,8 +822,6 @@ def projectPointsToFitPlane(points):
     nrm = fitPlaneNormal(pyPts)
     nrm /= np.linalg.norm(nrm)
     ori = np.mean(pyPts, axis=0)
-    print(ori)
-    print(nrm)
 
     #if np.dot(nrm, ref-ori)<0:
     #    nrm = -1*nrm
@@ -931,7 +931,6 @@ def projectOpeningToFitPlane(poly, boundary_ids, points, ITER):
     ids = boundary_ids.copy()
     proj_pts = projectPointsToFitPlane(pts)
     for factor in np.linspace(0.8, 0., ITER, endpoint=False):
-        print("FACTOR: ", factor)
         ids, pts,  proj_pts = _moveConnectedPoints(ids, pts, proj_pts, factor)
     poly = changePolyDataPointsCoordinates(poly, ids, proj_pts)
     return poly 
@@ -1085,7 +1084,6 @@ def tagPolyData(poly, tag):
     tags.SetNumberOfComponents(1)
     tags.SetName('ModelFaceID')
     tags.SetNumberOfValues(poly.GetNumberOfPolys())
-    print(int(tag))
     for i in range(poly.GetNumberOfPolys()):
         tags.SetValue(i, int(tag))
     poly.GetCellData().SetScalars(tags)

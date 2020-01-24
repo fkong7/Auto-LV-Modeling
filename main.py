@@ -29,7 +29,7 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
     """
     FACTOR_LA = 0.7
     FACTOR_AA = 1.2
-    MESH_RESOLUTION = (1.5,1.5,1.5)
+    MESH_RESOLUTION = (2.,2.,2.)
 
     for fn, poly_fn in zip(fns,poly_fns): 
 
@@ -49,10 +49,10 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
         #process models
         model.processWall(la_cutter, aa_cutter)
         model.processCap(1.5) 
-        fn = os.path.join(os.path.dirname(__file__), "debug", "temp.vtk")
+        fn = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(poly_fn))
         model.writeSurfaceMesh(fn)
         model.remesh(1.5, fn, poly_fn, ug_fn)
-        model.writeSurfaceMesh(poly_fn)
+       # model.writeSurfaceMesh(poly_fn)
 
 
 if __name__=="__main__":
