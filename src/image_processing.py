@@ -84,7 +84,7 @@ class lvImage(Images):
         print("NRM: ", nrm)
         print("----------------------")
         #dilate by a little bit
-        cut_Im = utils.labelDilateErode(utils.recolorVTKPixelsByPlane(cut_Im, ori, -1.*nrm, 0), region_id, 0, 3)
+        cut_Im = utils.labelDilateErode(utils.recolorVTKPixelsByPlane(cut_Im, ori, -1.*nrm, 0), region_id, 0, 5.)
         debug_fn = '/Users/fanweikong/Downloads/cut_'+str(region_id) + '.vti'
         label_io.writeVTKImage(cut_Im, debug_fn)
         
