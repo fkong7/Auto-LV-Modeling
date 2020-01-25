@@ -33,8 +33,8 @@ class Geometry(object):
                 'VolumeMeshFlag': True,
                 'GlobalEdgeSize': edge_size, 
                 'MeshWallFirst': True, 
-                'NoMerge':True,
-                'NoBisect': True,
+                'NoMerge':False,
+                'NoBisect': False,
                 'Epsilon': 1e-8,
                 'Optimization': 3,
                 'QualityRatio': 1.4
