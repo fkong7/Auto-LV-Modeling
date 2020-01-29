@@ -33,8 +33,9 @@ class Geometry(object):
                 'VolumeMeshFlag': True,
                 'GlobalEdgeSize': edge_size, 
                 'MeshWallFirst': True, 
-                'NoMerge':False,
-                'NoBisect': False,
+                'NoMerge':True,
+                'NoBisect': True,
+                'Hausd': 0.02,
                 'Epsilon': 1e-8,
                 'Optimization': 3,
                 'QualityRatio': 1.4
@@ -82,6 +83,7 @@ class leftVentricle(Geometry):
         self.poly = utils.smoothVTKPolydata(utils.cleanPolyData(self.poly, 0.))
         
         self.wall_processed = True
+        label_io.writeVTKPolyData(self.poly, '/Users/fanweikong/Downloads/test2.vtp')
         return
 
     def processCap(self, edge_size):
@@ -90,6 +92,7 @@ class leftVentricle(Geometry):
             return
         self.poly = utils.capPolyDataOpenings(self.poly, edge_size)
         self.cap_processed = True
+        label_io.writeVTKPolyData(self.poly, '/Users/fanweikong/Downloads/test3.vtp')
         return
 
 

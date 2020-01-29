@@ -29,7 +29,7 @@ class Images(object):
 class lvImage(Images):
     
     def process(self, remove_list):
-        self.write_image('/Users/fanweikong/Downloads/test0.vti') 
+        #self.write_image('/Users/fanweikong/Downloads/test0.vti') 
         #self.label = utils.vtkImageResample(self.label, spacing=(0.5, 0.5, 0.5), opt='NN')
         self.write_image('/Users/fanweikong/Downloads/test1.vti') 
         from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
@@ -84,7 +84,7 @@ class lvImage(Images):
         print("NRM: ", nrm)
         print("----------------------")
         #dilate by a little bit
-        cut_Im = utils.labelDilateErode(utils.recolorVTKPixelsByPlane(cut_Im, ori, -1.*nrm, 0), region_id, 0, 5.)
+        cut_Im = utils.labelDilateErode(utils.recolorVTKPixelsByPlane(cut_Im, ori, -1.*nrm, 0), region_id, 0, 6.)
         debug_fn = '/Users/fanweikong/Downloads/cut_'+str(region_id) + '.vti'
         label_io.writeVTKImage(cut_Im, debug_fn)
         
