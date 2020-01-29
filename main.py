@@ -63,6 +63,7 @@ if __name__=="__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--json_fn', nargs=1, help='Name of the json file')
+    parser.add_argument('--seg_name', help='Name of the segmentation file')
     args = parser.parse_args()
     
     paras = label_io.loadJsonArgs(args.json_fn[0])
@@ -75,14 +76,18 @@ if __name__=="__main__":
     try:
         os.makedirs(os.path.join(output_dir, "volumes"))
     except Exception as e: print(e)
-    
-    #seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], paras['seg_name'] % paras['start_phase'])
-    seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], paras['seg_name'])
     fn_tempPts = os.path.join(output_dir, "surfaces", 'outputpoints.txt')
     
+    #seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], paras['seg_name'] % paras['start_phase'])
     #fn_poly = os.path.join(output_dir, "surfaces", paras['model_output'] % paras['start_phase'])
-    fn_poly = os.path.join(output_dir, "surfaces", paras['model_output'])
+    if args.seg_name is not None:
+        seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], args.seg_name)
+        fn_poly = os.path.join(output_dir, "surfaces", args.seg_name+'.vtk')
+    else:
+        seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], paras['seg_name'])
+        fn_poly = os.path.join(output_dir, "surfaces", paras['model_output'])
 
+    print(seg_fn, fn_poly)
     #run volume mesh to generate ids but not using it
     fn_ug = 'temp'
     buildSurfaceModelFromImage([seg_fn], [fn_poly], fn_ug)
