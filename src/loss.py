@@ -45,18 +45,19 @@ def la_loss(y_true, y_pred):
     return loss
 
 def weighted_categorical_crossentropy(weights):
-    #weights = K.variable(weights)
     def loss(y_true, y_pred):
         y_pred /= K.sum(y_pred, axis=-1, keepdims=True)
         y_pred = K.clip(y_pred, K.epsilon(), 1 - K.epsilon())
+        print("Y_PRED_SHAPE:", y_pred.get_shape())
         num_class = y_pred.get_shape().as_list()[-1]
         y_true_one_hot = tf.one_hot(tf.cast(y_true,tf.int32), num_class)
-        #loss = 0.
-        #for i in range(num_class):
-        #    loss += tf.reduce_mean(losses.categorical_crossentropy(tf.squeeze(y_true_one_hot[:,:,:,:,i]), y_pred[:,:,:,i])) * weights[i]
+        print("Y_ONE_HOT:", y_true_one_hot.get_shape())
         loss = tf.squeeze(y_true_one_hot) * K.log(y_pred)
+        print("LOSS:", loss.get_shape())
         loss = tf.reduce_mean(tf.reduce_sum(loss, axis=[1,2]), axis=0)*weights
+        print("LOSS1:", loss.get_shape())
         loss = - K.sum(loss, -1)
+        print("LOSS2:", loss.get_shape())
         return loss
     return loss
 
@@ -73,8 +74,7 @@ def weighted_dice(weights):
 def weighted_bce_dice_loss(weights):
     #weights = K.variable(weights)
     def loss(y_true, y_pred):
-        #loss = weighted_categorical_crossentropy(weights)(y_true, y_pred) + weighted_dice(weights)(y_true, y_pred)
-        loss = weighted_categorical_crossentropy(weights)(y_true, y_pred)
+        loss = weighted_categorical_crossentropy(weights)(y_true, y_pred) + weighted_dice(weights)(y_true, y_pred)
         return loss
     return loss
 

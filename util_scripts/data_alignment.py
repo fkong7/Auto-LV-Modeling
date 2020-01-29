@@ -25,12 +25,14 @@ def blankSpaces(y_train_filenames_ct, y_train_filenames_mr):
   ratio_mr = []
   ratio_ct = []
   for i in range(num):
-    mask_ct, ratio = cropMask(sitk.GetArrayFromImage(resample_spacing(y_train_filenames_ct[i])[0]),1.)
-    print(ratio)
-    ratio_ct = np.concatenate((ratio_ct, ratio))
-    mask_mr, ratio = cropMask(sitk.GetArrayFromImage(resample_spacing(y_train_filenames_mr[i])[0]),1.)
+    im_mr = resample_spacing(y_train_filenames_mr[i])[0]
+    mask_mr, ratio = cropMask(sitk.GetArrayFromImage(im_mr),1.)
     print(ratio)
     ratio_mr = np.concatenate((ratio_mr, ratio))
+    im_ct = resample_spacing(y_train_filenames_ct[i])[0]
+    mask_ct, ratio = cropMask(sitk.GetArrayFromImage(im_ct),1.)
+    print(ratio)
+    ratio_ct = np.concatenate((ratio_ct, ratio))
   return ratio_ct, ratio_mr
 
   
@@ -43,9 +45,10 @@ def main(args):
     aug_num = args.aug_num
     # TO-DO: NEED TO CHECK/FIX THIS BEFORE NEXT RUNS
     if fdr_postfix == '_train':
-        ids = range(1,19)
+        ids = range(0,17)
     elif fdr_postfix =='_val':
-        ids = [0, 19]
+        #ids = [0, 19]
+        ids = range(17, 20)
         #ids = range(0,4)
 
     for m in modality:
@@ -93,7 +96,9 @@ def main(args):
         
     for m in modality:
       num = len(filenames_dic[m+'_x'])
+      print(filenames_dic[m+'_x'])
       for i in ids:
+          print("ID: ", i)
           fn = os.path.join(output_data_folder, m+fdr_postfix, os.path.basename(filenames_dic[m+'_x'][i]))
           img,_ = resample_spacing(filenames_dic[m+'_x'][i], order=1)
           sitk.WriteImage(img, fn)
