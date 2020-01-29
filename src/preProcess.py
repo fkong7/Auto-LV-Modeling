@@ -36,11 +36,6 @@ def Resize_and_map_intensity_from_fn(image_vol_fn, m):
     
     return image_vol, original_shape, image_info
 
-def Resize_by_view(image_vol, view, size):
-    shape = [size, size, size]
-    shape[view] = image_vol.shape[view]
-    image_vol_resize = resize(image_vol.astype(float), tuple(shape))
-    return image_vol_resize
 
 def HistogramEqualization(pyIm):
     pyImNew = np.empty(pyIm.shape)
@@ -56,10 +51,23 @@ def HistogramEqualization(pyIm):
     
     return pyImNew
   
-def resample(sitkIm_fn, resolution = (0.5, 0.5, 0.5), dim=3):
-  image = sitk.ReadImage(sitkIm_fn)
+def Resize_by_view(image_vol, view, size):
+    shape = [size, size, size]
+    shape[view] = image_vol.shape[view]
+    image_vol_resize = resize(image_vol.astype(float), tuple(shape))
+    return image_vol_resize
+
+  
+def resample(sitkIm, resolution = (0.5, 0.5, 0.5),order=1,dim=3):
+  if type(sitkIm) is str:
+    image = sitk.ReadImage(sitkIm)
+  else:
+    image = sitkIm
   resample = sitk.ResampleImageFilter()
-  resample.SetInterpolator(sitk.sitkLinear)
+  if order==1:
+    resample.SetInterpolator(sitk.sitkLinear)
+  else:
+    resample.SetInterpolator(sitk.sitkNearestNeighbor)
   resample.SetOutputDirection(image.GetDirection())
   resample.SetOutputOrigin(image.GetOrigin())
   resample.SetOutputSpacing(resolution)
@@ -114,10 +122,10 @@ def transform_func(image, reference_image, transform, order=1):
       
     return resampled
 
-def reference_image(spacing, size, dim):
- 
-  reference_size = [256] * dim
-  reference_spacing = [int(np.max(size))/256*spacing] * dim
+def reference_image_build(spacing, size, template_size, dim):
+    #template size: image(array) dimension to resize to: a list of three elements
+  reference_size = template_size
+  reference_spacing = np.array(size)/np.array(template_size)*np.array(spacing)
   #reference_size = size
   reference_image = sitk.Image(reference_size, 0)
   reference_image.SetOrigin(np.zeros(3))
@@ -154,7 +162,8 @@ def isometric_transform(image, ref_img, orig_direction, order=1, target=None):
   #affine.SetMatrix(image.GetDirection())
   return transform_func(image, ref_img, affine, order)
 
-def resample_spacing(sitkIm, resolution=0.5, dim=3, order=1):
+def resample_spacing(sitkIm, resolution=0.5, dim=3, template_size=(256, 256, 256), order=1):
+  print("ok")
   if type(sitkIm) is str:
     image = sitk.ReadImage(sitkIm)
   else:
@@ -165,11 +174,10 @@ def resample_spacing(sitkIm, resolution=0.5, dim=3, order=1):
   new_size = orig_size*(orig_spacing/np.array(resolution))
   new_size = np.ceil(new_size).astype(np.int) #  Image dimensions are in integers
   new_size = [int(s) for s in new_size]
-  
-  ref_img = reference_image(resolution, new_size, dim)
+  new_size = np.abs(np.matmul(np.reshape(orig_direction, (3,3)), np.array(new_size)))
+  ref_img = reference_image_build(resolution, new_size, template_size, dim)
   centered = centering(image, ref_img, order)
   transformed = isometric_transform(centered, ref_img, orig_direction, order)
-  
   return transformed, ref_img
 
 def resample_scale(sitkIm, ref_img, scale_factor=1., order=1):
@@ -183,6 +191,38 @@ def resample_scale(sitkIm, ref_img, scale_factor=1., order=1):
   affine.SetCenter(sitkIm.TransformContinuousIndexToPhysicalPoint(np.array(sitkIm.GetSize())/2.0))
   transformed = transform_func(sitkIm, ref_img, affine, order)
   return transformed
+
+def scale(sitkIm, transform, scale_factor = [1., 1., 1.]):
+    dim = sitkIm.GetDimension()
+    new_transform = sitk.AffineTransform(transform)
+    scale = np.eye(dim)
+    np.fill_diagonal(scale, 1./np.array(scale_factor))
+    matrix = np.array(transform.GetMatrix()).reshape((dim,dim))
+    matrix = np.matmul(matrix, scale)
+    new_transform.SetMatrix(matrix.ravel())
+    new_transform.SetCenter(sitkIm.TransformContinuousIndexToPhysicalPoint(np.array(sitkIm.GetSize())/2.0))
+    return new_transform
+
+def translate(sitkIm, transform, translate=[0.,0.,0.]):
+    affine = sitk.AffineTransform(transform)
+    affine.SetTranslation(translate)
+    affine.SetCenter(sitkIm.TransformContinuousIndexToPhysicalPoint(np.array(sitkIm.GetSize())/2.0))
+    return affine
+
+def rotation(sitkIm, transform, angles = [0.,0.,0.]):
+    rads = np.array(angles)/180.*np.pi
+    dim = sitkIm.GetDimension()
+    x_rot = np.eye(dim)
+    x_rot = [[1., 0., 0.], [0., np.cos(rads[0]), -np.sin(rads[0])], [0., np.sin(rads[0]), np.cos(rads[0])]]
+    y_rot = [[np.cos(rads[1]), 0., np.sin(rads[1])], [0.,1.,0.], [-np.sin(rads[1]), 0., np.cos(rads[1])]]
+    z_rot = [[np.cos(rads[2]), -np.sin(rads[2]), 0.], [np.sin(rads[2]), np.cos(rads[2]), 0.], [0., 0., 1.]]
+    rot_matrix = np.matmul(np.matmul(np.array(x_rot), np.array(y_rot)), np.array(z_rot))
+    matrix = np.array(transform.GetMatrix()).reshape((dim, dim))
+    matrix = np.matmul(matrix, rot_matrix)
+    new_transform = sitk.AffineTransform(transform)
+    new_transform.SetMatrix(matrix.ravel())
+    new_transform.SetCenter(sitkIm.TransformContinuousIndexToPhysicalPoint(np.array(sitkIm.GetSize())/2.0))
+    return new_transform
 
 def swapLabels(labels):
     labels[labels==421]=420
@@ -239,14 +279,5 @@ def RescaleIntensity(slice_im,m,limit):
         slice_im -= 1
     return slice_im
     
-def data_preprocess_test(image_vol_fn, view, size, m):
-    image_vol = sitk.GetArrayFromImage(sitk.ReadImage(image_vol_fn))
-    original_shape = image_vol.shape
-    image_vol = RescaleIntensity(image_vol, m)
-    shape = [size, size, size]
-    shape[view] = image_vol.shape[view]
-    image_vol_resize = resize(image_vol, tuple(shape))
-    
-    return image_vol_resize, original_shape
-  
-  
+
+

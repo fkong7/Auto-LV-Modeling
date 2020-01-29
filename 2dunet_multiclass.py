@@ -156,8 +156,8 @@ tr_cfg = {
     'horizontal_flip': True,
     #'rotation': 10.,
     'changeIntensity': {"scale": [0.9, 1.1],"shift": [-0.1, 0.1]}, 
-    'width_shift_range': 0.2,
-    'height_shift_range': 0.2
+    'width_shift_range': 0.15,
+    'height_shift_range': 0.15
 }
 tr_preprocessing_fn = functools.partial(_augment, **tr_cfg)
 
@@ -186,8 +186,8 @@ inputs, outputs = UNet2D(img_shape, num_class)
 model = models.Model(inputs=[inputs], outputs=[outputs])
 
 adam = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=None, decay=1e-6, amsgrad=False)
+#model.compile(optimizer=adam, loss=bce_dice_loss, metrics=[dice_loss])
 model.compile(optimizer=adam, loss=bce_dice_loss, metrics=[dice_loss])
-#model.compile(optimizer=adam, loss=weighted_bce_dice_loss(weights), metrics=[dice_loss])
 
 model.summary()
 
@@ -195,7 +195,7 @@ model.summary()
 
 cp = tf.keras.callbacks.ModelCheckpoint(filepath=save_model_path, monitor='val_dice_loss', save_best_only=True, verbose=1)
 lr_schedule = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_dice_loss', factor=0.8, patience=5, min_lr=0.000005)
-erly_stp = tf.keras.callbacks.EarlyStopping(monitor='val_dice_loss', patience=30)
+erly_stp = tf.keras.callbacks.EarlyStopping(monitor='val_dice_loss', patience=15)
 # Alternatively, load the weights directly: model.load_weights(save_model_path)
 try:
   model = models.load_model(save_model_path, custom_objects={'bce_dice_loss': bce_dice_loss, 'dice_loss': dice_loss})
