@@ -2,8 +2,7 @@ import os
 import numpy as np
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
-
-
+import gc
 import tensorflow as tf
 import tensorflow.contrib as tfcontrib
 from tensorflow.python.keras import models as models_keras
@@ -43,16 +42,14 @@ def dice_score(pred, true):
     num_class = np.unique(true)
     
     #change to one hot
-    pred_one_hot = np.zeros((np.prod(pred.shape), len(num_class)-1))
-    true_one_hot = np.zeros((np.prod(pred.shape), len(num_class)-1))
     dice_out = [None]*len(num_class)
     for i in range(1, len(num_class)):
-        pred_one_hot[:, i-1] = (pred==num_class[i]).reshape(-1)
-        true_one_hot[:, i-1] = (true==num_class[i]).reshape(-1)
-        if i ==0:
-            continue
-        dice_out[i] = 1-dice(pred_one_hot[:,i-1], true_one_hot[:,i-1]) 
-    dice_out[0] = 1 - dice(pred_one_hot.reshape(-1), true_one_hot.reshape(-1))
+        pred_c = pred == num_class[i]
+        true_c = true == num_class[i]
+        dice_out[i] = np.sum(pred_c*true_c)*2.0 / (np.sum(pred_c) + np.sum(true_c))
+    
+    mask =( pred > 0 )+ (true > 0)
+    dice_out[0] = np.sum((pred==true)[mask]) * 2. / (np.sum(pred>0) + np.sum(true>0))
     return dice_out
 
 
@@ -116,35 +113,35 @@ class Prediction:
                 prob_resize[:,:,:,i] = resize(prob_view[:,:,:,i], self.original_shape, order=1)
             prob += prob_resize
         avg = prob/len(self.models)
-        prediction = predictVol(avg, np.zeros(1))
-        return prediction
+        self.pred = predictVol(avg, np.zeros(1))
+        return 
 
-    def dice(self, pred_label):
+    def dice(self):
         #assuming groud truth label has the same origin, spacing and orientation as input image
         label_vol = sitk.GetArrayFromImage(sitk.ReadImage(self.label_fn))
-        pred_label = sitk.GetArrayFromImage(pred_label)
+        pred_label = sitk.GetArrayFromImage(self.pred)
         pred_label = swapLabelsBack(label_vol, pred_label)
         ds = dice_score(pred_label, label_vol)
         return ds
     
-    def resample_prediction(self, prediction, write=None):
+    def resample_prediction(self):
         #resample prediction so it matches the original image
-        print(prediction.shape)
-        im = sitk.GetImageFromArray(prediction)
+        print(self.pred.shape)
+        im = sitk.GetImageFromArray(self.pred)
         im.SetSpacing(self.image_info['spacing'])
         im.SetOrigin(self.image_info['origin'])
         im.SetDirection(self.image_info['direction'])
-        pred_label = centering(im, sitk.ReadImage(self.image_fn), order=0)
-        if write is not None:
-            self.write_prediction(write, pred_label)
-        return pred_label
+        self.pred = centering(im, sitk.ReadImage(self.image_fn), order=0)
+        return
 
-    def write_prediction(self, out_fn, pred_label):
+    def post_process(self):
+        pass
+    def write_prediction(self, out_fn):
         try:
             os.makedirs(os.path.dirname(out_fn))
         except:
             pass
-        sitk.WriteImage(sitk.Cast(pred_label, sitk.sitkInt16), out_fn)
+        sitk.WriteImage(sitk.Cast(self.pred, sitk.sitkInt16), out_fn)
 
 def main(modality, data_folder, data_out_folder, model_folder, view_attributes, mode, channel):
     print(modality)
@@ -173,36 +170,20 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
     for m in modality:
         im_loader = ImageLoader(m, data_folder, fn='_test', fn_mask=None if mode=='test' else '_test_masks', ext='*.nii.gz')
         x_filenames, y_filenames = im_loader.load_imagefiles()
+        dice_list = []
 
         for i in range(len(x_filenames)):
             print("processing "+x_filenames[i])
             models = [os.path.realpath(i) + '/weights_multi-all-%s_%s.hdf5' % (j, model_postfix) for i, j in zip(model_folders, view_names)]
             predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i], channel)
-            output = predict.volume_prediction_average(256)
-            output = predict.resample_prediction(output, os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
-            
-            del predict 
-            del output
-    del unet
-    K.clear_session()
-    gc.collect()
-    # compute dice scores
-    if mode == 'validate':
-        for m in modality:
-            im_loader = ImageLoader(m, data_folder, fn='_test', fn_mask='_test_masks', ext='*.nii.gz')
-            x_filenames, y_filenames = im_loader.load_imagefiles()
-            dice_list = []
-            for i in range(len(x_filenames)):
-                label_vol = sitk.GetArrayFromImage(sitk.ReadImage(y_filenames[i]))
-                pred_vol = sitk.GetArrayFromImage(sitk.ReadImage(os.path.join(data_out_folder,os.path.basename(x_filenames[i]))))
-                pred_vol = swapLabelsBack(label_vol, pred_vol)
-                ds = dice_score(pred_vol, label_vol)
-                dice_list.append(ds)
-            if len(dice_list) >0:
-                csv_path = os.path.join(data_out_folder, '%s_test.csv' % m)
-                writeDiceScores(csv_path, dice_list)
-
-
+            predict.volume_prediction_average(256)
+            predict.resample_prediction()
+            if y_filenames[i] is not None:
+                dice_list.append(predict.dice())
+        if len(dice_list) >0:
+            csv_path = os.path.join(data_out_folder, '%s_test.csv' % m)
+            writeDiceScores(csv_path, dice_list)
+   
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
