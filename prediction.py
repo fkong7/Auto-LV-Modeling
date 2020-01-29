@@ -135,7 +135,19 @@ class Prediction:
         return
 
     def post_process(self):
-        pass
+        spacing = self.pred.GetSpacing()
+        ids = np.unique(sitk.GetArrayFromImage(self.pred))
+        kernel = [int(round(7./spacing[i])) for i in range(3)]
+        ftr = sitk.BinaryMorphologicalClosingImageFilter()
+        ftr.SetKernelRadius(kernel)
+        ftr.SafeBorderOn()
+        for i in ids:
+            if i ==0:
+                continue
+            ftr.SetForegroundValue(int(i))
+            self.pred = ftr.Execute(self.pred)
+
+
     def write_prediction(self, out_fn):
         try:
             os.makedirs(os.path.dirname(out_fn))
@@ -178,8 +190,11 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
             predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i], channel)
             predict.volume_prediction_average(256)
             predict.resample_prediction()
+            predict.post_process()
             if y_filenames[i] is not None:
                 dice_list.append(predict.dice())
+
+            predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
         if len(dice_list) >0:
             csv_path = os.path.join(data_out_folder, '%s_test.csv' % m)
             writeDiceScores(csv_path, dice_list)
