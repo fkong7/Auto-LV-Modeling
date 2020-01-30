@@ -138,6 +138,8 @@ class Prediction:
         spacing = self.pred.GetSpacing()
         ids = np.unique(sitk.GetArrayFromImage(self.pred))
         kernel = [int(round(7./spacing[i])) for i in range(3)]
+        #Max kernel size is 7
+        kernel = [7 if kernel[i]>7 else kernel[i] for i in range(3)]
         ftr = sitk.BinaryMorphologicalClosingImageFilter()
         ftr.SetKernelRadius(kernel)
         ftr.SafeBorderOn()
