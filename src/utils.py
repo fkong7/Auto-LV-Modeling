@@ -517,7 +517,7 @@ def clipVTKPolyData(poly, ori, nrm):
 
     return poly
 
-def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id):
+def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id, label_id=None):
     """
     For every pixel above a plane in physcal coordinates, change the pixel value to background pixel value
 
@@ -525,6 +525,8 @@ def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id):
         labels: VTK image
         ori: plane origin
         nrm: plane normal
+        bg_id: id to erode the label to
+        label_id: id to avoid erasing
     Returns:
         labels: editted VTK image
     """
@@ -543,6 +545,8 @@ def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id):
     vec1 = physical - np.tile(ori, total_num).reshape(total_num,3)
     vec2 = np.tile(nrm, total_num).reshape(total_num,3)
     above = np.sum(vec1*vec2, axis=1)>0
+    if label_id is not None:
+        above = np.logical_and(above, pyLabel!=label_id)
     pyLabel[above] = bg_id
     labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel))
 
@@ -1192,7 +1196,10 @@ def capPolyDataOpenings(poly,  size):
         cap_pts = _addNodesToCap(pts, size)
         cap_pts_list.append(cap_pts)
         cap = _delaunay2D(cap_pts)
+        label_io.writePointCloud(cap_pts, '/Users/fanweikong/Downloads/cap_pts_%d.vtp' % tag_id)
+        label_io.writeVTKPolyData(cap, '/Users/fanweikong/Downloads/cap_%d.vtp'% tag_id)
         cap = cutSurfaceWithPolygon(cap, boundary)
+        label_io.writeVTKPolyData(cap, '/Users/fanweikong/Downloads/cap2_%d.vtp' % tag_id)
         #tag the caps
         tag_id +=1
         cap = tagPolyData(cap, tag_id)

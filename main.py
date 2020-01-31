@@ -29,15 +29,15 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
     """
     FACTOR_LA = 0.7
     FACTOR_AA = 1.
-    MESH_RESOLUTION = (1.5,1.5,1.5)
+    MESH_RESOLUTION = (1.,1.,1.)
 
     for fn, poly_fn in zip(fns,poly_fns): 
 
         image = lvImage(fn)
         image.process(remove_ids)
 
-        la_cutter = image.buildCutter(la_id, 3, FACTOR_LA, op='valve')
-        aa_cutter = image.buildCutter(aa_id, 3, FACTOR_AA, op='tissue')
+        la_cutter = image.buildCutter(la_id, aa_id, 3, FACTOR_LA, op='valve')
+        aa_cutter = image.buildCutter(aa_id, la_id, 3, FACTOR_AA, op='tissue')
         la_fn = '/Users/fanweikong/Downloads/la.vtp'
         label_io.writeVTKPolyData(la_cutter, la_fn)
         aa_fn = '/Users/fanweikong/Downloads/aa.vtp'
