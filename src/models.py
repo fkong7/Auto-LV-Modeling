@@ -35,7 +35,6 @@ class Geometry(object):
                 'MeshWallFirst': True, 
                 'NoMerge':True,
                 'NoBisect': True,
-                'Hausd': 0.02,
                 'Epsilon': 1e-8,
                 'Optimization': 3,
                 'QualityRatio': 1.4
@@ -71,7 +70,7 @@ class leftVentricle(Geometry):
         self.poly = utils.cutPolyDataWithAnother(self.poly, la_cutter,False)
         self.poly = utils.cutPolyDataWithAnother(self.poly, aa_cutter,False)
         #fill small cutting artifacts:
-        self.poly = utils.fillHole(self.poly, size=10)
+        self.poly = utils.fillHole(self.poly, size=15.)
         label_io.writeVTKPolyData(self.poly, '/Users/fanweikong/Downloads/test1.vtp')
         #improve valve opening geometry
         id_lists,boundaries = utils.getPointIdsOnBoundaries(self.poly)

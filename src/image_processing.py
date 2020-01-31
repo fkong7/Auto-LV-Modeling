@@ -30,7 +30,7 @@ class lvImage(Images):
     
     def process(self, remove_list):
         #self.write_image('/Users/fanweikong/Downloads/test0.vti') 
-        #self.label = utils.vtkImageResample(self.label, spacing=(0.5, 0.5, 0.5), opt='NN')
+        self.label = utils.vtkImageResample(self.label, spacing=(1.2, 1.2, 1.2), opt='NN')
         self.write_image('/Users/fanweikong/Downloads/test1.vti') 
         from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
         pylabel = vtk_to_numpy(self.label.GetPointData().GetScalars())
@@ -45,12 +45,14 @@ class lvImage(Images):
         ids = np.vstack((ids, utils.locateRegionBoundaryIDs(self.label, 6, 2, size=6.)))
         self.label = utils.recolorVTKPixelsByIds(self.label, ids, 0)
         self.write_image('/Users/fanweikong/Downloads/test3.vti') 
-    def buildCutter(self, region_id, adjacent_id, FACTOR, op='valve', smooth_iter=50):
+    def buildCutter(self, region_id, avoid_id, adjacent_id, FACTOR, op='valve', smooth_iter=50):
         """
         Build cutter for aorta and la
 
         Args:
             label: original SimpleITK image
+            region_id: id of aorta or LA to build cutter
+            avoid_id: id of aorta or LA to avoid cutting into
             op: 'valve' or 'tissue', option for normal direction
         """
         cut_Im = vtk.vtkImageData()
@@ -84,7 +86,8 @@ class lvImage(Images):
         print("NRM: ", nrm)
         print("----------------------")
         #dilate by a little bit
-        cut_Im = utils.labelDilateErode(utils.recolorVTKPixelsByPlane(cut_Im, ori, -1.*nrm, 0), region_id, 0, 6.)
+        cut_Im = utils.labelDilateErode(utils.recolorVTKPixelsByPlane(cut_Im, ori, -1.*nrm, 10, avoid_id), region_id, 0, 8.)
+        cut_Im = utils.labelDilateErode(cut_Im, avoid_id, region_id, 2)
         debug_fn = '/Users/fanweikong/Downloads/cut_'+str(region_id) + '.vti'
         label_io.writeVTKImage(cut_Im, debug_fn)
         
