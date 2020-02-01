@@ -27,7 +27,7 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
         model: constructed surface mesh (VTK PolyData)
         cap_pts_ids: node ids of the points on the caps
     """
-    FACTOR_LA = 0.7
+    FACTOR_LA = 0.5
     FACTOR_AA = 1.
     MESH_RESOLUTION = (1.,1.,1.)
 
@@ -38,10 +38,6 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
 
         la_cutter = image.buildCutter(la_id, aa_id, 3, FACTOR_LA, op='valve')
         aa_cutter = image.buildCutter(aa_id, la_id, 3, FACTOR_AA, op='tissue')
-        la_fn = '/Users/fanweikong/Downloads/la.vtp'
-        label_io.writeVTKPolyData(la_cutter, la_fn)
-        aa_fn = '/Users/fanweikong/Downloads/aa.vtp'
-        label_io.writeVTKPolyData(aa_cutter, aa_fn)
         image.resample(MESH_RESOLUTION, 'linear')
         image.convert2binary()
         #image.write_image('/Users/fanweikong/Downloads/test.vti')
@@ -51,7 +47,7 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
         model.processCap(1.5) 
         fn = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(poly_fn))
         #model.writeSurfaceMesh(fn)
-        model.remesh(1.5, fn, poly_fn, ug_fn)
+        model.remesh(1., fn, poly_fn, ug_fn)
         model.writeSurfaceMesh(poly_fn)
 
 

@@ -294,9 +294,6 @@ def writePointCloud(pts,fn):
 
     return
 
-    
-    
-
 def writeVTKPolyDataVerts(poly, fn):
     """
     Writes the vertices of the VTK PolyData
@@ -306,6 +303,14 @@ def writeVTKPolyDataVerts(poly, fn):
     writePointCloud(pts, fn)
     return
 
+def writeVTKPoints(pts, fn):
+    poly = vtk.vtkPolyData()
+    poly.SetPoints(pts)
+    verts = vtk.vtkVertexGlyphFilter()
+    verts.AddInputData(poly)
+    verts.Update()
+    writeVTKPolyData(verts.GetOutput(), fn)
+    return 
 
 def readElastixPointOuptut(fn):
     """
