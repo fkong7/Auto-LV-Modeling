@@ -358,7 +358,6 @@ def labelDilateErode(im, label_id, bg_id, size):
     dilateErode.SetErodeValue(bg_id)
     
     #kernel_size = np.rint(thickness/np.array(im.GetSpacing())).astype(int)
-    #print(kernel_size)
     kernel_size = (np.ones(3) * size).astype(int)
     dilateErode.SetKernelSize(*kernel_size)
     dilateErode.Update()
@@ -434,7 +433,6 @@ def locateRegionBoundaryIDs(im, label_id1, label_id2, size = 1.):
     
     #kernel_size = np.rint(size/np.array(im.GetSpacing())).astype(int)
     kernel_size = (np.ones(3)*size).astype(int)
-    print(kernel_size)
     dilateErode.SetKernelSize(*kernel_size)
     dilateErode.Update()
     newIm = dilateErode.GetOutput()
@@ -1110,6 +1108,43 @@ def fixPolydataNormals(poly):
     normAdj.Update()
     poly = normAdj.GetOutput()
     return poly
+def orientedPointsetFromBoundary(boundary):
+    """
+    Create list of oriented ids on a closed boundary curve (polyline)
+
+    Args: 
+        boundary: VTK PolyData
+    Returns:
+        id_list: list of ordered ids
+        pt_list: vtk points with ordered points
+    """
+    bound_pts = boundary.GetPoints()
+    pt_list = vtk.vtkPoints()
+    pt_list.SetNumberOfPoints(bound_pts.GetNumberOfPoints())
+    id_list = [None]*bound_pts.GetNumberOfPoints()
+    pt_list.SetPoint(0, bound_pts.GetPoint(0))
+    id_list[0] = 0
+
+    cells = vtk.vtkIdList()
+    boundary.GetPointCells(id_list[0], cells)
+    pts = vtk.vtkIdList()
+    boundary.GetCellPoints(cells.GetId(1), pts)
+    for i in range(pts.GetNumberOfIds()):
+        if pts.GetId(i) not in id_list:
+            id_list[1] = pts.GetId(i)
+            pt_list.SetPoint(1, bound_pts.GetPoint(i))
+
+    for i in range(2, len(id_list)):
+        cells = vtk.vtkIdList()
+        boundary.GetPointCells(id_list[i-1], cells)
+        for j in range(cells.GetNumberOfIds()):
+            pts = vtk.vtkIdList()
+            boundary.GetCellPoints(cells.GetId(j), pts)
+            for k in range(pts.GetNumberOfIds()):
+                if pts.GetId(k) not in id_list:
+                    id_list[i] = pts.GetId(k)
+                    pt_list.SetPoint(i, bound_pts.GetPoint(k))
+    return id_list, pt_list
 
 def capPolyDataOpenings(poly,  size):
     """
@@ -1164,16 +1199,24 @@ def capPolyDataOpenings(poly,  size):
         #_plotPoints(vtk_to_numpy(vtkPts.GetData()))
         return vtkPts
 
-    def _delaunay2D(vtkPts):
+    def _delaunay2D(vtkPts, boundary):
         """
         Delaunay 2D on input points
         """
         vtkPtsPly = vtk.vtkPolyData()
         vtkPtsPly.SetPoints(vtkPts)
+        
+        ids, pt_list = orientedPointsetFromBoundary(boundary)   
 
+        polygon = vtk.vtkCellArray()
+        polygon.InsertNextCell(len(ids))
+        for i in ids:
+            polygon.InsertCellPoint(i)
+        vtkPtsPly.SetPolys(polygon)
+        
         delaunay = vtk.vtkDelaunay2D()
         delaunay.SetInputData(vtkPtsPly)
-        delaunay.SetBoundingTriangulation(False)
+        delaunay.SetSourceData(vtkPtsPly)
         delaunay.SetTolerance(0.002)
         delaunay.Update()
         return delaunay.GetOutput()
@@ -1195,11 +1238,8 @@ def capPolyDataOpenings(poly,  size):
     for boundary, ids, pts in zip(components, id_lists, pt_lists):
         cap_pts = _addNodesToCap(pts, size)
         cap_pts_list.append(cap_pts)
-        cap = _delaunay2D(cap_pts)
-        label_io.writePointCloud(cap_pts, '/Users/fanweikong/Downloads/cap_pts_%d.vtp' % tag_id)
-        label_io.writeVTKPolyData(cap, '/Users/fanweikong/Downloads/cap_%d.vtp'% tag_id)
-        cap = cutSurfaceWithPolygon(cap, boundary)
-        label_io.writeVTKPolyData(cap, '/Users/fanweikong/Downloads/cap2_%d.vtp' % tag_id)
+        cap = _delaunay2D(cap_pts, boundary)
+        #cap = cutSurfaceWithPolygon(cap, boundary)
         #tag the caps
         tag_id +=1
         cap = tagPolyData(cap, tag_id)

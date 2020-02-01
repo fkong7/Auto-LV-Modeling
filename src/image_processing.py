@@ -76,7 +76,6 @@ class lvImage(Images):
             nrm = nrm_valve_plane
             if np.dot(nrm_tissue, nrm_valve_plane)<0:
                 nrm =  -1 *nrm
-            nrm = (nrm + nrm_tissue)/2.
         elif op=='tissue':
             nrm = nrm_tissue
         else:
