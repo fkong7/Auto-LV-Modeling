@@ -66,12 +66,10 @@ class leftVentricle(Geometry):
             print("Left ventricle wall has been processed!")
             return
         # cut with la and aorta cutter:
-        label_io.writeVTKPolyData(self.poly, '/Users/fanweikong/Downloads/test.vtp')
         self.poly = utils.cutPolyDataWithAnother(self.poly, la_cutter,False)
         self.poly = utils.cutPolyDataWithAnother(self.poly, aa_cutter,False)
         #fill small cutting artifacts:
         self.poly = utils.fillHole(self.poly, size=15.)
-        label_io.writeVTKPolyData(self.poly, '/Users/fanweikong/Downloads/test1.vtp')
         #improve valve opening geometry
         id_lists,boundaries = utils.getPointIdsOnBoundaries(self.poly)
         for idx, (ids, boundary) in enumerate(zip(id_lists, boundaries)):
@@ -82,7 +80,6 @@ class leftVentricle(Geometry):
         self.poly = utils.smoothVTKPolydata(utils.cleanPolyData(self.poly, 0.))
         
         self.wall_processed = True
-        label_io.writeVTKPolyData(self.poly, '/Users/fanweikong/Downloads/test2.vtp')
         return
 
     def processCap(self, edge_size):
@@ -91,7 +88,6 @@ class leftVentricle(Geometry):
             return
         self.poly = utils.capPolyDataOpenings(self.poly, edge_size)
         self.cap_processed = True
-        label_io.writeVTKPolyData(self.poly, '/Users/fanweikong/Downloads/test3.vtp')
         return
 
 
