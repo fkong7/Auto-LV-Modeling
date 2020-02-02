@@ -13,7 +13,7 @@ import utils
 import vtk
 import time
 
-def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=2,aa_id=6):
+def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=2,aa_id=6, timming=False):
     """
     Modified test6 to cut on the PolyData directly to create better defined inlet/outlet geometry
     The left atrium is cut normal to the direction defined by the normal of the mitral plane
@@ -30,7 +30,11 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
     FACTOR_LA = 0.5
     FACTOR_AA = 1.
     MESH_RESOLUTION = (1.,1.,1.)
-
+        
+        
+    time_list = []
+    if timming:
+        start = time.time()
     for fn, poly_fn in zip(fns,poly_fns): 
 
         image = lvImage(fn)
@@ -40,16 +44,27 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
         aa_cutter = image.buildCutter(aa_id, la_id, 3, FACTOR_AA, op='tissue')
         image.resample(MESH_RESOLUTION, 'linear')
         image.convert2binary()
-        #image.write_image('/Users/fanweikong/Downloads/test.vti')
+
+        if timming:
+            im_time = time.time() - start
+            time_now = time.time()
+        
         model = leftVentricle(image.generate_surface(0, 50))
         #process models
         model.processWall(la_cutter, aa_cutter)
         model.processCap(1.5) 
+
+        if timming:
+            surf_time = time.time() - time_now
+            time_now = time.time()
         fn = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(poly_fn))
         #model.writeSurfaceMesh(fn)
         model.remesh(1., fn, poly_fn, ug_fn)
         model.writeSurfaceMesh(poly_fn)
-
+        if timming:
+            mesh_time = time.time() - time_now
+            time_list.append([im_time, surf_time, mesh_time])
+    return time_list
 
 if __name__=="__main__":
     start = time.time()
@@ -86,7 +101,13 @@ if __name__=="__main__":
     print(seg_fn, fn_poly)
     #run volume mesh to generate ids but not using it
     fn_ug = 'temp'
-    buildSurfaceModelFromImage([seg_fn], [fn_poly], fn_ug)
+    time_list = buildSurfaceModelFromImage([seg_fn], [fn_poly], fn_ug, timming=False)
+    timming = True
+    if timming:
+        import csv
+        with open(os.path.join(output_dir, 'time_results.csv'), 'w+' , newline="") as f:
+            writer = csv.writer(f)
+            writer.writerows(time_list)
 
     end = time.time()
     print("Time spend in main.py: ", end-start)
