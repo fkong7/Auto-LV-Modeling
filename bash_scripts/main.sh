@@ -8,7 +8,7 @@ volume_mesh_script=/Users/fanweikong/Documents/Modeling/SurfaceModeling/volume_m
 
 #${sv_python_dir}/sv --python -- ${model_script} --json_fn ${json_file}
 
-dir=/Users/fanweikong/Downloads/test_ensemble-1-29
+dir=/Users/fanweikong/Downloads/test_ensemble_post
 
 for file in ${dir}/*.nii.gz; do  ${sv_python_dir}/sv --python -- ${model_script} --json_fn ${json_file} --seg_name ${file##*/}; done
 
