@@ -101,11 +101,11 @@ if __name__=="__main__":
     print(seg_fn, fn_poly)
     #run volume mesh to generate ids but not using it
     fn_ug = 'temp'
-    time_list = buildSurfaceModelFromImage([seg_fn], [fn_poly], fn_ug, timming=False)
     timming = True
+    time_list = buildSurfaceModelFromImage([seg_fn], [fn_poly], fn_ug, timming=timming)
     if timming:
         import csv
-        with open(os.path.join(output_dir, 'time_results.csv'), 'w+' , newline="") as f:
+        with open(os.path.join(output_dir, 'time_results.csv'), 'a' , newline="") as f:
             writer = csv.writer(f)
             writer.writerows(time_list)
 
