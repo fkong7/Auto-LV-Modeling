@@ -15,6 +15,7 @@ from tensorflow.python.keras import backend as K
 from model import UNet2D
 from imageLoader import ImageLoader
 import argparse
+import time
 
 def model_output_no_resize(model, im_vol, view, channel):
     im_vol = np.moveaxis(im_vol, view, 0)
@@ -163,6 +164,8 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
     print(mode)
     print(os.path.join(data_out_folder, '%s_test.csv' % "ct"))
 
+    time_list = []
+
     model_postfix = "small2"
     model_folders = sorted(model_folder * len(view_attributes))
     view_attributes *= len(model_folder)
@@ -181,6 +184,8 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
     
     #load image filenames
     filenames = {}
+
+    t_start = time.time()
     for m in modality:
         im_loader = ImageLoader(m, data_folder, fn='_test', fn_mask=None if mode=='test' else '_test_masks', ext='*.nii.gz')
         x_filenames, y_filenames = im_loader.load_imagefiles()
@@ -197,10 +202,13 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
                 dice_list.append(predict.dice())
 
             predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
+
+            time_list.append(time.time()-t_start)
+            t_start = time.time()
         if len(dice_list) >0:
             csv_path = os.path.join(data_out_folder, '%s_test.csv' % m)
             writeDiceScores(csv_path, dice_list)
-   
+            
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -214,4 +222,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print('Finished parsing...')
     
-    main(args.modality, args.image, args.output, args.model, args.view, args.mode, args.n_channel)
+    t_start = time.time() 
+    time_list = main(args.modality, args.image, args.output, args.model, args.view, args.mode, args.n_channel)
+    time_list.append(time.time()-t_start)
+    import csv
+    with open(os.path.join(args.output, 'time_results.csv'), 'a' , newline="") as f:
+        writer = csv.writer(f)
+        writer.writerows(time_list)
