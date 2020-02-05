@@ -6,7 +6,7 @@
 #SBATCH --account=fc_biome
 #
 # Partition:
-#SBATCH --partition=savio2_gpu
+#SBATCH --partition=savio2
 #
 # QoS:
 #SBATCH --qos=savio_normal
@@ -15,13 +15,9 @@
 #SBATCH --nodes=1
 #
 # Number of tasks (one for each GPU desired for use case) (example):
-#SBATCH --ntasks=1
+#SBATCH --ntasks-per-node=24
 #
-# Number of processors for single task needed for use case (example):
-#SBATCH --cpus-per-task=4
-#
-#Number of GPUs, this can be in the format of "gpu:[1-4]", or "gpu:K80:[1-4] with the type included
-#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=1
 #
 # Wall clock limit:
 #SBATCH --time=04:30:00
@@ -57,37 +53,35 @@ module load cuda
 #
 #python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction.py \
 #    --image ImageData/MMWHS_small \
-#    --output 2DUNet/Logs/MMWHS_editted_aug/run0/test_axial \
-#    --model 2DUNet/Logs/MMWHS_editted_aug/run0 \
-#    --view 0 \
-#    --modality ct mr \
-#    --mode test
-#
-#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction.py \
-#    --image ImageData/MMWHS_small \
-#    --output 2DUNet/Logs/MMWHS_editted_aug/run0/test_coronal \
-#    --model 2DUNet/Logs/MMWHS_editted_aug/run0 \
-#    --view 1 \
-#    --modality ct mr \
-#    --mode test
-#
-#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction.py \
-#    --image ImageData/MMWHS_small \
-#    --output 2DUNet/Logs/MMWHS_editted_aug/run0/test_sagittal \
-#    --model 2DUNet/Logs/MMWHS_editted_aug/run0 \
-#    --view 2 \
-#    --modality ct mr \
-#    --mode test
-#
-
-#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction.py \
-#    --image ImageData/MMWHS_small \
-#    --output 2DUNet/Logs/MMWHS_editted_aug/run0/val_axial \
-#    --model 2DUNet/Logs/MMWHS_editted_aug/run0 \
+#    --output 2DUNet/Logs/MMWHS_aug2/run1/val_axial \
+#    --model 2DUNet/Logs/MMWHS_aug2/run1 \
 #    --view 0 \
 #    --modality ct mr \
 #    --mode validate
 
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction.py \
+#    --image ImageData/MMWHS_small \
+#    --output 2DUNet/Logs/MMWHS_aug2/run1/val_coronal \
+#    --model 2DUNet/Logs/MMWHS_aug2/run1 \
+#    --view 1 \
+#    --modality ct mr \
+#    --mode validate
+#
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction.py \
+#    --image ImageData/MMWHS_small \
+#    --output 2DUNet/Logs/MMWHS_aug2/run1/val_sagittal \
+#    --model 2DUNet/Logs/MMWHS_aug2/run1 \
+#    --view 2 \
+#    --modality ct mr \
+#    --mode validate
+#
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction.py \
+#    --image ImageData/MMWHS_small \
+#    --output 2DUNet/Logs/MMWHS_aug2/run1/val_ensemble \
+#    --model 2DUNet/Logs/MMWHS_aug2/run1 \
+#    --view 0 1 2 \
+#    --modality ct mr \
+#    --mode validate
 #python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction.py \
 #    --image ImageData/MMWHS_small \
 #    --output 2DUNet/Logs/MMWHS_aug2/run1-total_run_small_lr-total_run_small_lr_mean_dice_ensemble \
@@ -97,12 +91,12 @@ module load cuda
 #    --mode validate
 
 python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction.py \
-    --image ImageData/MMWHS \
-    --output 2DUNet/Logs/MMWHS_aug2/run1/test_ensemble2 \
-    --model 2DUNet/Logs/MMWHS_aug2/run1 \
+    --image ImageData/MMWHS_small \
+    --output 2DUNet/Logs/MMWHS_editted_aug/run0 \
+    --model 2DUNet/Logs/MMWHS_editted_aug/run0\
     --view 0 1 2 \
     --modality ct mr \
-    --mode test
+    --mode validate
 
 #
 #python /global/scratch/fanwei_kong/DeepLearning/2DUNet/prediction.py \

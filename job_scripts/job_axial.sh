@@ -24,15 +24,171 @@
 #SBATCH --gres=gpu:1
 #
 # Wall clock limit:
-#SBATCH --time=72:00:00
+#SBATCH --time=48:00:00
 #
 ## Command(s) to run (example):
 module load python
 module load tensorflow/1.12.0-py36-pip-gpu
 module load cuda
-#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass_axial.py MMWHS_small_aug MMWHS_small_aug/mr_only3 41 8 100 1
-python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py MMWHS MMWHS/total_run3 41 8 500 1 0
-#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py MMWHS_2 MMWHS_2/total_run 41 8 500 1 0
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_aug3 \
+#    --attr 1 \
+#    --output MMWHS_aug3/total_run0 \
+#    --view 0 \
+#    --modality ct mr \
+#    --num_epoch 500 \
+#    --num_class 8
 
-#python /global/scratch/fanwei_kong/2DUNet/2dunet_multiclass_axial.py MMWHS_CrossValidation/run0/fold0 MMWHS_CrossValidation/run0/fold0_2 11
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_aug3 \
+#    --attr 1 \
+#    --output MMWHS_aug3/total_run1 \
+#    --view 0 \
+#    --modality ct mr \
+#    --num_epoch 500 \
+#    --num_class 8 \
+#    --lr 0.005
+
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_3 \
+#    --attr 1 \
+#    --output MMWHS_3/mr_run0 \
+#    --view 0 \
+#    --modality mr \
+#    --num_epoch 500 \
+#    --num_class 8 \
+#    --lr 0.005
+#CHANGED Patience from 3 to 10 (lr schedule)
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_3 \
+#    --attr 1 \
+#    --output MMWHS_3/mr_run1 \
+#    --view 0 \
+#    --modality mr \
+#    --num_epoch 500 \
+#    --num_class 8 \
+#    --lr 0.005
+# CHANGE LR Scale factor from 0.5 to 0.8, tf clip on intensity -1 to 1
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_3 \
+#    --attr 1 \
+#    --output MMWHS_3/mr_run2 \
+#    --view 0 \
+#    --modality mr \
+#    --num_epoch 500 \
+#    --num_class 8 \
+#    --lr 0.005
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_3 \
+#    --attr 1 \
+#    --output MMWHS_3/mr_run3 \
+#    --view 0 \
+#    --modality mr \
+#    --num_epoch 500 \
+#    --num_class 8 \
+#    --lr 0.002
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_3 \
+#    --attr 1 \
+#    --output MMWHS_3/mr_run4 \
+#    --view 0 \
+#    --modality mr \
+#    --num_epoch 500 \
+#    --num_class 8 \
+#    --lr 0.001
+
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_3 \
+#    --attr 1 \
+#    --output MMWHS_3/mr_run5 \
+#    --view 0 \
+#    --modality mr \
+#    --num_epoch 500 \
+#    --num_class 8 \
+#    --lr 0.0005
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_3 \
+#    --attr 1 \
+#    --output MMWHS_3/mr_run6 \
+#    --view 0 \
+#    --modality mr \
+#    --num_epoch 500 \
+#    --num_class 8 \
+#    --lr 0.0001
+
+#change min lr to 0.00005
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_3 \
+#    --attr 1 \
+#    --output MMWHS_3/mr_run7 \
+#    --view 0 \
+#    --modality mr \
+#    --num_epoch 500 \
+#    --num_class 8 \
+#    --lr 0.00005
+
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_3 \
+#    --attr 1 \
+#    --output MMWHS_3/total_run0 \
+#    --view 0 \
+#    --modality ct mr \
+#    --num_epoch 500 \
+#    --num_class 8 \
+#    --lr 0.0001
+
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_aug4 \
+#    --attr 1 \
+#    --output MMWHS_aug4/total_run0 \
+#    --view 0 \
+#    --modality ct mr \
+#    --num_epoch 500 \
+#    --num_class 8 \
+#    --lr 0.0001
+
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_aug4 \
+#    --attr 1 \
+#    --output MMWHS_aug4/total_run1 \
+#    --view 0 \
+#    --modality ct mr \
+#    --num_epoch 500 \
+#    --num_class 8 \
+#    --lr 0.00005 \
+#    --batch_size 24
+
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_aug4_intensity \
+#    --attr 1 \
+#    --output MMWHS_aug4_intensity/total_run0 \
+#    --view 0 \
+#    --modality ct mr \
+#    --num_epoch 500 \
+#    --num_class 8 \
+#    --lr 0.00005 \
+#    --batch_size 24
+
+#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+#    --image MMWHS_aug2 \
+#    --attr 1 \
+#    --output MMWHS_aug2/total_run_small_lr \
+#    --view 0 \
+#    --modality ct mr \
+#    --num_epoch 500 \
+#    --num_class 8 \
+#    --lr 0.00005 \
+#    --batch_size 24
+
+# CHANGED TO MEAN_DICE_COEFF
+python /global/scratch/fanwei_kong/DeepLearning/2DUNet/2dunet_multiclass.py \
+    --image MMWHS_editted_aug \
+    --attr 1 \
+    --output MMWHS_editted_aug/run2 \
+    --view 0 \
+    --modality ct mr \
+    --num_epoch 500 \
+    --num_class 8 \
+    --lr 0.0005 \
+    --batch_size 24
 
