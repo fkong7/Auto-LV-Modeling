@@ -18,7 +18,23 @@ def swapLabels(pyImage):
     for i, v in enumerate(ids):
         pyImage[pyImage==v] = i
     return pyImage
+
 def fitPlaneNormal(points_input):
+    """
+    Fit a plane to a point set
+    
+    Args:
+        points_input: 3d coordinates of a point set
+    Returns:
+        normal: normal of the fitting plane
+    """
+    G = points_input.sum(axis=0) / points_input.shape[0]
+
+    u, s, vh = np.linalg.svd(points_input - G)
+    normal = vh[2, :]
+    return normal
+
+def fitPlaneNormal2(points_input):
     """
     Fit a plane to a point set
     
@@ -340,6 +356,26 @@ def gaussianSmoothVTKImage(im, stdev):
     smoother.Update()
     return smoother.GetOutput()
 
+def labelOpenClose(im, label_id, bg_id, size):
+    """
+    Open or close 
+
+    Args: 
+        im: vtkImage of the label map
+        label_id: class id to close
+        bg_id: class id of background to open
+        size: number of pixels of the erosion
+    Return: processed vtk image
+    """
+
+    filt = vtk.vtkImageOpenClose3D()
+    filt.SetInputData(im)
+    filt.SetOpenValue(bg_id)
+    filt.SetCloseValue(label_id)
+    filt.SetKernelSize(int(size), int(size), int(size))
+    filt.Update()
+    return filt.GetOutput()
+
 def labelDilateErode(im, label_id, bg_id, size):
     """
     Dilates a label
@@ -348,7 +384,7 @@ def labelDilateErode(im, label_id, bg_id, size):
         im: vtkImage of the label map
         label_id: class id to erode
         bg_id: class id of backgroud to dilate
-        size: num of pixels of the erosion in physical unit
+        size: num of pixels of the erosion
     Returns
         newIm: vtkImage with dilated tissue structure
     """
@@ -1213,7 +1249,6 @@ def capPolyDataOpenings(poly,  size):
         for i in ids:
             polygon.InsertCellPoint(i)
         vtkPtsPly.SetPolys(polygon)
-        
         delaunay = vtk.vtkDelaunay2D()
         delaunay.SetInputData(vtkPtsPly)
         delaunay.SetSourceData(vtkPtsPly)
