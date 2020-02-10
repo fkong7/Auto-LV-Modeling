@@ -208,7 +208,7 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
         if len(dice_list) >0:
             csv_path = os.path.join(data_out_folder, '%s_test.csv' % m)
             writeDiceScores(csv_path, dice_list)
-            
+    return time_list            
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -225,7 +225,5 @@ if __name__ == '__main__':
     t_start = time.time() 
     time_list = main(args.modality, args.image, args.output, args.model, args.view, args.mode, args.n_channel)
     time_list.append(time.time()-t_start)
-    import csv
-    with open(os.path.join(args.output, 'time_results.csv'), 'a' , newline="") as f:
-        writer = csv.writer(f)
-        writer.writerows(time_list)
+    
+    np.savetxt(os.path.join(args.output, 'time_results.csv'), np.transpose([np.array(time_list)]), fmt='%1.3f')
