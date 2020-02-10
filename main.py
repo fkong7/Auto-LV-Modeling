@@ -28,7 +28,7 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
         cap_pts_ids: node ids of the points on the caps
     """
     FACTOR_LA = 20
-    FACTOR_AA = 35
+    FACTOR_AA = 38
     MESH_RESOLUTION = (1.,1.,1.)
         
         

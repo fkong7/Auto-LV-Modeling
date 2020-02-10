@@ -13,8 +13,9 @@ class Images(object):
    
     def convert2binary(self):
         self.label = utils.convertVTK2binary(self.label)
-        #self.label = utils.labelOpenClose(self.label, 1, 0, size=1)
+        #self.label = utils.labelOpenClose(self.label, 1, 0, size=3)
         #self.write_image('/Users/fanweikong/Downloads/test.vti')
+        #self.label = utils.recolorVTKPixelsByIds(self.label, self.ids, 0)
 
     def resample(self, resolution, mode):
         self.label = utils.vtkImageResample(self.label, resolution, mode)
@@ -41,11 +42,13 @@ class lvImage(Images):
         self.label.GetPointData().SetScalars(numpy_to_vtk(pylabel))
         # remove connections between AA and LA
         self.label = utils.labelDilateErode(self.label, 6, 3, 8) #6 - AO id, 3 - LV id
-        ids = utils.locateRegionBoundaryIDs(self.label, 2, 6, size=3.)
-        ids = np.vstack((ids, utils.locateRegionBoundaryIDs(self.label, 6, 2, size=6.)))
-        self.label = utils.recolorVTKPixelsByIds(self.label, ids, 0)
         self.label = utils.labelOpenClose(self.label, 6, 0, size=5)
+        self.label = utils.labelDilateErode(self.label, 2, 3, 2) #6 - AO id, 3 - LV id
         self.label = utils.labelOpenClose(self.label, 2, 0, size=5)
+        ids = utils.locateRegionBoundaryIDs(self.label, 2, 6, size=3.)
+        self.ids = np.vstack((ids, utils.locateRegionBoundaryIDs(self.label, 6, 2, size=6.)))
+        #self.label = utils.labelOpenClose(self.label, 2, 0, size=5)
+        self.label = utils.recolorVTKPixelsByIds(self.label, self.ids, 0)
     
     def buildCutter(self, region_id, avoid_id, adjacent_id, FACTOR, op='valve', smooth_iter=50):
         """
@@ -80,10 +83,10 @@ class lvImage(Images):
             #    nrm =  -1 *nrm
             nrm = nrm_tissue
         elif op=='tissue':
-            #nrm = nrm_tissue
-            nrm = nrm_valve_plane
-            if np.dot(nrm_tissue, nrm_valve_plane)<0:
-                nrm =  -1 *nrm
+            nrm = nrm_tissue
+            #nrm = nrm_valve_plane
+            #if np.dot(nrm_tissue, nrm_valve_plane)<0:
+            #    nrm =  -1 *nrm
         else:
             raise ValueError("Incorrect option")
         ori = ctr_valve + FACTOR * nrm/np.linalg.norm(nrm)
