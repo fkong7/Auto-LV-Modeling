@@ -26,7 +26,8 @@ class Geometry(object):
 
         Repository.ImportVtkPd(self.poly, "mmg_poly")
         meshing.remeshPolyData("mmg_poly", "mmg_poly_remesh", 1.,1.5, fn)
-        print("MMG GLOBAL REMESHING DONE")
+        #print("MMG GLOBAL REMESHING DONE")
+        #self.writeSurfaceMesh(fn)
         # generate volumetric mesh:
         mesh_ops = {
                 'SurfaceMeshFlag': True,
@@ -73,11 +74,11 @@ class leftVentricle(Geometry):
         #improve valve opening geometry
         id_lists,boundaries = utils.getPointIdsOnBoundaries(self.poly)
         for idx, (ids, boundary) in enumerate(zip(id_lists, boundaries)):
-            boundary = utils.smoothVTKPolyline(boundary, 2)
+            boundary = utils.smoothVTKPolyline(boundary, 5)
             self.poly = utils.projectOpeningToFitPlane(self.poly, ids, boundary.GetPoints(), 3)
             # Remove the free cells and update the point lists
             self.poly, id_lists[idx] = utils.removeFreeCells(self.poly, [idx for sub_l in id_lists for idx in sub_l])
-        self.poly = utils.smoothVTKPolydata(utils.cleanPolyData(self.poly, 0.))
+        self.poly = utils.smoothVTKPolydata(utils.cleanPolyData(self.poly, 0.), iteration=50)
         
         self.wall_processed = True
         return
