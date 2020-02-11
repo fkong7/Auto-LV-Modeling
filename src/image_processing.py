@@ -13,9 +13,7 @@ class Images(object):
    
     def convert2binary(self):
         self.label = utils.convertVTK2binary(self.label)
-        #self.label = utils.labelOpenClose(self.label, 1, 0, size=3)
-        #self.write_image('/Users/fanweikong/Downloads/test.vti')
-        #self.label = utils.recolorVTKPixelsByIds(self.label, self.ids, 0)
+        #self.label = utils.gaussianSmoothVTKImage(self.label, 0.01)
 
     def resample(self, resolution, mode):
         self.label = utils.vtkImageResample(self.label, resolution, mode)
@@ -26,9 +24,10 @@ class Images(object):
     def write_image(self,fn):
         label_io.writeVTKImage(self.label, fn)
 
-    def generate_surface(self, region_id, smooth_iter):
-        return m_c.vtk_marching_cube_multi(self.label, region_id, smooth_iter)
-
+    def generate_surface(self, region_id, smooth_iter, band):
+        poly = m_c.vtk_marching_cube(self.label, region_id, smooth_iter, band)
+        #return m_c.vtk_continuous_marching_cube(self.label, region_id, smooth_iter)
+        return poly
 class lvImage(Images):
     
     def process(self, remove_list):
@@ -43,8 +42,12 @@ class lvImage(Images):
         # remove connections between AA and LA
         self.label = utils.labelDilateErode(self.label, 6, 3, 8) #6 - AO id, 3 - LV id
         self.label = utils.labelOpenClose(self.label, 6, 0, size=5)
+        self.label = utils.labelOpenClose(self.label, 0, 6, size=5)
         self.label = utils.labelDilateErode(self.label, 2, 3, 2) #6 - AO id, 3 - LV id
         self.label = utils.labelOpenClose(self.label, 2, 0, size=5)
+        self.label = utils.labelOpenClose(self.label, 3, 0, size=5)
+        self.label = utils.labelOpenClose(self.label, 0, 3, size=5)
+        self.label = utils.labelOpenClose(self.label, 0, 2, size=5)
         ids = utils.locateRegionBoundaryIDs(self.label, 2, 6, size=3.)
         self.ids = np.vstack((ids, utils.locateRegionBoundaryIDs(self.label, 6, 2, size=6.)))
         #self.label = utils.labelOpenClose(self.label, 2, 0, size=5)
@@ -95,6 +98,6 @@ class lvImage(Images):
         cut_Im = utils.labelDilateErode(cut_Im, avoid_id, region_id, 2)
         
         # marching cube
-        cutter = m_c.vtk_marching_cube(cut_Im, region_id,smooth_iter)
+        cutter = m_c.vtk_marching_cube(cut_Im, region_id)
         return cutter
 

@@ -49,10 +49,13 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
             im_time = time.time() - start
             time_now = time.time()
         
-        model = leftVentricle(image.generate_surface(0, 50))
+        model = leftVentricle(image.generate_surface(0, smooth_iter=20, band=0.02))
         #process models
+        model.writeSurfaceMesh('/Users/fanweikong/Downloads/test.vtp')
         model.processWall(la_cutter, aa_cutter)
+        model.writeSurfaceMesh('/Users/fanweikong/Downloads/test2.vtp')
         model.processCap(5.) 
+        model.writeSurfaceMesh('/Users/fanweikong/Downloads/test3.vtp')
         if timming:
             surf_time = time.time() - time_now
             time_now = time.time()
