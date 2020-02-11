@@ -21,9 +21,9 @@ def marching_cube(label, tol):
     
     return (verts, faces, normals, values)
 
-def vtk_marching_cube(vtkLabel, tol, smooth=None):
+def vtk_marching_cube(vtkLabel, tol, smooth=None, band=None):
     """
-    Use the VTK marching cube implementation to create the surface mesh
+    Use the VTK discreate marching cube implementation to create the surface mesh
 
     Args:
         vtkLabel: vtk structured array containing the label map
@@ -38,13 +38,40 @@ def vtk_marching_cube(vtkLabel, tol, smooth=None):
     contour.Update()
 
     mesh = contour.GetOutput()
-
+    
     if smooth is not None:
-        mesh = utils.smoothVTKPolydata(mesh, smooth)
-
+        if band is not None:
+            mesh = utils.windowedSincSmoothVTKPolyData(mesh, smooth, band)
+        else:
+            mesh = utils.smoothVTKPolydata(mesh, smooth)
     return mesh
 
-def vtk_marching_cube_multi(vtkLabel, bg_id, smooth=None):
+def vtk_continuous_marching_cube(vtkLabel, tol, smooth=None, band=None):
+    """
+    Use the VTK marching cube implementation to create the surface mesh
+
+    Args:
+        vtkLabel: vtk structured array containing the label map
+        tol: threshold value for iso-surface
+        smooth: smoothing iterations
+    Returns:
+        mesh: vtk PolyData of the surface mesh
+    """
+    contour = vtk.vtkMarchingCubes()
+    contour.SetInputData(vtkLabel)
+    contour.SetValue(0, tol)
+    contour.Update()
+
+    mesh = contour.GetOutput()
+
+    if smooth is not None:
+        if band is not None:
+            mesh = utils.windowedSincSmoothVTKPolyData(mesh, smooth, band)
+        else:
+            mesh = utils.smoothVTKPolydata(mesh, smooth)
+    return mesh
+
+def vtk_marching_cube_multi(vtkLabel, bg_id, smooth=None, band=None):
     """
     Use the VTK marching cube to create isosrufaces for all classes excluding the background
 
@@ -71,7 +98,10 @@ def vtk_marching_cube_multi(vtkLabel, bg_id, smooth=None):
     mesh = contour.GetOutput()
 
     if smooth is not None:
-        mesh = utils.smoothVTKPolydata(mesh, smooth)
+        if band is not None:
+            mesh = utils.windowedSincSmoothVTKPolyData(mesh, smooth, band)
+        else:
+            mesh = utils.smoothVTKPolydata(mesh, smooth)
 
     return mesh
 

@@ -276,6 +276,27 @@ def smoothVTKPolydata(poly, iteration=10, boundary=False, feature=False):
 
     return smoothed
 
+def windowedSincSmoothVTKPolyData(poly, iteration=15, band=0.1, boundary=False, feature=False):
+    """
+    This function smooths a vtk polydata, using windowed sinc algorithm
+
+    Args:
+        poly: vtk polydata to smooth
+        boundary: boundary smooth bool
+
+    Returns:
+        smoothed vtk polydata
+    """
+    ftr = vtk.vtkWindowedSincPolyDataFilter()
+    ftr.SetInputData(poly)
+    ftr.SetNumberOfIterations(iteration)
+    ftr.SetPassBand(band)
+    ftr.SetBoundarySmoothing(boundary)
+    ftr.SetFeatureEdgeSmoothing(feature)
+    ftr.NonManifoldSmoothingOn()
+    ftr.NormalizeCoordinatesOn()
+    ftr.Update()
+    return ftr.GetOutput()
 def booleanVTKPolyData(poly1, poly2, keyword):
     """
     Apply VTK boolean operation on two VTK PolyData
