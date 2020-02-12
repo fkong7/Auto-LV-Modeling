@@ -43,13 +43,13 @@ class lvImage(Images):
         self.label = utils.labelDilateErode(self.label, 6, 3, 8) #6 - AO id, 3 - LV id
         self.label = utils.labelOpenClose(self.label, 6, 0, size=5)
         self.label = utils.labelOpenClose(self.label, 0, 6, size=5)
-        self.label = utils.labelDilateErode(self.label, 2, 3, 2) #6 - AO id, 3 - LV id
+        self.label = utils.labelDilateErode(self.label, 2, 3, 3) #6 - AO id, 3 - LV id
         self.label = utils.labelOpenClose(self.label, 2, 0, size=5)
         self.label = utils.labelOpenClose(self.label, 3, 0, size=5)
         self.label = utils.labelOpenClose(self.label, 0, 3, size=5)
         self.label = utils.labelOpenClose(self.label, 0, 2, size=5)
-        ids = utils.locateRegionBoundaryIDs(self.label, 2, 6, size=3.)
-        self.ids = np.vstack((ids, utils.locateRegionBoundaryIDs(self.label, 6, 2, size=6.)))
+        ids = utils.locateRegionBoundaryIDs(self.label, 2, 6, size=3.,bg_id=0)
+        self.ids = np.vstack((ids, utils.locateRegionBoundaryIDs(self.label, 6, 2, size=5., bg_id=0)))
         #self.label = utils.labelOpenClose(self.label, 2, 0, size=5)
         self.label = utils.recolorVTKPixelsByIds(self.label, self.ids, 0)
     
@@ -98,6 +98,6 @@ class lvImage(Images):
         cut_Im = utils.labelDilateErode(cut_Im, avoid_id, region_id, 2)
         
         # marching cube
-        cutter = m_c.vtk_marching_cube(cut_Im, region_id)
+        cutter = m_c.vtk_marching_cube(cut_Im, region_id, 20, 0.1)
         return cutter
 

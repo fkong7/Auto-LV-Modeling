@@ -471,7 +471,7 @@ def getCentroid(im, label_id):
     centroid = np.mean(spacing * ids + origin, axis=0)
     return centroid
 
-def locateRegionBoundaryIDs(im, label_id1, label_id2, size = 1.):
+def locateRegionBoundaryIDs(im, label_id1, label_id2, size = 1., bg_id = None):
     """
     Locate the boundary coordinates between two regions with different labels
     
@@ -479,12 +479,23 @@ def locateRegionBoundaryIDs(im, label_id1, label_id2, size = 1.):
         im: vtkImage of the label map
         label_id1: class id of 1st region
         label_id2: class id of 2nd region
-        
+        bg_id: class id of background
     Returns
         ids: ids of the boundary points
     """
+    new_Im = vtk.vtkImageData()
+    new_Im.DeepCopy(im)
+    if bg_id is not None:
+        dilateErode = vtk.vtkImageDilateErode3D()
+        dilateErode.SetInputData(new_Im)
+        dilateErode.SetDilateValue(label_id1)
+        dilateErode.SetErodeValue(bg_id)
+        dilateErode.SetKernelSize(3, 3, 3)
+        dilateErode.Update()
+        new_Im = dilateErode.GetOutput()
+    
     dilateErode = vtk.vtkImageDilateErode3D()
-    dilateErode.SetInputData(im)
+    dilateErode.SetInputData(new_Im)
     dilateErode.SetDilateValue(label_id1)
     dilateErode.SetErodeValue(label_id2)
     
@@ -493,7 +504,7 @@ def locateRegionBoundaryIDs(im, label_id1, label_id2, size = 1.):
     dilateErode.SetKernelSize(*kernel_size)
     dilateErode.Update()
     newIm = dilateErode.GetOutput()
-    
+
     from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
 
     x, y, z = newIm.GetDimensions()
@@ -1185,7 +1196,7 @@ def orientedPointsetFromBoundary(boundary):
     cells = vtk.vtkIdList()
     boundary.GetPointCells(id_list[0], cells)
     pts = vtk.vtkIdList()
-    boundary.GetCellPoints(cells.GetId(1), pts)
+    boundary.GetCellPoints(cells.GetId(0), pts)
     for i in range(pts.GetNumberOfIds()):
         if pts.GetId(i) not in id_list:
             id_list[1] = pts.GetId(i)

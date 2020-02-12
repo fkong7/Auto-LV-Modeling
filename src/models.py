@@ -73,6 +73,7 @@ class leftVentricle(Geometry):
         self.poly = utils.fillHole(self.poly, size=15.)
         #improve valve opening geometry
         id_lists,boundaries = utils.getPointIdsOnBoundaries(self.poly)
+        #self.writeSurfaceMesh('/Users/fanweikong/Downloads/test_1.vtp')
         for idx, (ids, boundary) in enumerate(zip(id_lists, boundaries)):
             boundary = utils.smoothVTKPolyline(boundary, 5)
             self.poly = utils.projectOpeningToFitPlane(self.poly, ids, boundary.GetPoints(), 3)
