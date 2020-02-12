@@ -27,7 +27,7 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
         model: constructed surface mesh (VTK PolyData)
         cap_pts_ids: node ids of the points on the caps
     """
-    FACTOR_LA = 20
+    FACTOR_LA = 18
     FACTOR_AA = 38
     MESH_RESOLUTION = (1.,1.,1.)
         
@@ -51,11 +51,11 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
         
         model = leftVentricle(image.generate_surface(0, smooth_iter=20, band=0.02))
         #process models
-        model.writeSurfaceMesh('/Users/fanweikong/Downloads/test.vtp')
+        #model.writeSurfaceMesh('/Users/fanweikong/Downloads/test.vtp')
         model.processWall(la_cutter, aa_cutter)
-        model.writeSurfaceMesh('/Users/fanweikong/Downloads/test2.vtp')
+        #model.writeSurfaceMesh('/Users/fanweikong/Downloads/test2.vtp')
         model.processCap(5.) 
-        model.writeSurfaceMesh('/Users/fanweikong/Downloads/test3.vtp')
+        #model.writeSurfaceMesh('/Users/fanweikong/Downloads/test3.vtp')
         if timming:
             surf_time = time.time() - time_now
             time_now = time.time()
