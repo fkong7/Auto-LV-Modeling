@@ -135,20 +135,27 @@ class Prediction:
         self.pred = centering(im, sitk.ReadImage(self.image_fn), order=0)
         return
 
-    def post_process(self):
+    def post_process(self, m):
         spacing = self.pred.GetSpacing()
         ids = np.unique(sitk.GetArrayFromImage(self.pred))
-        kernel = [int(round(7./spacing[i])) for i in range(3)]
+        kernel = [int(round(5./spacing[i])) for i in range(3)]
         #Max kernel size is 7
-        kernel = [7 if kernel[i]>7 else kernel[i] for i in range(3)]
+        kernel = [5 if kernel[i]>5 else kernel[i] for i in range(3)]
         ftr = sitk.BinaryMorphologicalClosingImageFilter()
         ftr.SetKernelRadius(kernel)
         ftr.SafeBorderOn()
+        ftr2 = sitk.BinaryMorphologicalOpeningImageFilter()
+        ftr2.SetKernelRadius([2, 2, 2])
         for i in ids:
             if i ==0:
                 continue
             ftr.SetForegroundValue(int(i))
-            self.pred = ftr.Execute(self.pred)
+            ftr2.SetForegroundValue(int(i))
+            if m =="ct":
+                #self.pred = ftr.Execute(ftr2.Execute(self.pred))
+                self.pred = self.pred
+            else:
+                self.pred = ftr.Execute(self.pred)
 
 
     def write_prediction(self, out_fn):
@@ -158,7 +165,7 @@ class Prediction:
             pass
         sitk.WriteImage(sitk.Cast(self.pred, sitk.sitkInt16), out_fn)
 
-def main(modality, data_folder, data_out_folder, model_folder, view_attributes, mode, channel):
+def main(modality, data_folder, data_out_folder, model_folder, view_attributes, mode, channel, folder_postfix):
     print(modality)
     print(view_attributes)
     print(mode)
@@ -187,7 +194,7 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
 
     t_start = time.time()
     for m in modality:
-        im_loader = ImageLoader(m, data_folder, fn='_test', fn_mask=None if mode=='test' else '_test_masks', ext='*.nii.gz')
+        im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_masks', ext='*.nii.gz')
         x_filenames, y_filenames = im_loader.load_imagefiles()
         dice_list = []
 
@@ -197,7 +204,7 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
             predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i], channel)
             predict.volume_prediction_average(256)
             predict.resample_prediction()
-            predict.post_process()
+            #predict.post_process(m)
             if y_filenames[i] is not None:
                 dice_list.append(predict.dice())
 
@@ -218,12 +225,13 @@ if __name__ == '__main__':
     parser.add_argument('--view', type=int, nargs='+', help='List of views for single or ensemble prediction, split by space. For example, 0 1 2  axial(0), coronal(1), sagittal(2)')
     parser.add_argument('--modality', nargs='+', help='Name of the modality, mr, ct, split by space')
     parser.add_argument('--mode', help='Test or validation (without or with ground truth label')
+    parser.add_argument('--im_folder_postfix', default='test', help='Postfix of the folder containing image data, for ct_test, enter test')
     parser.add_argument('--n_channel',type=int, default=1, help='Number of image channels of input')
     args = parser.parse_args()
     print('Finished parsing...')
     
     t_start = time.time() 
-    time_list = main(args.modality, args.image, args.output, args.model, args.view, args.mode, args.n_channel)
+    time_list = main(args.modality, args.image, args.output, args.model, args.view, args.mode, args.n_channel, args.im_folder_postfix)
     time_list.append(time.time()-t_start)
     
     np.savetxt(os.path.join(args.output, 'time_results.csv'), np.transpose([np.array(time_list)]), fmt='%1.3f')
