@@ -8,6 +8,7 @@ import numpy as np
 import label_io
 from models import leftVentricle
 from marching_cube import marching_cube, vtk_marching_cube
+from image_processing import lvImage
 import utils
 from registration import Registration
 import vtk
@@ -36,7 +37,6 @@ def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, imag
         moving_im_fn = os.path.join(image_dir, IMAGE_NAME % ((index+1)%TOTAL_PHASE)) 
         fixed_im_fn =os.path.join(image_dir, IMAGE_NAME % START_PHASE)
         
-
         register.updateMovingImage(moving_im_fn)
         register.updateFixedImage(fixed_im_fn)
 

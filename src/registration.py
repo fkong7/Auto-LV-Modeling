@@ -33,8 +33,12 @@ class Registration:
         self.parameter_map = None
 
     def loadImages(self):
-        self.fixed = sitk.ReadImage(self.fixed_fn)
-        self.moving = sitk.ReadImage(self.moving_fn)
+        fixed = lvImage(sitk.ReadImage(self.fixed_fn))
+        moving = lvImage(sitk.ReadImage(self.moving_fn))
+        fixed.process([1, 4, 5, 7])
+        moving.process([1, 4, 5, 7])
+        self.fixed = fixed.label
+        self.moving = moving.label
 
     def computeTransform(self):
 

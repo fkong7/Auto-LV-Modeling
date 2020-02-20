@@ -13,9 +13,9 @@ ${sv_python_dir}/sv --python -- ${model_script} --json_fn ${json_file}
 
 #for file in ${dir}/*.nii.gz; do  ${sv_python_dir}/sv --python -- ${model_script} --json_fn ${json_file} --seg_name ${file##*/}; done
 
-#conda activate elastix
-#python ${registration_script} --json_fn ${json_file} --write
-#conda deactivate
+conda activate elastix
+python ${registration_script} --json_fn ${json_file} --write
+conda deactivate
 
 #${sv_python_dir}/sv --python -- ${volume_mesh_script} --json_fn ${json_file}
 
