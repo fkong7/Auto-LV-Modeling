@@ -6,14 +6,14 @@ import seaborn as sns
 TIME = {}
 TIME['ct'] = {}
 TIME['mr'] = {}
-TIME['mr']['mesh'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Image_based2/test_ensemble_post/mr/time_results.csv'
-TIME['ct']['mesh'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Image_based2/test_ensemble_post/time_results.csv'
-TIME['mr']['seg'] = '/Users/fanweikong/Downloads/time_results_ct.csv'
-TIME['ct']['seg'] = '/Users/fanweikong/Downloads/time_results_ct.csv'
+TIME['mr']['mesh'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble-2-10-2_surf/time_results.csv'
+TIME['ct']['mesh'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble-2-10-2_surf/time_results.csv'
+TIME['mr']['seg'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/time_results_seg.csv'
+TIME['ct']['seg'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/time_results_seg.csv' 
 
 SIZE = 20
 OUT = {}
-OUT['mr'] = [32]
+OUT['mr'] = []
 OUT['ct'] = []
 def plot_hist(data, labels, ax, modality):
     sns.set_style("white")
@@ -28,7 +28,7 @@ def plot_hist(data, labels, ax, modality):
     print("Max, median, min for total time: %1.2f, %1.2f, %1.2f" % (np.max(total), np.median(total), np.min(total)))
     ax.set_title(modality.upper(), size=SIZE+5)
     ax.set_xlim([-5,160])
-    ax.set_ylim([0,0.3])
+    ax.set_ylim([0,0.4])
     ax.set_xlabel('Time (s)', fontsize=SIZE)
     ax.tick_params(labelsize=SIZE)
 
@@ -45,8 +45,10 @@ if __name__ == '__main__':
         seg_t = np.loadtxt(open(fn_dict['seg'], 'rb'), delimiter=",")
         if m=="ct":
             seg_t = seg_t[:40]
+            mesh_t = mesh_t[:40]
         else:
             seg_t = seg_t[40:80]
+            mesh_t = mesh_t[40:80]
 
         for o in OUT[m]:
             seg_t = np.delete(seg_t, o)

@@ -39,6 +39,10 @@ class lvImage(Images):
         for tissue in remove_list:
             pylabel = utils.removeClass(pylabel, tissue, 0)
         self.label.GetPointData().SetScalars(numpy_to_vtk(pylabel))
+        # remove small islands
+        self.label = utils.extractLargestConnectedRegion(self.label, 6)
+        self.label = utils.extractLargestConnectedRegion(self.label, 3)
+        self.label = utils.extractLargestConnectedRegion(self.label, 2)
         # remove connections between AA and LA
         self.label = utils.labelDilateErode(self.label, 6, 3, 8) #6 - AO id, 3 - LV id
         self.label = utils.labelOpenClose(self.label, 6, 0, size=5)
@@ -98,6 +102,6 @@ class lvImage(Images):
         cut_Im = utils.labelDilateErode(cut_Im, avoid_id, region_id, 2)
         
         # marching cube
-        cutter = m_c.vtk_marching_cube(cut_Im, region_id, 20, 0.1)
+        cutter = m_c.vtk_marching_cube(cut_Im, region_id, 20, 0.05)
         return cutter
 
