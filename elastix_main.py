@@ -15,7 +15,7 @@ import vtk
 import SimpleITK as sitk
 import time
 
-def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, image_dir, output_dir, write=False):
+def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, image_dir, output_dir, write=False, smooth=False):
     """
     Registration of surface mesh point set using Elastix
     Performs 3D image registration and move points based on the computed transform
@@ -28,7 +28,7 @@ def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, imag
 
     ids = list(range(START_PHASE,TOTAL_PHASE)) + list(range(0,START_PHASE))
 
-    register = Registration()
+    register = Registration(smooth)
     # Only need to register N-1 mesh
     for index in ids[:-1]:
         print("REGISTERING FROM %d TO %d " % (START_PHASE, (index+1)%TOTAL_PHASE))
@@ -65,6 +65,7 @@ if __name__=='__main__':
     
     parser.add_argument('--json_fn', help="Name of the json file")
     parser.add_argument('--write', default=False, action='store_true')
+    parser.add_argument('--smooth', default=False, action='store_true')
     args = parser.parse_args()
     
     paras = label_io.loadJsonArgs(args.json_fn)
@@ -75,6 +76,6 @@ if __name__=='__main__':
 
     #
     lvmodel = leftVentricle(label_io.loadVTKMesh(fn_poly))
-    registration(lvmodel, paras['start_phase'],paras['total_phase'], paras['model_output'], paras['im_name'], image_dir,output_dir, args.write)
+    registration(lvmodel, paras['start_phase'],paras['total_phase'], paras['model_output'], paras['im_name'], image_dir,output_dir, args.write, args.smooth)
     end = time.time()
     print("Time spent in elastix_main.py: ", end- start)
