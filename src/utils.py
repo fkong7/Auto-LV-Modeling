@@ -290,6 +290,29 @@ def smoothVTKPolydata(poly, iteration=10, boundary=False, feature=False):
 
     return smoothed
 
+def laplacianSmoothVTKPolydata(poly, iteration=10, boundary=False, feature=False):
+    """
+    This function smooths a vtk polydata
+
+    Args:
+        poly: vtk polydata to smooth
+        boundary: boundary smooth bool
+
+    Returns:
+        smoothed: smoothed vtk polydata
+    """
+
+    smoother = vtk.vtkWindowedSincPolyDataFilter()
+    smoother.SetInputData(poly)
+    smoother.SetBoundarySmoothing(boundary)
+    smoother.SetFeatureEdgeSmoothing(feature)
+    smoother.SetNumberOfIterations(iteration)
+    smoother.Update()
+
+    smoothed = smoother.GetOutput()
+
+    return smoothed
+
 def windowedSincSmoothVTKPolyData(poly, iteration=15, band=0.1, boundary=False, feature=False):
     """
     This function smooths a vtk polydata, using windowed sinc algorithm
