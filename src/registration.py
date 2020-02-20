@@ -34,12 +34,17 @@ class Registration:
         self.parameter_map = None
 
     def loadImages(self):
-        fixed = lvImage(self.fixed_fn)
-        moving = lvImage(self.moving_fn)
-        fixed.process([1, 4, 5, 7])
-        moving.process([1, 4, 5, 7])
-        self.fixed = label_io.exportVTK2Sitk(fixed.label)
-        self.moving = label_io.exportVTK2Sitk(moving.label)
+#        fixed = lvImage(self.fixed_fn)
+#        moving = lvImage(self.moving_fn)
+#        fixed.process([1, 4, 5, 7])
+#        moving.process([1, 4, 5, 7])
+#        self.fixed = label_io.exportVTK2Sitk(fixed.label)
+#        self.moving = label_io.exportVTK2Sitk(moving.label)
+        self.fixed = sitk.ReadImage(self.fixed_fn)
+        self.moving = sitk.ReadImage(self.moving_fn)
+        self.fixed = utils.closing(self.fixed, [7, 6, 5, 4, 3, 2, 1])
+        self.moving = utils.closing(self.moving, [7, 6, 5, 4, 3, 2, 1])
+
 
     def computeTransform(self):
 
