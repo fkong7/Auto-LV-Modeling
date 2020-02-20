@@ -725,6 +725,31 @@ def convertVTK2binary(labels):
     return labels
 
 
+def extractLargestConnectedRegion(vtk_im, label_id):
+    """
+    Extrac the largest connected region of a vtk image
+
+    Args:
+        vtk_im: vtk image
+        label_id: id of the label
+    Return:
+        new_im: processed vtk image
+    """
+
+    fltr = vtk.vtkImageConnectivityFilter()
+    fltr.SetScalarRange(label_id, label_id)
+    fltr.SetExtractionModeToLargestRegion()
+    fltr.SetInputData(vtk_im)
+    fltr.Update()
+    new_im = fltr.GetOutput()
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+    py_im = vtk_to_numpy(vtk_im.GetPointData().GetScalars())
+    py_mask = vtk_to_numpy(new_im.GetPointData().GetScalars())
+    mask = np.logical_and(py_im==label_id, py_mask==0)
+    py_im[mask] = 0
+    vtk_im.GetPointData().SetScalars(numpy_to_vtk(py_im))
+    return vtk_im
+
 def cutPolyDataWithAnother(poly1, poly2, inside=False):
     """
     Cuts the first VTK PolyData with another

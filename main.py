@@ -91,14 +91,16 @@ if __name__=="__main__":
     except Exception as e: print(e)
     fn_tempPts = os.path.join(output_dir, "surfaces", 'outputpoints.txt')
     
-    #seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], paras['seg_name'] % paras['start_phase'])
-    #fn_poly = os.path.join(output_dir, "surfaces", paras['model_output'] % paras['start_phase'])
     if args.seg_name is not None:
         seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], args.seg_name)
         fn_poly = os.path.join(output_dir, "surfaces", args.seg_name+'.vtk')
     else:
         seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], paras['seg_name'])
         fn_poly = os.path.join(output_dir, "surfaces", paras['model_output'])
+    
+    # needed for time-resolved data
+    seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], paras['seg_name'] % paras['start_phase'])
+    fn_poly = os.path.join(output_dir, "surfaces", paras['model_output'] % paras['start_phase'])
 
     print(seg_fn, fn_poly)
     #run volume mesh to generate ids but not using it

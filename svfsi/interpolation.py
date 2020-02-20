@@ -128,8 +128,9 @@ def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, 
 
 
 if __name__=='__main__':
-
+    import time
     import argparse
+    start = time.time()
     parser = argparse.ArgumentParser()
     
     parser.add_argument('--json_fn', help="Name of the json file")
@@ -146,4 +147,5 @@ if __name__=='__main__':
     import glob
     fns = sorted(glob.glob(os.path.join(mesh_dir, "*.vtk")))
     write_motion(fns,  args.phase ,paras['num_interpolation'], output_dir, paras['num_cycle'], paras['duration'], debug=False)
-    
+    end = time.time()
+    print("Time spent: ", end-start)

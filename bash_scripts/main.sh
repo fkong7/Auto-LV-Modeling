@@ -1,6 +1,6 @@
 sv_python_dir=/Users/fanweikong/SimVascular/build/SimVascular-build
 
-json_file=/Users/fanweikong/Documents/Modeling/SurfaceModeling/info2.json
+json_file=/Users/fanweikong/Documents/Modeling/SurfaceModeling/info.json
 
 model_script=/Users/fanweikong/Documents/Modeling/SurfaceModeling/main.py
 registration_script=/Users/fanweikong/Documents/Modeling/SurfaceModeling/elastix_main.py
