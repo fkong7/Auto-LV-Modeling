@@ -18,12 +18,12 @@ def get_volume(poly):
     return mass.GetVolume()*1.e-3
 
 if __name__ == '__main__':
-    #DIR_NAME = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40282_20150504/surfaces/'
-    #DIR_NAME_gt = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40282_20150504/surfaces/'
-    DIR_NAME = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results4/MACS40244_20150309/surfaces/'
-    DIR_NAME_gt = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309/surfaces/'
-    #START_PHASE = 8
-    START_PHASE = 9
+    DIR_NAME = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40282_20150504/surfaces/'
+    DIR_NAME_gt = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40282_20150504/surfaces/'
+    #DIR_NAME = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40244_20150309/surfaces/'
+    #DIR_NAME_gt = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309/surfaces/'
+    START_PHASE = 8
+    #START_PHASE = 9
     TOTAL_PHASE = 10
 
     fns = sorted(glob.glob(os.path.join(DIR_NAME, '*.vtk')))
@@ -44,13 +44,15 @@ if __name__ == '__main__':
     f2 = interp1d(x, np.array(vols), kind='cubic')
     f2_gt = interp1d(x, np.array(vols_gt), kind='cubic')
     x2 = np.linspace(0, 1, 200)
-    plt.plot(x2, f2(x2+1.), linewidth=2, label='Ours')
+    plt.plot(x2, f2(x2+1.), linewidth=2, label='Automated')
     plt.plot(x2, f2_gt(x2+1.), linewidth=2, label='Ground Truth')
     x3 = np.linspace(0, 1, 11)
-    print(vols)
-    print(vols_gt)
+    print("Volumes automated: ", vols)
+    print("Volumes gt: ", vols_gt)
+    print("% difference: ", (np.array(vols_gt) - np.array(vols))/np.array(vols_gt))
+    print("% difference max: ", np.max((np.array(vols_gt) - np.array(vols))/np.array(vols_gt)))
     #plt.plot(x3,  vols[:11])
     plt.xlabel('Time(s)')
     plt.ylabel('Volume (ml)')
     plt.legend()
-    plt.show()
+    plt.savefig(os.path.join(os.path.dirname(DIR_NAME), 'volume.png'))
