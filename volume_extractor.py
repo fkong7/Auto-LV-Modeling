@@ -20,7 +20,7 @@ def get_volume(poly):
 if __name__ == '__main__':
     #DIR_NAME = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40282_20150504/surfaces/'
     #DIR_NAME_gt = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40282_20150504/surfaces/'
-    DIR_NAME = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based/MACS40244_20150309/surfaces/'
+    DIR_NAME = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_temp/MACS40244_20150309/surfaces/'
     DIR_NAME_gt = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309/surfaces/'
     #START_PHASE = 8
     START_PHASE = 9
