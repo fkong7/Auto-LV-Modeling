@@ -4,6 +4,7 @@ import glob
 import SimpleITK as sitk
 import vtk
 import label_io
+from image_processing import lvImage
 import models
 class Registration:
     """
@@ -33,12 +34,12 @@ class Registration:
         self.parameter_map = None
 
     def loadImages(self):
-        fixed = lvImage(sitk.ReadImage(self.fixed_fn))
-        moving = lvImage(sitk.ReadImage(self.moving_fn))
+        fixed = lvImage(self.fixed_fn)
+        moving = lvImage(self.moving_fn)
         fixed.process([1, 4, 5, 7])
         moving.process([1, 4, 5, 7])
-        self.fixed = fixed.label
-        self.moving = moving.label
+        self.fixed = label_io.exportVTK2Sitk(fixed.label)
+        self.moving = label_io.exportVTK2Sitk(moving.label)
 
     def computeTransform(self):
 

@@ -92,6 +92,23 @@ def exportPy2Sitk(npArr, sitkIm):
     outSitkIm.SetDirection(sitkIm.GetDirection())
     return outSitkIm
 
+def exportVTK2Sitk(vtkIm):
+    """ 
+    Converts VTK image to Sitk image
+
+    NOTE: ONLY WORK FOR IDENTITY DIRECTION MATRIX
+
+    """
+    import SimpleITK as sitk
+    from vtk.util.numpy_support import vtk_to_numpy
+    py_im = vtk_to_numpy(vtkIm.GetPointData().GetScalars())
+    x , y, z = vtkIm.GetDimensions()
+    out_im = sitk.GetImageFromArray(py_im.reshape(z, y, x))
+    out_im.SetSpacing(vtkIm.GetSpacing())
+    out_im.SetOrigin(vtkIm.GetOrigin())
+    out_im.SetDirection(np.eye(3).flatten())
+    return out_im
+
 def writeSitkIm(sitkIm, fn):
     """
     This function writes a sitk image to disk
