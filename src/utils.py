@@ -80,8 +80,21 @@ def fitPlaneNormal2(points_input):
 
 ########################
 ## Label Map functions
-########################
- 
+#######################def closing(image, ids):
+def closing(im, ids):
+    spacing = im.GetSpacing()
+    kernel = [int(round(5./spacing[i])) for i in range(3)]
+    kernel = [8 if kernel[i]>8 else kernel[i] for i in range(3)]
+    ftr = sitk.BinaryMorphologicalClosingImageFilter()
+    ftr.SetKernelRadius(kernel)
+    ftr.SafeBorderOn()
+    for i in ids:
+        if i ==0:
+            continue
+        ftr.SetForegroundValue(int(i))
+        im = ftr.Execute(im)
+    return im
+
 def resample(image, resolution = (0.5, 0.5, 0.5), dim=3):
   """
   This function resamples a SimpleITK image to desired resolution
