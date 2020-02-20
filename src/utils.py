@@ -982,6 +982,19 @@ def smoothVTKPolyline(polyline, smooth_iter):
             polyline.GetPoints().SetPoint(i, pt)
     return polyline
 
+class pointLocator:
+    # Class to find closest points
+    def __init__(self,pts):
+        ds = vtk.vtkPolyData()
+        ds.SetPoints(pts)
+        self.locator = vtk.vtkKdTreePointLocator()
+        self.locator.SetDataSet(ds)
+        self.locator.BuildLocator()
+    def findNClosestPoints(self,pt, N):
+        ids = vtk.vtkIdList()
+        self.locator.FindClosestNPoints(N, pt, ids)
+        return ids
+
 def projectOpeningToFitPlane(poly, boundary_ids, points, ITER):
     """
     This function projects the opening geometry to a best fit plane defined by the points on opennings. Differenet from the previous function, not only the points on openings were moved but the neighbouring nodes to maintain mesh connectivity.
@@ -1002,21 +1015,9 @@ def projectOpeningToFitPlane(poly, boundary_ids, points, ITER):
     else:
         pts = points
 
-    class _pointLocator:
-        # Class to find closest points
-        def __init__(self,pts):
-            ds = vtk.vtkPolyData()
-            ds.SetPoints(pts)
-            self.locator = vtk.vtkKdTreePointLocator()
-            self.locator.SetDataSet(ds)
-            self.locator.BuildLocator()
-        def findNClosestPoints(self,pt, N):
-            ids = vtk.vtkIdList()
-            self.locator.FindClosestNPoints(N, pt, ids)
-            return ids
         
     def _moveConnectedPoints(ids, pts, proj_pts, factor):
-        locator = _pointLocator(pts)
+        locator = pointLocator(pts)
         displacement = proj_pts - vtk_to_numpy(pts.GetData())
         for i in range(pts.GetNumberOfPoints()):
             cell_ids = vtk.vtkIdList()
