@@ -4,13 +4,14 @@ import glob
 import SimpleITK as sitk
 import vtk
 import label_io
+import utils
 from image_processing import lvImage
 import models
 class Registration:
     """
     Class to perform 3D image registration
     """
-    def __init__(self, fixed_im_fn=None, moving_im_fn=None):
+    def __init__(self, fixed_im_fn=None, moving_im_fn=None, smooth=False):
         """
 
         Args:
@@ -22,6 +23,7 @@ class Registration:
         self.fixed = None
         self.moving = None
         self.parameter_map = None
+        self.smooth = smooth
 
     def updateMovingImage(self, moving_im_fn):
         self.moving_fn = moving_im_fn
@@ -42,8 +44,9 @@ class Registration:
 #        self.moving = label_io.exportVTK2Sitk(moving.label)
         self.fixed = sitk.ReadImage(self.fixed_fn)
         self.moving = sitk.ReadImage(self.moving_fn)
-        self.fixed = utils.closing(self.fixed, [7, 6, 5, 4, 3, 2, 1])
-        self.moving = utils.closing(self.moving, [7, 6, 5, 4, 3, 2, 1])
+        if self.smooth:
+            self.fixed = utils.closing(self.fixed, [7, 6, 5, 4, 3, 2, 1])
+            self.moving = utils.closing(self.moving, [7, 6, 5, 4, 3, 2, 1])
 
 
     def computeTransform(self):

@@ -82,6 +82,7 @@ def fitPlaneNormal2(points_input):
 ## Label Map functions
 #######################def closing(image, ids):
 def closing(im, ids):
+    import SimpleITK as sitk
     spacing = im.GetSpacing()
     kernel = [int(round(5./spacing[i])) for i in range(3)]
     kernel = [8 if kernel[i]>8 else kernel[i] for i in range(3)]
