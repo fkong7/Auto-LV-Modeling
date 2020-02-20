@@ -49,12 +49,18 @@ def ground_truth_correction(gt_fn, im_fn, ids):
         + np.array(target.GetPoints().GetPoint(ids.GetId(1)))
         + np.array(target.GetPoints().GetPoint(ids.GetId(2))))/3.
         gt.GetPoints().SetPoint(i, avg_pt)
+    
+    gt = utils.laplacianSmoothVTKPolydata(gt, 20)
+    gt = utils.cleanPolyData(gt, 0.)
     gt = utils.fillHole(gt)
+    gt = utils.fixPolydataNormals(gt)
     return gt 
 if __name__=='__main__':
 
-    poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309/surfaces'
-    im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40244_20150309/wall_motion_labels_gt' 
+    poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40282_20150504/surfaces'
+    im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40282_20150504/wall_motion_labels_gt' 
+    #poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309/surfaces'
+    #im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40244_20150309/wall_motion_labels_gt' 
     poly_dir_out = os.path.join(os.path.dirname(poly_dir), "surfaces_corrected")
 
     try:

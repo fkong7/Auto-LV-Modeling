@@ -19,9 +19,9 @@ def get_volume(poly):
 
 if __name__ == '__main__':
     DIR_NAME = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40282_20150504/surfaces/'
-    DIR_NAME_gt = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40282_20150504/surfaces/'
+    DIR_NAME_gt = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40282_20150504/surfaces_corrected/'
     #DIR_NAME = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40244_20150309/surfaces/'
-    #DIR_NAME_gt = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309/surfaces/'
+    #DIR_NAME_gt = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309/surfaces_corrected/'
     START_PHASE = 8
     #START_PHASE = 9
     TOTAL_PHASE = 10
@@ -49,8 +49,9 @@ if __name__ == '__main__':
     x3 = np.linspace(0, 1, 11)
     print("Volumes automated: ", vols)
     print("Volumes gt: ", vols_gt)
-    print("% difference: ", (np.array(vols_gt) - np.array(vols))/np.array(vols_gt))
-    print("% difference max: ", np.max((np.array(vols_gt) - np.array(vols))/np.array(vols_gt)))
+    diff = np.abs((np.array(vols_gt) - np.array(vols))/np.array(vols_gt))
+    print("% difference: ", diff)
+    print("% difference max: ", np.max(diff))
     #plt.plot(x3,  vols[:11])
     plt.xlabel('Time(s)')
     plt.ylabel('Volume (ml)')
