@@ -17,5 +17,5 @@ conda activate elastix
 python ${registration_script} --json_fn ${json_file} --write --smooth
 conda deactivate
 
-#${sv_python_dir}/sv --python -- ${volume_mesh_script} --json_fn ${json_file}
+${sv_python_dir}/sv --python -- ${volume_mesh_script} --json_fn ${json_file}
 

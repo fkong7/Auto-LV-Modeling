@@ -1018,14 +1018,14 @@ class pointLocator:
         self.locator.FindClosestNPoints(N, pt, ids)
         return ids
 
-def projectOpeningToFitPlane(poly, boundary_ids, points, ITER):
+def projectOpeningToFitPlane(poly, boundary_ids, points, MESH_SIZE):
     """
     This function projects the opening geometry to a best fit plane defined by the points on opennings. Differenet from the previous function, not only the points on openings were moved but the neighbouring nodes to maintain mesh connectivity.
     Args:
         poly: VTK PolyData
         boundary_ids: boundary ids
         points: bounary pts, vtk points or numpy
-        ITER: number of times to find connected points and move them
+        MESH_SIZE: mesh edge size, used to find the number of times to find connected points and move them
     Returns:
         poly: VTK PolyData of the modified geometry
     """
@@ -1063,6 +1063,9 @@ def projectOpeningToFitPlane(poly, boundary_ids, points, ITER):
     #make a copy of the pt ids
     ids = boundary_ids.copy()
     proj_pts = projectPointsToFitPlane(pts)
+    dist = np.max(np.linalg.norm(proj_pts - vtk_to_numpy(pts.GetData()), axis=1))
+    ITER = np.ceil(dist/MESH_SIZE)*3
+    print("ITER: ", ITER)
     for factor in np.linspace(0.8, 0., ITER, endpoint=False):
         ids, pts,  proj_pts = _moveConnectedPoints(ids, pts, proj_pts, factor)
     poly = changePolyDataPointsCoordinates(poly, ids, proj_pts)

@@ -30,7 +30,7 @@ if __name__ == '__main__':
     lvmodel = models.leftVentricle(label_io.loadVTKMesh(poly_fn))
     
     output_vol = os.path.join(paras['out_dir'], paras['patient_id'], paras['patient_id']+'-mesh-complete')
-    lvmodel.remesh(2., poly_fn, poly_fn=None, ug_fn=output_vol)
+    lvmodel.remesh(paras['edge_size'], poly_fn, poly_fn=None, ug_fn=output_vol, mmg=False)
     lvmodel.writeMeshComplete(output_vol)
     end = time.time()
     print("Time spent in volume_mesh_main.py: ", end-start)

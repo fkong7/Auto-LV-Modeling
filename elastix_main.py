@@ -75,7 +75,7 @@ if __name__=='__main__':
     fn_poly = os.path.join(output_dir, paras['model_output'] % paras['start_phase'])
 
     #
-    lvmodel = leftVentricle(label_io.loadVTKMesh(fn_poly))
+    lvmodel = leftVentricle(label_io.loadVTKMesh(fn_poly), edge_size=paras['edge_size'] )
     registration(lvmodel, paras['start_phase'],paras['total_phase'], paras['model_output'], paras['im_name'], image_dir,output_dir, args.write, args.smooth)
     end = time.time()
     print("Time spent in elastix_main.py: ", end- start)

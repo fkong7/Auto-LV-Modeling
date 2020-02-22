@@ -13,7 +13,7 @@ import utils
 import vtk
 import time
 
-def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=2,aa_id=6, timming=False):
+def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=2,aa_id=6, edge_size = 1., timming=False):
     """
     Modified test6 to cut on the PolyData directly to create better defined inlet/outlet geometry
     The left atrium is cut normal to the direction defined by the normal of the mitral plane
@@ -61,7 +61,7 @@ def buildSurfaceModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],l
             time_now = time.time()
         fn = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(poly_fn))
         #model.writeSurfaceMesh(fn)
-        model.remesh(1., fn, poly_fn, ug_fn)
+        model.remesh(edge_size, fn, poly_fn, ug_fn)
         model.writeSurfaceMesh(poly_fn)
         if timming:
             mesh_time = time.time() - time_now
@@ -106,7 +106,7 @@ if __name__=="__main__":
     #run volume mesh to generate ids but not using it
     fn_ug = 'temp'
     timming = True
-    time_list = buildSurfaceModelFromImage([seg_fn], [fn_poly], fn_ug, timming=timming)
+    time_list = buildSurfaceModelFromImage([seg_fn], [fn_poly], fn_ug, edge_size=paras['edge_size'], timming=timming)
     if timming:
         import csv
         with open(os.path.join(output_dir, 'time_results.csv'), 'a' , newline="") as f:

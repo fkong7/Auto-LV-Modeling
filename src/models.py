@@ -6,8 +6,9 @@ import utils
 import label_io
 
 class Geometry(object):
-    def __init__(self, vtk_poly):
+    def __init__(self, vtk_poly, edge_size=1.):
         self.poly = vtk_poly
+        self.edge_size = edge_size
     def getVolume(self):
         return utils.getPolydataVolume(self.poly)
 
@@ -20,12 +21,13 @@ class Geometry(object):
     def splitRegion(self, region_id, attr='ModelFaceID'):
         return utils.thresholdPolyData(self.poly, attr, (region_id, region_id))
     
-    def remesh(self, edge_size, fn, poly_fn=None, ug_fn=None):
+    def remesh(self, edge_size, fn, poly_fn=None, ug_fn=None, mmg=True):
         from sv import Repository
         import meshing
-
-        Repository.ImportVtkPd(self.poly, "mmg_poly")
-        meshing.remeshPolyData("mmg_poly", "mmg_poly_remesh", 1.,1.5, fn)
+        self.edge_size = edge_size
+        if mmg:
+            Repository.ImportVtkPd(self.poly, "mmg_poly")
+            meshing.remeshPolyData("mmg_poly", "mmg_poly_remesh", 1.,1.5, fn)
         #print("MMG GLOBAL REMESHING DONE")
         #self.writeSurfaceMesh(fn)
         # generate volumetric mesh:
@@ -56,8 +58,8 @@ class Geometry(object):
     
 class leftVentricle(Geometry):
     
-    def __init__(self, vtk_poly):
-        super(leftVentricle, self).__init__(vtk_poly)
+    def __init__(self, vtk_poly, edge_size=1.):
+        super(leftVentricle, self).__init__(vtk_poly, edge_size)
         self.wall_processed = False
         self.cap_processed = False
         self.cap_pts_ids = None
@@ -76,7 +78,7 @@ class leftVentricle(Geometry):
         #self.writeSurfaceMesh('/Users/fanweikong/Downloads/test_1.vtp')
         for idx, (ids, boundary) in enumerate(zip(id_lists, boundaries)):
             boundary = utils.smoothVTKPolyline(boundary, 5)
-            self.poly = utils.projectOpeningToFitPlane(self.poly, ids, boundary.GetPoints(), 3)
+            self.poly = utils.projectOpeningToFitPlane(self.poly, ids, boundary.GetPoints(), self.edge_size)
             # Remove the free cells and update the point lists
             self.poly, id_lists[idx] = utils.removeFreeCells(self.poly, [idx for sub_l in id_lists for idx in sub_l])
         self.poly = utils.smoothVTKPolydata(utils.cleanPolyData(self.poly, 0.), iteration=50)
@@ -106,7 +108,7 @@ class leftVentricle(Geometry):
         # Project the cap points so that they are co-planar
         for pt_ids in self.cap_pts_ids:
             pts = utils.getPolyDataPointCoordinatesFromIDs(new_model, pt_ids)
-            new_model = utils.projectOpeningToFitPlane(new_model, pt_ids, pts, 3)
+            new_model = utils.projectOpeningToFitPlane(new_model, pt_ids, pts, self.edge_size)
         return new_model
 
     def writeMeshComplete(self, path):

@@ -1,15 +1,16 @@
 {
     "Patient ID": "MACS40282_20150504",
-    "Start Phase": 4,
+    "Start Phase": 6,
     "Total Phase": 10,
     "Image Name": "phase%d.nii",
     "Output Surface Model Name": "phase%d.nii.vtk",
-    "Output Dir Name": "/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results",
+    "Output Dir Name": "/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results2",
     "Segmentation Name": "phase%d.nii",
     "Image Top Dir": "/Users/fanweikong/Documents/ImageData/4DCCTA",
     "Segmentation Folder Name": "wall_motion_labels",
     "Image Folder Name": "wall_motion_labels",
     "Number of Interpolations": 199,
     "Number of Cardiac Cycles": 1,
-    "Cycle Duration (s)": 1
+    "Cycle Duration (s)": 1,
+    "Mesh Size": 1.5
 }

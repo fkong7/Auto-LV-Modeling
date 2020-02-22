@@ -46,7 +46,7 @@ class Registration:
         self.moving = sitk.ReadImage(self.moving_fn)
         if self.smooth:
             self.fixed = utils.closing(self.fixed, [7, 6, 5, 4, 3, 2, 1])
-            self.moving = utils.closing(self.moving, [7, 6, 5, 4, 3, 2, 1])
+            self.moving = utils.closing(self.moving, [ 7, 6, 5, 4, 3, 2, 1])
 
 
     def computeTransform(self):
@@ -110,7 +110,7 @@ class Registration:
         new_poly = vtk.vtkPolyData()
         new_poly.DeepCopy(model.poly)
         new_poly.SetPoints(pts)
-        return models.leftVentricle(model.update(new_poly))
+        return models.leftVentricle(model.update(new_poly), model.edge_size)
 
 
         
