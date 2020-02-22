@@ -378,4 +378,5 @@ def loadJsonArgs(fn):
     args['num_interpolation']=data["Number of Interpolations"]
     args['num_cycle'] = data["Number of Cardiac Cycles"]
     args['duration'] = data["Cycle Duration (s)"]
+    args['edge_size'] = data["Mesh Size"]
     return args
