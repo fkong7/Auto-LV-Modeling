@@ -77,7 +77,7 @@ def ground_truth_correction(gt_fn, im_fn, ids):
         py_im = utils.removeClass(py_im, t_id, 0)
     im.GetPointData().SetScalars(numpy_to_vtk(py_im))
 
-    target = m_c.vtk_marching_cube_multi(im, 0)
+    target = m_c.vtk_marching_cube_multi(im, 0, smooth=50, band=0.02)
     #debug
     locator = utils.pointLocator(target.GetPoints())
 
@@ -144,6 +144,6 @@ def calculate_surface_distance_errors():
     np.savetxt(err_out, np.array(err_list).reshape(len(err_list), 1), fmt='%.5f',delimiter=',')
 
 if __name__=='__main__':
-    #map_registered_surface_to_ground_truth()
-    calculate_surface_distance_errors()
+    map_registered_surface_to_ground_truth()
+    #calculate_surface_distance_errors()
 
