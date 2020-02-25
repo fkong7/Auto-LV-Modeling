@@ -113,7 +113,7 @@ def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, 
         f.write('{} {} {}\n'.format(3, total_steps,face_poly.GetNumberOfPoints()))
         for t in np.linspace(0,num_cycle*duration, total_steps):
             f.write('{}\n'.format(t))
-        f.write('{}\n'.format(face_poly.GetNumberOfPoints()))
+        #f.write('{}\n'.format(face_poly.GetNumberOfPoints()))
         face_ids = vtk_to_numpy(face_poly.GetPointData().GetArray('GlobalNodeID'))
         node_id_index = find_index_in_array(node_ids, face_ids)
         for i in node_id_index:
