@@ -67,17 +67,27 @@ def ground_truth_correction(gt_fn, im_fn, ids):
         poly: mapped poly
     """
     # read and process image
+    print(gt_fn, im_fn)
     gt = label_io.loadVTKMesh(gt_fn) 
-    im = label_io.loadLabelMap(im_fn)
+    #im = label_io.loadLabelMap(im_fn)
+    from image_processing import lvImage
     from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
-    py_im = vtk_to_numpy(im.GetPointData().GetScalars())
-    py_im = utils.swapLabels(py_im)
 
-    for t_id in ids:
-        py_im = utils.removeClass(py_im, t_id, 0)
-    im.GetPointData().SetScalars(numpy_to_vtk(py_im))
+    im = lvImage(im_fn)
+    im.process(ids)
+    im.convert2binary()
+    im = im.label
+    #py_im = vtk_to_numpy(im.GetPointData().GetScalars())
+    #py_im = utils.swapLabels(py_im)
 
-    target = m_c.vtk_marching_cube_multi(im, 0, smooth=50, band=0.02)
+    #for t_id in ids:
+    #    py_im = utils.removeClass(py_im, t_id, 0)
+    
+    #im.GetPointData().SetScalars(numpy_to_vtk(py_im))
+    
+
+    target = m_c.vtk_marching_cube_multi(im, 0, smooth=20, band=0.02)
+    label_io.writeVTKPolyData(target, os.path.join(os.path.dirname(gt_fn), str(np.random.randint(100))+'.vtk'))
     #debug
     locator = utils.pointLocator(target.GetPoints())
 
@@ -107,8 +117,10 @@ def ground_truth_correction(gt_fn, im_fn, ids):
 def map_registered_surface_to_ground_truth():
     #poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40282_20150504/surfaces'
     #im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40282_20150504/wall_motion_labels_gt' 
-    poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309/surfaces'
-    im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40244_20150309/wall_motion_labels_gt' 
+    #poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309/surfaces'
+    #im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40244_20150309/wall_motion_labels_gt' 
+    poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results2/MACS40244_20150309/surfaces'
+    im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40244_20150309/wall_motion_labels' 
     poly_dir_out = os.path.join(os.path.dirname(poly_dir), "surfaces_corrected")
 
     try:
@@ -116,7 +128,8 @@ def map_registered_surface_to_ground_truth():
     except Exception as e: print(e)
 
     poly_fns = sorted(glob.glob(os.path.join(poly_dir, '*.vtk')))
-    im_fns = sorted(glob.glob(os.path.join(im_dir, '*.nii.gz')))
+    im_fns = sorted(glob.glob(os.path.join(im_dir, '*.nii')))
+    im_fns += sorted(glob.glob(os.path.join(im_dir, '*.nii.gz')))
     for poly_fn, im_fn in zip(poly_fns, im_fns):
         gt = ground_truth_correction(poly_fn, im_fn, [1, 4, 5, 7]) 
         label_io.writeVTKPolyData(gt, os.path.join(poly_dir_out, os.path.basename(poly_fn)))

@@ -22,38 +22,46 @@ def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, imag
     Cap the surface mesh with test6_2()
     """
     # compute volume of all phases to select systole and diastole:
-    volume = list()
-    
-    volume.append([START_PHASE,lvmodel.getVolume()])
 
     ids = list(range(START_PHASE,TOTAL_PHASE)) + list(range(0,START_PHASE))
+    reg_output_dir = os.path.join(output_dir, "registration")
+    try:
+        os.makedirs(reg_output_dir)
+    except Exception as e: print(e)
 
     register = Registration(smooth)
     # Only need to register N-1 mesh
-    for index in ids[:-1]:
-        print("REGISTERING FROM %d TO %d " % (START_PHASE, (index+1)%TOTAL_PHASE))
-    
-        #ASSUMING increment is 1
-        moving_im_fn = os.path.join(image_dir, IMAGE_NAME % ((index+1)%TOTAL_PHASE)) 
-        fixed_im_fn =os.path.join(image_dir, IMAGE_NAME % START_PHASE)
+    ITERATION = 1
+    fixed_im_fn =os.path.join(image_dir, IMAGE_NAME % START_PHASE)
+    for register_iter in range(ITERATION):
+        volume = list()
+        volume.append([START_PHASE,lvmodel.getVolume()])
+        image_output_dir = os.path.join(reg_output_dir, "images")
+        for index in ids[:-1]:
+            print("REGISTERING FROM %d TO %d " % (START_PHASE, (index+1)%TOTAL_PHASE))
         
-        register.updateMovingImage(moving_im_fn)
-        register.updateFixedImage(fixed_im_fn)
+            #ASSUMING increment is 1
+            moving_im_fn = os.path.join(image_dir, IMAGE_NAME % ((index+1)%TOTAL_PHASE)) 
+            
+            register.updateMovingImage(moving_im_fn)
+            register.updateFixedImage(fixed_im_fn)
 
-        try:
-            os.makedirs(os.path.join(output_dir, "registration"))
-        except Exception as e: print(e)
-        fn_out = os.path.join(os.path.join(output_dir, "registration"), "verts.pts")
+            try:
+                os.makedirs(os.path.join(image_output_dir))
+            except Exception as e: print(e)
+            fn_out = os.path.join(os.path.join(reg_output_dir), "verts.pts")
 
-        fn_paras = os.path.join(output_dir, "registration", str(START_PHASE)+"to"+str((index+1)%TOTAL_PHASE)+'.txt')
-        new_lvmodel = register.polydata_image_transform(lvmodel, fn_out, fn_paras)
-        if write:
-            register.writeParameterMap(fn_paras)
+            fn_paras = os.path.join(reg_output_dir, str(START_PHASE)+"to"+str((index+1)%TOTAL_PHASE)+'.txt')
+            new_lvmodel = register.polydata_image_transform(lvmodel, fn_out, os.path.join(image_output_dir, IMAGE_NAME % ((index+1)%TOTAL_PHASE)) , fn_paras)
+            if write:
+                register.writeParameterMap(fn_paras)
 
-        #ASSUMING increment is 1
-        fn_poly = os.path.join(output_dir, MODEL_NAME % ((index+1)%TOTAL_PHASE))
-        new_lvmodel.writeSurfaceMesh(fn_poly)
-        volume.append([(index+1)%TOTAL_PHASE,new_lvmodel.getVolume()])
+            #ASSUMING increment is 1
+            fn_poly = os.path.join(output_dir, MODEL_NAME % ((index+1)%TOTAL_PHASE))
+            new_lvmodel.writeSurfaceMesh(fn_poly)
+            volume.append([(index+1)%TOTAL_PHASE,new_lvmodel.getVolume()])
+        reg_output_dir = os.path.join(reg_output_dir, "images")
+        image_dir = image_output_dir
 
     np.save(os.path.join(output_dir, "volume.npy"), volume)
     return
