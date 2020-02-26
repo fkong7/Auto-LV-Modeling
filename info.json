@@ -1,6 +1,6 @@
 {
-    "Patient ID": "MACS40282_20150504",
-    "Start Phase": 6,
+    "Patient ID": "MACS40244_20150309",
+    "Start Phase": 7,
     "Total Phase": 10,
     "Image Name": "phase%d.nii",
     "Output Surface Model Name": "phase%d.nii.vtk",
