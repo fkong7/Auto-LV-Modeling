@@ -379,4 +379,5 @@ def loadJsonArgs(fn):
     args['num_cycle'] = data["Number of Cardiac Cycles"]
     args['duration'] = data["Cycle Duration (s)"]
     args['edge_size'] = data["Mesh Size"]
+    args['mask_folder_name'] = data["Mask Folder Name"]
     return args

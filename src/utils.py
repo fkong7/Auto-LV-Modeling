@@ -96,7 +96,7 @@ def closing(im, ids):
         im = ftr.Execute(im)
     return im
 
-def resample(image, resolution = (0.5, 0.5, 0.5), dim=3):
+def resample(image, resolution = (0.5, 0.5, 0.5), dim=3, order=0):
   """
   This function resamples a SimpleITK image to desired resolution
 
@@ -109,7 +109,10 @@ def resample(image, resolution = (0.5, 0.5, 0.5), dim=3):
   """
   import SimpleITK as sitk
   resample = sitk.ResampleImageFilter()
-  resample.SetInterpolator(sitk.sitkNearestNeighbor)
+  if order ==0:
+    resample.SetInterpolator(sitk.sitkNearestNeighbor)
+  else:
+    resample.SetInterpolator(sitk.sitkLinear)
   resample.SetOutputDirection(image.GetDirection())
   resample.SetOutputOrigin(image.GetOrigin())
   resample.SetOutputSpacing(resolution)

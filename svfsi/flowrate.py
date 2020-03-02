@@ -1,0 +1,202 @@
+import vtk
+import os
+import glob
+import numpy as np
+import matplotlib.pyplot as plt
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '../src'))
+import label_io
+import utils
+def convertPointDataToCellData(mesh):
+    p2c = vtk.vtkPointDataToCellData()
+    p2c.SetInputData(mesh)
+    p2c.Update()
+    return p2c.GetOutput()
+
+def extracSurface(volume):
+    extractor = vtk.vtkDataSetSurfaceFilter()
+    extractor.SetInputData(volume)
+    extractor.SetPieceInvariant(True)
+    extractor.Update()
+    return extractor.GetOutput()
+
+def computeNormals(poly,angle):
+    normalGen = vtk.vtkPolyDataNormals()
+    normalGen.SetInputData(poly)
+    normalGen.ComputeCellNormalsOn()
+    normalGen.SetFeatureAngle(angle)
+    #normalGen.SplittingOff()
+    normalGen.Update()
+    poly = normalGen.GetOutput()
+    return poly
+
+def cellArea(cell):
+    pt1 = [0,0,0]
+    pt2 = [0,0,0]
+    pt3 = [0,0,0]
+    cell.GetPoints().GetPoint(0,pt1)
+    cell.GetPoints().GetPoint(1,pt2)
+    cell.GetPoints().GetPoint(2,pt3)
+    area = vtk.vtkTriangle.TriangleArea(pt1,pt2,pt3)
+    return area
+
+def extractRegions(poly):
+    connectivity = vtk.vtkConnectivityFilter()
+    connectivity.SetInputData(poly)
+    connectivity.ColorRegionsOn()
+    connectivity.SetExtractionModeToAllRegions()
+    connectivity.Update()
+    num_surf = connectivity.GetNumberOfExtractedRegions()
+    print('Number of extracted surfaces: %d'%num_surf)
+    extracted_regions = connectivity.GetOutput()
+    return extracted_regions
+
+def findCellsByRegion(poly,rg):
+    List = []
+    regionIds = poly.GetCellData().GetAbstractArray('RegionId')
+    if regionIds == None:
+        raise ValueError('Regions have not been extracted\n')
+    for i in range(poly.GetNumberOfCells()):
+        ID = regionIds.GetTuple(i)
+        if int(ID[0]) == rg:
+            List.append(i)
+
+    return List
+
+def findCellsByPoints(poly, ptIds):
+    """ 
+    Based on id number of points on a face, find the id of the cells on that face
+    """
+    List = []
+    for p_id in ptIds:
+        cell_list = vtk.vtkIdList()
+        poly.GetPointCells(p_id, cell_list)
+        for c_id in range(cell_list.GetNumberOfIds()):
+            pt_list = vtk.vtkIdList()
+            poly.GetCellPoints(cell_list.GetId(c_id), pt_list)
+            on_face = True
+            for pp_id in range(pt_list.GetNumberOfIds()):
+                if pt_list.GetId(pp_id) not in ptIds:
+                    on_face = False
+            if on_face:
+                if cell_list.GetId(c_id) not in List:
+                    List.append(cell_list.GetId(c_id))
+    return List
+
+def setupSurfaceMesh(fileName):
+    volMesh = label_io.loadVTKMesh(fileName)
+    poly = extracSurface(volMesh)
+    polyCD = convertPointDataToCellData(poly)
+    #polyCD = computeNormals(polyCD,40)
+
+    return polyCD
+
+def flowRate(polyCD,IdList):
+    #get velocity data
+    polyCD = computeNormals(polyCD, 40)
+    velCells = polyCD.GetCellData()
+    norms = velCells.GetNormals()
+    velArray = velCells.GetAbstractArray('Velocity')
+    Q = 0.
+    A = 0.
+    count = 0
+    for i in IdList:
+        cell = polyCD.GetCell(i)
+        area = cellArea(cell)
+        vel = velArray.GetTuple(i)
+        norm = norms.GetTuple(i)
+        q = np.dot(np.array(vel),np.array(norm))*area*1e4
+        #print('%f, %f\n'% (np.dot(np.array(vel),np.array(norm)), np.linalg.norm(np.array(vel))))
+        Q = Q+q
+        A = A + area
+        count = count+1
+        
+    #print('Flow rate is %f mL/s' % Q)
+    #print('Total number of cells in region is %d' % count)
+    return Q
+
+def getAllFlowRate(fns, face_poly_fn):
+    polyCD = setupSurfaceMesh(fns[0])
+
+    face_poly = label_io.loadVTKMesh(face_poly_fn)
+    face_pts = face_poly.GetPoints()
+    
+    pt_ids = utils.findPointCorrespondence(polyCD, face_pts)
+    IdList = findCellsByPoints(polyCD, pt_ids)
+    print(IdList)
+    tags = vtk.vtkIntArray()
+    tags.SetNumberOfComponents(1)
+    tags.SetName('Region Ids')
+    tags.SetNumberOfValues(polyCD.GetNumberOfCells())
+    for i in range(polyCD.GetNumberOfCells()):
+        if i in IdList:
+            tags.InsertValue(i, 2)
+        else:
+            tags.InsertValue(i, 1)
+    polyCD.GetCellData().SetScalars(tags)
+    label_io.writeVTKPolyData(polyCD, '/Users/fanweikong/Downloads/'+str(np.random.randint(100))+'.vtp')
+    #polyCD = extractRegions(polyCD)
+    #avList = findCellsByRegion(polyCD,2)
+    #mvList = findCellsByRegion(polyCD,1)
+    Qlist = []
+    for fn in fns:
+        #if mode=='mv':
+        #    IdList = mvList
+        #elif mode=='av':
+        #    IdList = avList
+        poly = setupSurfaceMesh(fn)
+        Q = flowRate(poly, IdList)
+        Qlist.append(Q)
+    return Qlist
+
+import re
+def natural_sort(l):
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ]
+    return sorted(l, key = alphanum_key)
+
+def main():
+    dir_name = '/Volumes/Untitled/LVFSI_data/MACS40282_20150504_results_coarse'
+    dir_name_gt = '/Volumes/Untitled/LVFSI_data/MACS40282_20150504_gt_results_coarse'
+
+    face = {}
+    #face['av'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40244_20150309/MACS40244_20150309-mesh-complete-coarse/mesh-surfaces/noname_3.vtp'
+    #face['mv'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40244_20150309/MACS40244_20150309-mesh-complete-coarse/mesh-surfaces/noname_2.vtp'
+    face_gt = {}
+    #face_gt['av'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309_gt/MACS40244_20150309_gt-mesh-complete-coarse/mesh-surfaces/noname_3.vtp'
+    #face_gt['mv'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309_gt/MACS40244_20150309_gt-mesh-complete-coarse/mesh-surfaces/noname_2.vtp'
+    face['av'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40282_20150504/MACS40282_20150504-mesh-complete-coarse/mesh-surfaces/noname_3.vtp'
+    face['mv'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40282_20150504/MACS40282_20150504-mesh-complete-coarse/mesh-surfaces/noname_2.vtp'
+    face_gt['av'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40282_20150504_gt/MACS40282_20150504_gt-mesh-complete-coarse/mesh-surfaces/noname_3.vtp'
+    face_gt['mv'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40282_20150504_gt/MACS40282_20150504_gt-mesh-complete-coarse/mesh-surfaces/noname_2.vtp'
+    prefix = ['result_1_', 'result_2_', 'result_3_']
+    mode = ['mv', 'av', 'mv']
+    #prefix = ['result_2_']
+    #mode = ['av']
+    Qlist = []
+    for pre, m in zip(prefix, mode):
+        fns = natural_sort(glob.glob(os.path.join(dir_name, pre+'*.vtu')))
+        fns = [fns[i] for i in range(0, len(fns), 20)]
+        Qlist += getAllFlowRate(fns, face[m])
+    
+    Qlist_gt = []
+    for pre, m in zip(prefix, mode):
+        fns = natural_sort(glob.glob(os.path.join(dir_name_gt, pre+'*.vtu')))
+        fns = [fns[i] for i in range(0, len(fns), 20)]
+        Qlist_gt += getAllFlowRate(fns, face_gt[m])
+
+    plt.plot(Qlist, '-', linewidth=3)
+    plt.plot(Qlist_gt, '-', linewidth=3)
+
+    #plt.setp(lines[0],linewidth=3)
+    #plt.setp(lines[1],linewidth=3)
+    #plt.legend(('Original','Smoothed'),loc='upper right')
+    plt.title('flow rate (ml/s)')
+    plt.show()
+    #plt.savefig(prefix+'flowRate.png')
+
+
+
+if __name__ == '__main__':
+    main()
+

@@ -87,7 +87,7 @@ def ground_truth_correction(gt_fn, im_fn, ids):
     
 
     target = m_c.vtk_marching_cube_multi(im, 0, smooth=20, band=0.02)
-    label_io.writeVTKPolyData(target, os.path.join(os.path.dirname(gt_fn), str(np.random.randint(100))+'.vtk'))
+    #label_io.writeVTKPolyData(target, os.path.join(os.path.dirname(gt_fn), str(np.random.randint(100))+'.vtk'))
     #debug
     locator = utils.pointLocator(target.GetPoints())
 
@@ -112,27 +112,35 @@ def ground_truth_correction(gt_fn, im_fn, ids):
     gt = utils.cleanPolyData(gt, 0.)
     gt = utils.fillHole(gt)
     gt = utils.fixPolydataNormals(gt)
-    return gt 
+    return gt, im
 
 def map_registered_surface_to_ground_truth():
     #poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40282_20150504/surfaces'
     #im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40282_20150504/wall_motion_labels_gt' 
+    #poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results2/MACS40282_20150504/surfaces'
+    #im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40282_20150504/wall_motion_labels' 
     #poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309/surfaces'
     #im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40244_20150309/wall_motion_labels_gt' 
     poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results2/MACS40244_20150309/surfaces'
     im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40244_20150309/wall_motion_labels' 
     poly_dir_out = os.path.join(os.path.dirname(poly_dir), "surfaces_corrected")
+    im_dir_out = os.path.join(os.path.dirname(im_dir), "wall_motion_labels_processed")
 
     try:
         os.makedirs(poly_dir_out)
+    except Exception as e: print(e)
+    try:
+        os.makedirs(im_dir_out)
     except Exception as e: print(e)
 
     poly_fns = sorted(glob.glob(os.path.join(poly_dir, '*.vtk')))
     im_fns = sorted(glob.glob(os.path.join(im_dir, '*.nii')))
     im_fns += sorted(glob.glob(os.path.join(im_dir, '*.nii.gz')))
+    import SimpleITK as sitk
     for poly_fn, im_fn in zip(poly_fns, im_fns):
-        gt = ground_truth_correction(poly_fn, im_fn, [1, 4, 5, 7]) 
+        gt, im = ground_truth_correction(poly_fn, im_fn, [1, 4, 5, 7]) 
         label_io.writeVTKPolyData(gt, os.path.join(poly_dir_out, os.path.basename(poly_fn)))
+        sitk.WriteImage(label_io.exportVTK2Sitk(im), os.path.join(im_dir_out, os.path.basename(im_fn).split('.')[0]+'.nii'))
 
 def calculate_surface_distance_errors():
     #poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40282_20150504/surfaces'
