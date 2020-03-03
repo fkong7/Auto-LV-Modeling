@@ -79,18 +79,18 @@ class Registration:
         elastixImageFilter = sitk.ElastixImageFilter()
         elastixImageFilter.SetFixedImage(self.fixed)
         #elastixImageFilter.SetFixedMask(self.fixed_mask)
-        p_map_1 = sitk.GetDefaultParameterMap('translation')
-        p_map_2 = sitk.GetDefaultParameterMap('affine')
-        p_map_3 = sitk.GetDefaultParameterMap('bspline')
+        #p_map_1 = sitk.GetDefaultParameterMap('translation')
+        #p_map_2 = sitk.GetDefaultParameterMap('affine')
+        #p_map_3 = sitk.GetDefaultParameterMap('bspline')
         #p_map_3['MaximumNumberOfIterations'] = ['256']
-        p_map_3['FinalGridSpacingInPhysicalUnits'] = []
+        #p_map_3['FinalGridSpacingInPhysicalUnits'] = []
         #p_map_3["MaximumNumberOfSamplingAttempts"] = ['4']
-        p_map_3["FinalGridSpacingInVoxels"] = ['12']
+        #p_map_3["FinalGridSpacingInVoxels"] = ['12']
         #p_map_3['FinalBSplineInterpolationOrder'] = ['3']
-        sitk.PrintParameterMap(p_map_3)
-        elastixImageFilter.SetParameterMap(p_map_1)
-        elastixImageFilter.AddParameterMap(p_map_2)
-        elastixImageFilter.AddParameterMap(p_map_3)
+        #sitk.PrintParameterMap(p_map_3)
+        #elastixImageFilter.SetParameterMap(p_map_1)
+        #elastixImageFilter.AddParameterMap(p_map_2)
+        #elastixImageFilter.AddParameterMap(p_map_3)
         elastixImageFilter.SetMovingImage(self.moving)
         #elastixImageFilter.SetMovingMask(self.moving_mask)
         elastixImageFilter.Execute()

@@ -86,14 +86,14 @@ def findCellsByPoints(poly, ptIds):
 def setupSurfaceMesh(fileName):
     volMesh = label_io.loadVTKMesh(fileName)
     poly = extracSurface(volMesh)
-    polyCD = convertPointDataToCellData(poly)
     #polyCD = computeNormals(polyCD,40)
 
-    return polyCD
+    return poly
 
 def flowRate(polyCD,IdList):
     #get velocity data
-    polyCD = computeNormals(polyCD, 40)
+    polyCD = computeNormals(polyCD, 20)
+    polyCD = convertPointDataToCellData(poly)
     velCells = polyCD.GetCellData()
     norms = velCells.GetNormals()
     velArray = velCells.GetAbstractArray('Velocity')
@@ -114,6 +114,34 @@ def flowRate(polyCD,IdList):
     #print('Flow rate is %f mL/s' % Q)
     #print('Total number of cells in region is %d' % count)
     return Q
+
+def getMaxVelocity(mesh, IdList):
+    velPts = mesh.GetPointData().GetAbstractArray('Velocity')
+    maxVel = 0.
+    for i in IdList:
+        vel = np.linalg.norm(velPts.GetTuple(i))
+        if abs(vel)>maxVel:
+            maxVel = vel
+
+    return maxVel
+def getAllMaxVelocity(fns, face_poly_fn):
+    polyCD = setupSurfaceMesh(fns[0])
+
+    face_poly = label_io.loadVTKMesh(face_poly_fn)
+    face_pts = face_poly.GetPoints()
+    
+    pt_ids = utils.findPointCorrespondence(polyCD, face_pts)
+    
+    Vlist = []
+    for fn in fns:
+        #if mode=='mv':
+        #    IdList = mvList
+        #elif mode=='av':
+        #    IdList = avList
+        poly = setupSurfaceMesh(fn)
+        V = getMaxVelocity(poly, pt_ids)/1e3
+        Vlist.append(V)
+    return Vlist
 
 def getAllFlowRate(fns, face_poly_fn):
     polyCD = setupSurfaceMesh(fns[0])
@@ -145,7 +173,7 @@ def getAllFlowRate(fns, face_poly_fn):
         #elif mode=='av':
         #    IdList = avList
         poly = setupSurfaceMesh(fn)
-        Q = flowRate(poly, IdList)
+        Q = flowRate(poly, IdList)/1e7
         Qlist.append(Q)
     return Qlist
 
@@ -176,22 +204,34 @@ def main():
     Qlist = []
     for pre, m in zip(prefix, mode):
         fns = natural_sort(glob.glob(os.path.join(dir_name, pre+'*.vtu')))
-        fns = [fns[i] for i in range(0, len(fns), 20)]
-        Qlist += getAllFlowRate(fns, face[m])
-    
+        fns = [fns[i] for i in range(0, len(fns), 2)]
+        #Qlist += getAllFlowRate(fns, face[m])
+        res = getAllMaxVelocity(fns, face[m])
+        if m == 'av':
+            Qlist += res
+        elif m=='mv':
+            Qlist += [-1.*r for r in res] 
+
     Qlist_gt = []
     for pre, m in zip(prefix, mode):
         fns = natural_sort(glob.glob(os.path.join(dir_name_gt, pre+'*.vtu')))
-        fns = [fns[i] for i in range(0, len(fns), 20)]
-        Qlist_gt += getAllFlowRate(fns, face_gt[m])
+        fns = [fns[i] for i in range(0, len(fns), 2)]
+        #Qlist_gt += getAllFlowRate(fns, face_gt[m])
+        res = getAllMaxVelocity(fns, face_gt[m])
+        if m == 'av':
+            Qlist_gt += res
+        elif m=='mv':
+            Qlist_gt += [-1.*r for r in res] 
 
-    plt.plot(Qlist, '-', linewidth=3)
-    plt.plot(Qlist_gt, '-', linewidth=3)
+    time = np.linspace(0, 1, len(Qlist))
+    plt.rcParams.update({'font.size': 20})
+    plt.plot(time, Qlist, '-', linewidth=3)
+    plt.plot(time, Qlist_gt, '-', linewidth=3)
+    plt.xlabel('Time')
+    plt.ylabel('Max Velocity (m/s)')
 
-    #plt.setp(lines[0],linewidth=3)
-    #plt.setp(lines[1],linewidth=3)
-    #plt.legend(('Original','Smoothed'),loc='upper right')
-    plt.title('flow rate (ml/s)')
+    plt.legend(('Automated','Ground Truth'),loc='upper right')
+    #plt.title('flow rate (ml/s)')
     plt.show()
     #plt.savefig(prefix+'flowRate.png')
 

@@ -18,12 +18,12 @@ def get_volume(poly):
     return mass.GetVolume()*1.e-3
 
 if __name__ == '__main__':
-    #DIR_NAME = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40282_20150504/surfaces/'
-    #DIR_NAME_gt = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40282_20150504/surfaces'
-    DIR_NAME = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results2/MACS40244_20150309/surfaces/'
-    DIR_NAME_gt = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309/surfaces/'
-    #START_PHASE = 8
-    START_PHASE = 9
+    DIR_NAME = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40282_20150504/surfaces/'
+    DIR_NAME_gt = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt2/MACS40282_20150504/surfaces'
+    #DIR_NAME = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results2/MACS40244_20150309/surfaces/'
+    #DIR_NAME_gt = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309/surfaces/'
+    START_PHASE = 8
+    #START_PHASE = 9
     TOTAL_PHASE = 10
 
     fns = sorted(glob.glob(os.path.join(DIR_NAME, '*.vtk')))
