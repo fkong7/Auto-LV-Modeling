@@ -117,12 +117,12 @@ def ground_truth_correction(gt_fn, im_fn, ids):
 def map_registered_surface_to_ground_truth():
     #poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40282_20150504/surfaces'
     #im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40282_20150504/wall_motion_labels_gt' 
-    #poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results2/MACS40282_20150504/surfaces'
-    #im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40282_20150504/wall_motion_labels' 
+    poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40282_20150504/surfaces'
+    im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40282_20150504/wall_motion_labels' 
     #poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309/surfaces'
     #im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40244_20150309/wall_motion_labels_gt' 
-    poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results2/MACS40244_20150309/surfaces'
-    im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40244_20150309/wall_motion_labels' 
+    #poly_dir = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40244_20150309/surfaces'
+    #im_dir ='/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40244_20150309/wall_motion_labels' 
     poly_dir_out = os.path.join(os.path.dirname(poly_dir), "surfaces_corrected")
     im_dir_out = os.path.join(os.path.dirname(im_dir), "wall_motion_labels_processed")
 
