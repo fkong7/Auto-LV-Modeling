@@ -4,13 +4,14 @@
     "Total Phase": 10,
     "Image Name": "",
     "Output Surface Model Name": "mr_train_1010_label_bad.nii.gz.vtk",
-    "Output Dir Name": "/Users/fanweikong/Documents/Modeling/SurfaceModeling/results",
+    "Output Dir Name": "/Users/fanweikong/Documents/Modeling/pycpd/data/left_heart",
     "Segmentation Name": "mr_train_1010_label_bad.nii.gz",
     "Image Top Dir": "/Users/fanweikong/Documents/Modeling/SurfaceModeling",
     "Segmentation Folder Name": "",
     "Image Folder Name": "wall_motion_labels",
+    "Mask Folder Name": "wall_motion_labels",
     "Number of Interpolations": 199,
     "Number of Cardiac Cycles": 1,
     "Cycle Duration (s)": 1,
-    "Mesh Size": 1.5
+    "Mesh Size": 2.5
 }
