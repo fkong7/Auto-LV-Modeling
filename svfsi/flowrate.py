@@ -93,7 +93,7 @@ def setupSurfaceMesh(fileName):
 def flowRate(polyCD,IdList):
     #get velocity data
     polyCD = computeNormals(polyCD, 20)
-    polyCD = convertPointDataToCellData(poly)
+    polyCD = convertPointDataToCellData(polyCD)
     velCells = polyCD.GetCellData()
     norms = velCells.GetNormals()
     velArray = velCells.GetAbstractArray('Velocity')
@@ -106,7 +106,6 @@ def flowRate(polyCD,IdList):
         vel = velArray.GetTuple(i)
         norm = norms.GetTuple(i)
         q = np.dot(np.array(vel),np.array(norm))*area*1e4
-        #print('%f, %f\n'% (np.dot(np.array(vel),np.array(norm)), np.linalg.norm(np.array(vel))))
         Q = Q+q
         A = A + area
         count = count+1
@@ -115,6 +114,12 @@ def flowRate(polyCD,IdList):
     #print('Total number of cells in region is %d' % count)
     return Q
 
+#def getMaxVelocity(mesh, IdList):
+#    velPts = mesh.GetPointData().GetAbstractArray('Velocity')
+#    from vtk.util.numpy_support import vtk_to_numpy
+#    py_array = vtk_to_numpy(velPts)
+#    #return np.percentile(py_array, 99)
+#    return np.max(py_array)
 def getMaxVelocity(mesh, IdList):
     velPts = mesh.GetPointData().GetAbstractArray('Velocity')
     maxVel = 0.
@@ -124,6 +129,7 @@ def getMaxVelocity(mesh, IdList):
             maxVel = vel
 
     return maxVel
+
 def getAllMaxVelocity(fns, face_poly_fn):
     polyCD = setupSurfaceMesh(fns[0])
 
@@ -140,7 +146,19 @@ def getAllMaxVelocity(fns, face_poly_fn):
         #    IdList = avList
         poly = setupSurfaceMesh(fn)
         V = getMaxVelocity(poly, pt_ids)/1e3
-        Vlist.append(V)
+        if not np.isnan(V):
+            Vlist.append(V)
+    return Vlist
+
+def getAllVolume(fns):
+    
+    Vlist = []
+    for fn in fns:
+        poly = setupSurfaceMesh(fn)
+        mass = vtk.vtkMassProperties()
+        mass.SetInputData(poly)
+        mass.Update()
+        Vlist.append(mass.GetVolume()*1.e-3)
     return Vlist
 
 def getAllFlowRate(fns, face_poly_fn):
@@ -151,7 +169,6 @@ def getAllFlowRate(fns, face_poly_fn):
     
     pt_ids = utils.findPointCorrespondence(polyCD, face_pts)
     IdList = findCellsByPoints(polyCD, pt_ids)
-    print(IdList)
     tags = vtk.vtkIntArray()
     tags.SetNumberOfComponents(1)
     tags.SetName('Region Ids')
@@ -173,8 +190,9 @@ def getAllFlowRate(fns, face_poly_fn):
         #elif mode=='av':
         #    IdList = avList
         poly = setupSurfaceMesh(fn)
-        Q = flowRate(poly, IdList)/1e7
-        Qlist.append(Q)
+        Q = -1. * flowRate(poly, IdList)/1e7
+        if not np.isnan(Q):
+            Qlist.append(Q)
     return Qlist
 
 import re
@@ -183,54 +201,69 @@ def natural_sort(l):
     alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ]
     return sorted(l, key = alphanum_key)
 
-def main():
-    dir_name = '/Volumes/Untitled/LVFSI_data/MACS40282_20150504_results_coarse'
-    dir_name_gt = '/Volumes/Untitled/LVFSI_data/MACS40282_20150504_gt_results_coarse'
 
+def main():
+    #dir_name = '/Volumes/Untitled/LVFSI_data/MACS40282_20150504_results_coarse'
+    #dir_name_gt = '/Volumes/Untitled/LVFSI_data/MACS40282_20150504_gt_results_coarse2'
+    dir_name = '/Volumes/Untitled/LVFSI_data/MACS40244_20150309_results_coarse2'
+    dir_name_gt = '/Volumes/Untitled/LVFSI_data/MACS40244_20150309_gt_results_coarse2'
     face = {}
-    #face['av'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40244_20150309/MACS40244_20150309-mesh-complete-coarse/mesh-surfaces/noname_3.vtp'
-    #face['mv'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40244_20150309/MACS40244_20150309-mesh-complete-coarse/mesh-surfaces/noname_2.vtp'
+    face['av'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40244_20150309/MACS40244_20150309-mesh-complete-coarse/mesh-surfaces/noname_3.vtp'
+    face['mv'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40244_20150309/MACS40244_20150309-mesh-complete-coarse/mesh-surfaces/noname_2.vtp'
     face_gt = {}
-    #face_gt['av'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309_gt/MACS40244_20150309_gt-mesh-complete-coarse/mesh-surfaces/noname_3.vtp'
-    #face_gt['mv'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309_gt/MACS40244_20150309_gt-mesh-complete-coarse/mesh-surfaces/noname_2.vtp'
-    face['av'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40282_20150504/MACS40282_20150504-mesh-complete-coarse/mesh-surfaces/noname_3.vtp'
-    face['mv'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40282_20150504/MACS40282_20150504-mesh-complete-coarse/mesh-surfaces/noname_2.vtp'
-    face_gt['av'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40282_20150504_gt/MACS40282_20150504_gt-mesh-complete-coarse/mesh-surfaces/noname_3.vtp'
-    face_gt['mv'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40282_20150504_gt/MACS40282_20150504_gt-mesh-complete-coarse/mesh-surfaces/noname_2.vtp'
+    face_gt['av'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309_gt/MACS40244_20150309_gt-mesh-complete-coarse/mesh-surfaces/noname_3.vtp'
+    face_gt['mv'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt/MACS40244_20150309_gt/MACS40244_20150309_gt-mesh-complete-coarse/mesh-surfaces/noname_2.vtp'
+    #face['av'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40282_20150504/MACS40282_20150504-mesh-complete-coarse/mesh-surfaces/noname_3.vtp'
+    #face['mv'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results/MACS40282_20150504/MACS40282_20150504-mesh-complete-coarse/mesh-surfaces/noname_2.vtp'
+    #face_gt['av'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt2/MACS40282_20150504/MACS40282_20150504_gt-mesh-complete-coarse/mesh-surfaces/noname_3.vtp'
+    #face_gt['mv'] = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/Label_based_results_gt2/MACS40282_20150504/MACS40282_20150504_gt-mesh-complete-coarse/mesh-surfaces/noname_2.vtp'
     prefix = ['result_1_', 'result_2_', 'result_3_']
     mode = ['mv', 'av', 'mv']
     #prefix = ['result_2_']
     #mode = ['av']
     Qlist = []
-    for pre, m in zip(prefix, mode):
-        fns = natural_sort(glob.glob(os.path.join(dir_name, pre+'*.vtu')))
-        fns = [fns[i] for i in range(0, len(fns), 2)]
-        #Qlist += getAllFlowRate(fns, face[m])
-        res = getAllMaxVelocity(fns, face[m])
-        if m == 'av':
-            Qlist += res
-        elif m=='mv':
-            Qlist += [-1.*r for r in res] 
-
     Qlist_gt = []
     for pre, m in zip(prefix, mode):
-        fns = natural_sort(glob.glob(os.path.join(dir_name_gt, pre+'*.vtu')))
-        fns = [fns[i] for i in range(0, len(fns), 2)]
-        #Qlist_gt += getAllFlowRate(fns, face_gt[m])
-        res = getAllMaxVelocity(fns, face_gt[m])
-        if m == 'av':
-            Qlist_gt += res
-        elif m=='mv':
-            Qlist_gt += [-1.*r for r in res] 
+        fns = natural_sort(glob.glob(os.path.join(dir_name, pre+'*.vtu')))
+        fns = [fns[i] for i in range(0, len(fns), 10)]
+        fns_gt = natural_sort(glob.glob(os.path.join(dir_name_gt, pre+'*.vtu')))
+        fns_gt = [fns_gt[i] for i in range(0, len(fns_gt), 10)]
+        
+        num_file = len(fns) if len(fns) < len(fns_gt) else len(fns_gt)
+        fns = fns[:num_file]
+        fns_gt = fns_gt[:num_file]
+        
+        res = getAllFlowRate(fns, face[m])
+        Qlist += res
+        #res_gt = getAllFlowRate(fns_gt, face_gt[m])
+        #Qlist_gt += res_gt
+        #res = getAllMaxVelocity(fns, face[m])
+        #res_gt = getAllMaxVelocity(fns_gt, face_gt[m])
+        #if m == 'av':
+        #    Qlist += res
+        #    Qlist_gt += res_gt
+        #elif m=='mv':
+        #    Qlist += [-1.*r for r in res] 
+        #    Qlist_gt += [-1.*r for r in res_gt]
+        #Qlist += getAllVolume(fns)
+        #Qlist_gt += getAllVolume(fns_gt)
+        #res = np.array(res)
+        #res_gt = np.array(res_gt)
 
+        #diff = np.abs(res_gt-res)
+        #max_id = np.argmax(diff)
+        #print(pre, m, np.max(np.abs(res)), np.min(np.abs(res)), diff[max_id]/np.abs(res_gt[max_id]))
+    
+    
     time = np.linspace(0, 1, len(Qlist))
+
     plt.rcParams.update({'font.size': 20})
     plt.plot(time, Qlist, '-', linewidth=3)
-    plt.plot(time, Qlist_gt, '-', linewidth=3)
+    #plt.plot(time, Qlist_gt, '-', linewidth=3)
     plt.xlabel('Time')
-    plt.ylabel('Max Velocity (m/s)')
+    plt.ylabel('Flow rate (ml/s)')
 
-    plt.legend(('Automated','Ground Truth'),loc='upper right')
+    #plt.legend(('Automated','Ground Truth'),loc='upper right')
     #plt.title('flow rate (ml/s)')
     plt.show()
     #plt.savefig(prefix+'flowRate.png')

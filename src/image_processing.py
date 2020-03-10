@@ -30,11 +30,20 @@ class Images(object):
         return poly
 class lvImage(Images):
     
+    def erase_boundary(self):
+        ### this is only needed for a more general left heart model
+        from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+        x, y, z = self.label.GetDimensions()
+        pylabel = vtk_to_numpy(self.label.GetPointData().GetScalars()).reshape(z, y, x).transpose(2, 1, 0)
+        pylabel = utils.eraseBoundary(pylabel, 2, 0)
+        self.label.GetPointData().SetScalars(numpy_to_vtk(pylabel.transpose(2, 1, 0).flatten()))
+
     def process(self, remove_list):
         self.label = utils.vtkImageResample(self.label, spacing=(1.2, 1.2, 1.2), opt='NN')
         from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
         pylabel = vtk_to_numpy(self.label.GetPointData().GetScalars())
         pylabel = utils.swapLabels(pylabel)
+
         #remove myocardium, RV, RA and PA
         for tissue in remove_list:
             pylabel = utils.removeClass(pylabel, tissue, 0)

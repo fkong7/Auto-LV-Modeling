@@ -55,6 +55,39 @@ class Geometry(object):
     
     def writeMeshComplete(self, path):
         pass
+
+
+class leftHeart(Geometry):
+    
+    def __init__(self, vtk_poly, edge_size=1.):
+        super(leftHeart, self).__init__(vtk_poly, edge_size)
+        self.wall_processed = False
+        self.cap_processed = False
+        self.cap_pts_ids = None
+
+    def processWall(self, aa_cutter):
+        if self.wall_processed:
+            print("Left heart  wall has been processed!")
+            return
+        self.poly = utils.cutPolyDataWithAnother(self.poly, aa_cutter,False)
+        self.poly = utils.fillHole(self.poly, size=15.)
+        id_lists,boundaries = utils.getPointIdsOnBoundaries(self.poly)
+        #self.writeSurfaceMesh('/Users/fanweikong/Downloads/test_1.vtp')
+        for idx, (ids, boundary) in enumerate(zip(id_lists, boundaries)):
+            boundary = utils.smoothVTKPolyline(boundary, 5)
+            self.poly = utils.projectOpeningToFitPlane(self.poly, ids, boundary.GetPoints(), self.edge_size)
+            # Remove the free cells and update the point lists
+            self.poly, id_lists[idx] = utils.removeFreeCells(self.poly, [idx for sub_l in id_lists for idx in sub_l])
+        self.poly = utils.smoothVTKPolydata(utils.cleanPolyData(self.poly, 0.), iteration=50)
+        self.wall_processed = True
+        return
+    def processCap(self, edge_size):
+        if self.cap_processed:
+            print("Caps have been processed!")
+            return
+        self.poly = utils.capPolyDataOpenings(self.poly, edge_size)
+        self.cap_processed = True
+        return
     
 class leftVentricle(Geometry):
     
