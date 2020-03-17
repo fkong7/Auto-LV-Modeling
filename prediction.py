@@ -194,7 +194,7 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
 
     t_start = time.time()
     for m in modality:
-        im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_masks', ext='*.nii.gz')
+        im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_masks', ext='*.nii')
         x_filenames, y_filenames = im_loader.load_imagefiles()
         dice_list = []
 
