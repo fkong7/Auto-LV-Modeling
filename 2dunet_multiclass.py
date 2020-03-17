@@ -187,9 +187,11 @@ val_ds = get_baseline_dataset(x_val_filenames, preproc_fn=val_preprocessing_fn,
 #model = models.Model(inputs=[inputs], outputs=[outputs])
 
 # Build U-net Isensee
-from model import UNet2DIsensee
-unet_isensee = UNet2DIsensee(img_shape, num_class)
-model = unet_isensee.build()
+#from model import UNet2DIsensee
+#unet_isensee = UNet2DIsensee(img_shape, num_class)
+#model = unet_isensee.build()
+inputs, outputs = UNet2D(img_shape, num_class)
+model = models.Model(inputs=[inputs], outputs=[outputs])
 
 adam = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=None, decay=1e-6, amsgrad=False)
 #model.compile(optimizer=adam, loss=bce_dice_loss, metrics=[dice_loss])
