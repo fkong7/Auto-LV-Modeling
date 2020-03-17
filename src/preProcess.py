@@ -1,6 +1,5 @@
 import numpy as np
 import SimpleITK as sitk
-from skimage.transform import resize
 from utils import np_to_tfrecords
 
 def Map_intensity_from_fn(image_vol_fn, m):
@@ -26,6 +25,7 @@ def Resize_and_map_intensity_from_fn(image_vol_fn, m):
     image_vol = sitk.GetArrayFromImage(img).astype(float)
     original_shape = image_vol.shape
     
+    from skimage.transform import resize
     image_vol = resize(image_vol, (space[0]*original_shape[0],space[1]*original_shape[1], space[2]*original_shape[2])) 
     
 
@@ -54,6 +54,7 @@ def HistogramEqualization(pyIm):
 def Resize_by_view(image_vol, view, size):
     shape = [size, size, size]
     shape[view] = image_vol.shape[view]
+    from skimage.transform import resize
     image_vol_resize = resize(image_vol.astype(float), tuple(shape))
     return image_vol_resize
 

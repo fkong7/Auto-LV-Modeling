@@ -8,8 +8,7 @@ import tensorflow.contrib as tfcontrib
 from tensorflow.python.keras import models as models_keras
 
 import SimpleITK as sitk 
-from skimage.transform import resize
-from preProcess import swapLabelsBack, resample_spacing, Resize_by_view, isometric_transform, centering, RescaleIntensity
+from preProcess import swapLabelsBack, resample_spacing, isometric_transform, centering, RescaleIntensity
 from loss import bce_dice_loss, dice_loss
 from tensorflow.python.keras import backend as K
 from model import UNet2D
@@ -106,13 +105,9 @@ class Prediction:
             prob_view = np.zeros(predict_shape)
             for i in indices:
                 model_path = self.models[i]
-                image_vol_resize = Resize_by_view(img_vol, self.views[i], size)
                 (self.unet).load_weights(model_path)
-                prob_view+=model_output_no_resize(self.unet, image_vol_resize, self.views[i], self.channel)
-            prob_resize = np.zeros(prob.shape)
-            for i in range(prob.shape[-1]):
-                prob_resize[:,:,:,i] = resize(prob_view[:,:,:,i], self.original_shape, order=1)
-            prob += prob_resize
+                prob_view+=model_output_no_resize(self.unet, img_vol, self.views[i], self.channel)
+            prob += prob_view
         avg = prob/len(self.models)
         self.pred = predictVol(avg, np.zeros(1))
         return 
@@ -194,7 +189,7 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
 
     t_start = time.time()
     for m in modality:
-        im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_masks', ext='*.nii')
+        im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_masks', ext='*.nii.gz')
         x_filenames, y_filenames = im_loader.load_imagefiles()
         dice_list = []
 
