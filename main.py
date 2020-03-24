@@ -144,8 +144,8 @@ if __name__=="__main__":
     #run volume mesh to generate ids but not using it
     fn_ug = 'temp'
     timming = True
-    time_list = buildLeftHeartModelFromImage([seg_fn], [fn_poly], fn_ug, edge_size=paras['edge_size'], timming=timming)
-    #time_list = buildLVModelFromImage([seg_fn], [fn_poly], fn_ug, edge_size=paras['edge_size'], timming=timming)
+    #time_list = buildLeftHeartModelFromImage([seg_fn], [fn_poly], fn_ug, edge_size=paras['edge_size'], timming=timming)
+    time_list = buildLVModelFromImage([seg_fn], [fn_poly], fn_ug, edge_size=paras['edge_size'], timming=timming)
     if timming:
         import csv
         with open(os.path.join(output_dir, 'time_results.csv'), 'a' , newline="") as f:
