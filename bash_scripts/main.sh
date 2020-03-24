@@ -9,9 +9,12 @@ volume_mesh_script=/Users/fanweikong/Documents/Modeling/SurfaceModeling/volume_m
 #${sv_python_dir}/sv --python -- ${model_script} --json_fn ${json_file}
 
 #dir=/Users/fanweikong/Downloads/test_ensemble-2-10-2
-dir=/Users/fanweikong/Documents/Modeling/SurfaceModeling/examples
-
-for file in ${dir}/*.nii.gz; do  ${sv_python_dir}/sv --python -- ${model_script} --json_fn ${json_file} --seg_name ${file##*/}; done
+#dir=/Users/fanweikong/Documents/Modeling/SurfaceModeling/examples
+#dir=/Users/fanweikong/Documents/ImageData/orCalScore_CTAI/ct_train_masks
+#dir=/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40244_20150309/wall_motion_labels_gt
+dir=/Users/fanweikong/Documents/ImageData/MMWHS/ct_test_masks
+ls ${dir}
+for file in ${dir}/*.nii.gz; do echo ${file} &&  ${sv_python_dir}/sv --python -- ${model_script} --json_fn ${json_file} --seg_name ${file##*/}; done
 
 #conda activate elastix
 #python ${registration_script} --json_fn ${json_file} --write --smooth

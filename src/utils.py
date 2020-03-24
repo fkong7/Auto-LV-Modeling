@@ -229,6 +229,22 @@ def recolorPixelsByPlane(labels, ori, nrm, bg_id):
 ################################
 ## VTK PolyData functions
 ###############################
+def decimation(poly, rate):
+    """
+    Simplifies a VTK PolyData
+
+    Args: 
+        poly: vtk PolyData
+        rate: target rate reduction
+    """
+    decimate = vtk.vtkQuadricDecimation()
+    decimate.SetInputData(poly)
+    decimate.AttributeErrorMetricOn()
+    decimate.SetTargetReduction(rate)
+    decimate.VolumePreservationOn()
+    decimate.Update()
+    return decimate.GetOutput()
+
 def cleanPolyData(poly, tol):
     """
     Cleans a VTK PolyData
@@ -852,6 +868,8 @@ def findPointCorrespondence(mesh,points):
     
     Returns
         IdList: list containing the IDs
+    TO-DO: optimization move vtkKdTreePointLocator out of the loop, why
+    is it inside now?
     """
     IdList = [None]*points.GetNumberOfPoints()
     for i in range(len(IdList)):
