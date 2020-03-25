@@ -72,7 +72,7 @@ def buildLVModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=
 
 def buildLeftHeartModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7], la_id=2, aa_id=6, edge_size = 1., timming=False):
     
-    MESH_RESOLUTION = (1.,1.,1.)
+    MESH_RESOLUTION = (0.5,0.5,0.5)
     FACTOR_AA = 38
         
     time_list = []
