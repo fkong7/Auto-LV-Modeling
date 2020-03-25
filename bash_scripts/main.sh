@@ -12,7 +12,8 @@ volume_mesh_script=/Users/fanweikong/Documents/Modeling/SurfaceModeling/volume_m
 #dir=/Users/fanweikong/Documents/Modeling/SurfaceModeling/examples
 #dir=/Users/fanweikong/Documents/ImageData/orCalScore_CTAI/ct_train_masks
 #dir=/Users/fanweikong/Documents/ImageData/4DCCTA/MACS40244_20150309/wall_motion_labels_gt
-dir=/Users/fanweikong/Documents/ImageData/MMWHS/ct_test_masks
+#dir=/Users/fanweikong/Documents/ImageData/MMWHS/test_ensemble-2-10-2_seg_corrected
+dir=/Users/fanweikong/Documents/ImageData/MMWHS/temp
 ls ${dir}
 for file in ${dir}/*.nii.gz; do echo ${file} &&  ${sv_python_dir}/sv --python -- ${model_script} --json_fn ${json_file} --seg_name ${file##*/}; done
 

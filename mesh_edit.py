@@ -224,6 +224,23 @@ def build_template():
     
     label_io.writeVTKPolyData(poly_tmplt, os.path.join(os.path.dirname(poly_tmplt_fn), 'tmplt.vtp'))
     label_io.writeVTKPoints(poly_tmplt.GetPoints(), os.path.join(os.path.dirname(poly_tmplt_fn), 'tmplt_pts.vtp'))
+
+def mean_template(fn_d):
+    fns = glob.glob(os.path.join(fn_d, '*.vtp'))+glob.glob(os.path.join(fn_d, '*.vtk'))
+    poly = label_io.loadVTKMesh(fns[0])
+    coords = np.zeros((poly.GetNumberOfPoints(),3))
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+    for fn in fns:
+        ply = label_io.loadVTKMesh(fn)
+        coords_ply = vtk_to_numpy(ply.GetPoints().GetData())
+        coords_ply -= np.mean(coords_ply, axis=0)
+        coords += coords_ply
+
+    coords /= len(fns)
+    poly.GetPoints().SetData(numpy_to_vtk(coords))
+    label_io.writeVTKPolyData(poly, os.path.join(fn_d, 'mean.vtp'))
+    
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--input', default="", help="Input folder name")
@@ -231,4 +248,5 @@ if __name__ == "__main__":
     parser.add_argument('--rate', type=float, default=0.8, help="Target reduction rate")
     args = parser.parse_args()
     #decimate_mesh_in_folder(args.input, args.output, args.rate)
-    build_template()
+    #build_template()
+    mean_template('/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000')

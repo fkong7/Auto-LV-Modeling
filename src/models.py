@@ -70,7 +70,7 @@ class leftHeart(Geometry):
             print("Left heart  wall has been processed!")
             return
         self.poly = utils.cutPolyDataWithAnother(self.poly, aa_cutter,False)
-        self.poly = utils.fillHole(self.poly, size=15.)
+        self.poly = utils.fillHole(self.poly, size=25.)
         id_lists,boundaries = utils.getPointIdsOnBoundaries(self.poly)
         #self.writeSurfaceMesh('/Users/fanweikong/Downloads/test_1.vtp')
         for idx, (ids, boundary) in enumerate(zip(id_lists, boundaries)):
@@ -108,7 +108,7 @@ class leftVentricle(Geometry):
         self.poly = utils.fillHole(self.poly, size=15.)
         #improve valve opening geometry
         id_lists,boundaries = utils.getPointIdsOnBoundaries(self.poly)
-        #self.writeSurfaceMesh('/Users/fanweikong/Downloads/test_1.vtp')
+        self.writeSurfaceMesh('/Users/fanweikong/Downloads/test_1.vtp')
         for idx, (ids, boundary) in enumerate(zip(id_lists, boundaries)):
             boundary = utils.smoothVTKPolyline(boundary, 5)
             self.poly = utils.projectOpeningToFitPlane(self.poly, ids, boundary.GetPoints(), self.edge_size)
