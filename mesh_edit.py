@@ -240,6 +240,73 @@ def mean_template(fn_d):
     poly.GetPoints().SetData(numpy_to_vtk(coords))
     label_io.writeVTKPolyData(poly, os.path.join(fn_d, 'mean.vtp'))
     
+def map_new_template_by_existing_registration(reg_d, out_d, fn_old_tmplt, fn_tmplt):
+    from models import leftVentricle
+    fns = glob.glob(os.path.join(reg_d, '*.vtp'))+glob.glob(os.path.join(reg_d, '*.vtk'))
+    tmplt_old = label_io.loadVTKMesh(fn_old_tmplt)
+    tmplt_new = label_io.loadVTKMesh(fn_tmplt)
+    locator = utils.pointLocator(tmplt_old.GetPoints())
+    corr_ids = np.zeros((tmplt_new.GetNumberOfPoints(), 3)).astype(int)
+    corr_weights = np.zeros((tmplt_new.GetNumberOfPoints(), 3))
+    tmplt_new_w_id = utils.extractPolyDataFaces(tmplt_new, 70., 3)
+    
+    label_io.writeVTKPolyData(tmplt_new_w_id, '/Users/fanweikong/Downloads/test2.vtp')
+    #lv = leftVentricle(tmplt_new_w_id, edge_size=3.)
+    #tmplt_new = lv.update(tmplt_new)
+
+    for i in range(tmplt_new.GetNumberOfPoints()):
+        pt = tmplt_new.GetPoints().GetPoint(i)
+        ids = locator.findNClosestPoints(pt,3)
+        pt1 = tmplt_old.GetPoints().GetPoint(ids.GetId(0))
+        pt2 = tmplt_old.GetPoints().GetPoint(ids.GetId(1))
+        pt3 = tmplt_old.GetPoints().GetPoint(ids.GetId(2))
+        dist1 = np.linalg.norm(np.array(pt1) - np.array(pt))
+        dist2 = np.linalg.norm(np.array(pt2) - np.array(pt))
+        dist3 = np.linalg.norm(np.array(pt3) - np.array(pt))
+        total = dist1 + dist2 + dist3
+        corr_ids[i,:] = [ids.GetId(0), ids.GetId(1), ids.GetId(2)]
+        corr_weights[i,:] = [dist3/total, dist2/total, dist1/total]
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+    tmplt_old_coords = vtk_to_numpy(tmplt_old.GetPoints().GetData())
+    for fn in fns:
+        coords = vtk_to_numpy(tmplt_new.GetPoints().GetData())
+        poly = label_io.loadVTKMesh(fn)
+        poly_coords = vtk_to_numpy(poly.GetPoints().GetData())
+        num = corr_weights.shape[0]
+        for i in range(num):
+            #coords[i,:] += dx[corr_ids[i,0],:]*corr_weights[i,0] + \
+            #         dx[corr_ids[i,1],:]*corr_weights[i,1] + \
+            #         dx[corr_ids[i,2],:]*corr_weights[i,2] 
+            coords[i,:] = poly_coords[corr_ids[i,0],:]*corr_weights[i,0] + \
+                    poly_coords[corr_ids[i,1],:]*corr_weights[i,1] + \
+                    poly_coords[corr_ids[i,2],:]*corr_weights[i,2]
+        poly_new = vtk.vtkPolyData()
+        poly_new.DeepCopy(tmplt_new)
+        poly_new.GetPoints().SetData(numpy_to_vtk(coords))
+        poly_new = utils.smoothVTKPolydata(poly_new)
+        lv = leftVentricle(tmplt_new_w_id, edge_size=1.)
+        poly_new = lv.update(poly_new)
+
+        label_io.writeVTKPolyData(poly_new, os.path.join(out_d, os.path.basename(fn)))
+
+def upsample(tmplt_fn, tmplt_next_fn, out_fn=None):
+    """
+    Subdivide the template provided by tmplt_fn with VTK 
+    mesh subdivision. Map the subdivided mesh using the template provided by tmplt_next_fn, which is computed in 3DPixel2Mesh
+    """
+    from models import leftVentricle
+    tmplt = label_io.loadVTKMesh(tmplt_fn)
+    #project caps to planes
+    lv = leftVentricle(tmplt, edge_size=3.)
+    tmplt = lv.update(tmplt)
+    tmplt_new = utils.subdivisionWithCaps(tmplt,'loop',1)
+
+    tmplt_linear = label_io.loadVTKMesh(tmplt_next_fn)
+    idList = utils.findPointCorrespondence(tmplt_new, tmplt_linear.GetPoints())
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+    update_coords = vtk_to_numpy(tmplt_new.GetPoints().GetData())[idList,:]
+    tmplt_linear.GetPoints().SetData(numpy_to_vtk(update_coords))
+    label_io.writeVTKPolyData(tmplt_linear, out_fn)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -249,4 +316,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     #decimate_mesh_in_folder(args.input, args.output, args.rate)
     #build_template()
-    mean_template('/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000')
+    #mean_template('/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000')
+    upsample('/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init2.vtp',
+           '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init3.vtp',
+           '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init3_smooth.vtp') 
+    map_new_template_by_existing_registration(
+            '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000_2_fine_tune',
+            '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000_2_template2',
+            '/Users/fanweikong/Documents/Modeling/pycpd/data/left_heart/examples/template/mean_smoothed.vtp',
+            '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init3_smooth.vtp')

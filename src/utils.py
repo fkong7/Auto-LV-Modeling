@@ -1085,7 +1085,7 @@ def projectOpeningToFitPlane(poly, boundary_ids, points, MESH_SIZE):
     ids = boundary_ids.copy()
     proj_pts = projectPointsToFitPlane(pts)
     dist = np.max(np.linalg.norm(proj_pts - vtk_to_numpy(pts.GetData()), axis=1))
-    ITER = np.ceil(dist/MESH_SIZE)*3
+    ITER = int(np.ceil(dist/MESH_SIZE)*3)
     print("ITER: ", ITER)
     for factor in np.linspace(0.8, 0., ITER, endpoint=False):
         ids, pts,  proj_pts = _moveConnectedPoints(ids, pts, proj_pts, factor)
@@ -1149,6 +1149,67 @@ def removeFreeCells(poly, pt_ids):
             pt_ids.remove(idx)
     poly = deleteCellsFromPolyData(poly, cell_list)
     return poly, pt_ids
+
+def extractPolyDataFaces(poly, angle, expect_num=None):
+    """
+    Extract faces of a VTK PolyData based on feature angle
+    
+    Args:
+        poly: VTK PolyData
+        angle: feature angle
+    """
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+    copy = vtk.vtkPolyData()
+    copy.DeepCopy(poly)
+
+    normals = vtk.vtkPolyDataNormals()
+    normals.SetFeatureAngle(angle)
+    normals.SetInputData(poly)
+    normals.Update()
+
+    connectivity = vtk.vtkConnectivityFilter()
+    connectivity.SetInputConnection(normals.GetOutputPort())
+    connectivity.ColorRegionsOn()
+    connectivity.SetExtractionModeToAllRegions()
+    connectivity.Update()
+    num_surf = connectivity.GetNumberOfExtractedRegions()
+    extracted_regions = connectivity.GetOutput()
+
+    p2c= vtk.vtkPointDataToCellData()
+    p2c.SetInputData(extracted_regions)
+    p2c.Update()
+    extracted_regions = p2c.GetOutput()
+
+    counts  = []
+    face_list = []
+    for i in range(num_surf):
+        face = thresholdPolyData(extracted_regions, 'RegionId', (i,i))
+        face_list.append(face)
+        counts.append(face.GetNumberOfCells())
+    orders = np.argsort(counts)[::-1].astype(int)
+    saved_id = list(orders[:expect_num])
+    face_list = [face_list[i] for i in orders[:expect_num]]
+    corr_list = []
+    for i in range(expect_num):
+        corr_list.append(findPointCorrespondence(copy, face_list[i]))
+    tags = vtk.vtkIntArray()
+    tags.SetNumberOfComponents(1)
+    tags.SetName('ModelFaceID')
+    tags.SetNumberOfValues(copy.GetNumberOfCells())
+    for i in range(copy.GetNumberOfCells()):
+        pt_ids = vtk.vtkIdList()
+        copy.GetCellPoints(i, pt_ids)
+        pt_ids_py = []
+        for j in range(pt_ids.GetNumberOfIds()):
+            pt_ids_py.append(pt_ids.GetId(j))
+        tags.SetValue(i, 1)
+        for k in range(expect_num, 1, -1):
+            if set(pt_ids_py).issubset(set(corr_list[k-1])):
+                tags.SetValue(i, k)
+        
+    copy.GetCellData().SetScalars(tags)
+        
+    return copy 
 
 def cutSurfaceWithPolygon(poly, boundary):
     """
@@ -1263,6 +1324,44 @@ def fixPolydataNormals(poly):
     normAdj.Update()
     poly = normAdj.GetOutput()
     return poly
+def subdivisionWithCaps(poly,mode,num,cap_id=[2,3], wall_id=1):
+    """
+    Subvidie the polydata while perserving the sharp edges between the cap and the wall
+
+    Args:
+        poly: VTK PolyData
+        mode: str, loop, linear, butterfly
+        cap_id: id list of caps
+        wall_id: id of wall --TO-DO possible to have >1 wall, combine first?
+    """
+    cap_bounds = [None]*len(cap_id)
+    wall = thresholdPolyData(poly, 'ModelFaceID', (wall_id, wall_id))
+    wall = subdivision(wall, num, mode)
+    for i, c_id in enumerate(cap_id):
+        cap = thresholdPolyData(poly, 'ModelFaceID', (c_id, c_id))
+        cap_bounds[i] = boundaryEdges(cap)
+        cap = subdivision(cap, num, mode)
+        wall = appendPolyData(wall,cap)
+    wall = cleanPolyData(wall, 1e-5) 
+    
+    return wall
+
+def subdivision(poly,num,option='linear'):
+
+    if option == 'linear':
+        divide = vtk.vtkLinearSubdivisionFilter()
+    elif option == 'loop':
+        divide = vtk.vtkLoopSubdivisionFilter()
+    elif option == 'butterfly':
+        divide = vtk.vtkButterflySubdivisionFilter()
+    else:
+        print("subdivision option: linear, loop or butterfly")
+        raise
+    divide.SetInputData(poly)
+    divide.SetNumberOfSubdivisions(num)
+    divide.Update()
+    return divide.GetOutput()
+
 def orientedPointsetFromBoundary(boundary):
     """
     Create list of oriented ids on a closed boundary curve (polyline)
