@@ -1187,6 +1187,8 @@ def extractPolyDataFaces(poly, angle, expect_num=None):
         face_list.append(face)
         counts.append(face.GetNumberOfCells())
     orders = np.argsort(counts)[::-1].astype(int)
+    if expect_num is None:
+        expect_num = num_surf
     saved_id = list(orders[:expect_num])
     face_list = [face_list[i] for i in orders[:expect_num]]
     corr_list = []

@@ -250,7 +250,6 @@ def map_new_template_by_existing_registration(reg_d, out_d, fn_old_tmplt, fn_tmp
     corr_weights = np.zeros((tmplt_new.GetNumberOfPoints(), 3))
     tmplt_new_w_id = utils.extractPolyDataFaces(tmplt_new, 70., 3)
     
-    label_io.writeVTKPolyData(tmplt_new_w_id, '/Users/fanweikong/Downloads/test2.vtp')
     #lv = leftVentricle(tmplt_new_w_id, edge_size=3.)
     #tmplt_new = lv.update(tmplt_new)
 
