@@ -504,6 +504,27 @@ def createTissueThickness(im, label_id, bg_id,thickness,binary=True):
     newIm.GetPointData().SetScalars(numpy_to_vtk(pyIm_new))
     return newIm
 
+def constrained_local_smoothing(poly, ctr, radius, iteration, factor):
+    for index in range(poly.GetNumberOfPoints()):
+        pt = np.array(poly.GetPoints().GetPoint(index))
+        if np.linalg.norm(pt-ctr)<radius:
+            for it in range(iteration):
+                ptList=vtk.vtkIdList()
+                tempList=vtk.vtkIdList()
+                tempPtList=vtk.vtkIdList()
+                tempCoord=np.zeros((0,3))
+                poly.GetPointCells(index,tempList)
+                for i in range(tempList.GetNumberOfIds()):
+                    poly.GetCellPoints(tempList.GetId(i),tempPtList)
+                    for j in range(3):
+                        if tempPtList.GetId(j)!=index:
+                            ptList.InsertUniqueId(tempPtList.GetId(j))
+                for i in range(ptList.GetNumberOfIds()):
+                    tempCoord = np.vstack((tempCoord, np.array(poly.GetPoints().GetPoint(ptList.GetId(i)))))
+                disp_vec = np.sum(tempCoord, axis=0)/tempCoord.shape[0] - pt
+                poly.GetPoints().SetPoint(index, pt+factor*disp_vec)
+    return poly
+
 def getCentroid(im, label_id):
     """
     Compute the centroid (mean coordinates) of one labelled region

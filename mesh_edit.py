@@ -298,7 +298,7 @@ def upsample(tmplt_fn, tmplt_next_fn, out_fn=None):
     #project caps to planes
     lv = leftVentricle(tmplt, edge_size=3.)
     tmplt = lv.update(tmplt)
-    tmplt_new = utils.subdivisionWithCaps(tmplt,'loop',1)
+    tmplt_new = utils.subdivisionWithCaps(tmplt,'loop',2)
 
     tmplt_linear = label_io.loadVTKMesh(tmplt_next_fn)
     idList = utils.findPointCorrespondence(tmplt_new, tmplt_linear.GetPoints())
@@ -306,6 +306,11 @@ def upsample(tmplt_fn, tmplt_next_fn, out_fn=None):
     update_coords = vtk_to_numpy(tmplt_new.GetPoints().GetData())[idList,:]
     tmplt_linear.GetPoints().SetData(numpy_to_vtk(update_coords))
     label_io.writeVTKPolyData(tmplt_linear, out_fn)
+
+def local_smoothing(poly_fn, ctr, radius, poly_fn_out):
+    model = label_io.loadVTKMesh(poly_fn)
+    poly = utils.constrained_local_smoothing(model, ctr, radius, 50, 0.5)
+    label_io.writeVTKPolyData(poly, poly_fn_out)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -316,11 +321,12 @@ if __name__ == "__main__":
     #decimate_mesh_in_folder(args.input, args.output, args.rate)
     #build_template()
     #mean_template('/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000')
-    upsample('/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init2.vtp',
-           '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init3.vtp',
-           '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init3_smooth.vtp') 
-    map_new_template_by_existing_registration(
-            '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000_2_fine_tune',
-            '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000_2_template2',
-            '/Users/fanweikong/Documents/Modeling/pycpd/data/left_heart/examples/template/mean_smoothed.vtp',
-            '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init3_smooth.vtp')
+    #upsample('/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init2.vtp',
+    #       '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init3.vtp',
+    #       '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init3_smooth.vtp') 
+    #map_new_template_by_existing_registration(
+    #        '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000_2_fine_tune',
+    #        '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000_2_template2',
+    #        '/Users/fanweikong/Documents/Modeling/pycpd/data/left_heart/examples/template/mean_smoothed.vtp',
+    #        '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init3_smooth.vtp')
+    local_smoothing('/Users/fanweikong/Documents/SV-Python-examples/cylinder.vtp', np.array([0., 0., 0.]), 3., '/Users/fanweikong/Downloads/test.vtp')
