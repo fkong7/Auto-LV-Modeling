@@ -127,6 +127,7 @@ def reference_image_build(spacing, size, template_size, dim):
     #template size: image(array) dimension to resize to: a list of three elements
   reference_size = template_size
   reference_spacing = np.array(size)/np.array(template_size)*np.array(spacing)
+  reference_spacing = np.mean(reference_spacing)*np.ones(3)
   #reference_size = size
   reference_image = sitk.Image(reference_size, 0)
   reference_image.SetOrigin(np.zeros(3))
@@ -163,7 +164,7 @@ def isometric_transform(image, ref_img, orig_direction, order=1, target=None):
   #affine.SetMatrix(image.GetDirection())
   return transform_func(image, ref_img, affine, order)
 
-def resample_spacing(sitkIm, resolution=0.5, dim=3, template_size=(256, 256, 256), order=1):
+def resample_spacing(sitkIm, resolution=(0.5, 0.5, 0.5), dim=3, template_size=(256, 256, 256), order=1):
   print("ok")
   if type(sitkIm) is str:
     image = sitk.ReadImage(sitkIm)
@@ -179,6 +180,7 @@ def resample_spacing(sitkIm, resolution=0.5, dim=3, template_size=(256, 256, 256
   ref_img = reference_image_build(resolution, new_size, template_size, dim)
   centered = centering(image, ref_img, order)
   transformed = isometric_transform(centered, ref_img, orig_direction, order)
+
   return transformed, ref_img
 
 def resample_scale(sitkIm, ref_img, scale_factor=1., order=1):
