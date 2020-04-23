@@ -20,6 +20,7 @@ def fix_labels(dir_n):
     fns = sorted(glob.glob(os.path.join(dir_n, '*.nii.gz')))
     
     for n in fns:
+        print(n)
         im = sitk.ReadImage(n)
         pyarr = sitk.GetArrayFromImage(im)
         for index, label in enumerate(ids):
@@ -39,7 +40,6 @@ def fix_excels(dir_n, metric):
         fns = sorted(glob.glob(os.path.join(dir_n, m+'*'+metric+'*.xls')))
         out = open(os.path.join(dir_n, m+'_'+metric+'.xls'), 'w+')
         for fn in fns:
-            print(fn)
             with open(fn) as f:
                 for line in f:
                     score = []
@@ -56,28 +56,32 @@ def fix_excels(dir_n, metric):
 def fix_excels_surface(dir_n):
     modality = ["ct", "mr"]
     classes = ["LV", "Epi", "RV", "LA", "RA", "LO", "PA", "WHS"]
+    #classes = ["LV"]
     #classes = ["WHS"]
     results = {}
     for m in modality:
         results[m.upper()] = []
         for c in classes:
-            out = open(os.path.join(dir_n, m+ '_surfaces_'+c + '.xls'), 'w+')
-            score = []
-            for i in range(1, 41):
-                fn = os.path.join(dir_n, m+'_surface'+str(i)+'_'+c+'.xls')
-                print(fn)
-                with open(fn) as f:
-                    for line in f:
-                        try:
-                            float(line.split()[0])
+            try:
+                out = open(os.path.join(dir_n, m+ '_surfaces_'+c + '.xls'), 'w+')
+                score = []
+                for i in range(1, 41):
+                    fn = os.path.join(dir_n, m+'_surface'+str(i)+'_'+c+'.xls')
+                    print(fn)
+                    with open(fn) as f:
+                        for line in f:
                             try:
-                                score.append(float(line.split()[1]))
-                            except Exception as e: pass
-                            out.write(line)
-                        except Exception as e:
-                            #print(e)
-                            pass
-            results[m.upper()].append(score)
+                                float(line.split()[0])
+                                try:
+                                    score.append(float(line.split()[1]))
+                                except Exception as e: pass
+                                out.write(line)
+                            except Exception as e:
+                                #print(e)
+                                pass
+                results[m.upper()].append(score)
+            except:
+                results[m.upper()].append(list(np.zeros(40)))
             out.close()
         results[m.upper()] = np.array(results[m.upper()]).transpose()
 
@@ -137,11 +141,16 @@ def plot_table(dice, jaccard, surfd, classes, ids):
                 [classes[i] for i in ids]).T
         jc_mean = jc_df.mean()
         jc_std = jc_df.std()
-        surf_df = pd.DataFrame([surfd[k][i][:] for i in ids], 
+        try:
+            surf_df = pd.DataFrame([surfd[k][:,i] for i in ids], 
                 [classes[i] for i in ids]).T
+        except:
+            surf_df = pd.DataFrame([surfd[k][i][:] for i in ids], 
+                [classes[i] for i in ids]).T
+        print(surf_df)
         surf_mean = surf_df.mean()
         surf_std = surf_df.std()
-        
+        print(surf_mean, surf_std)        
         DF = pd.concat([dice_mean, dice_std, jc_mean, jc_std, surf_mean, surf_std], axis=1).T
         print(DF)
         DF['WH paper'] = pd.Series(paper[k], index=DF.index)
@@ -156,27 +165,33 @@ def plot_table(dice, jaccard, surfd, classes, ids):
     print(table_df)
     print(table_df.to_latex(index = True, multirow = True,multicolumn=True, escape=False))
 if __name__ =='__main__':
-    #fix_labels()
-    dir_n = '/Users/fanweikong/Downloads/test_ensemble_post-1'
+    #dir_n = '/Users/fanweikong/Downloads/test_ensemble_post-1'
+    #dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_seg_postprocess2'
+    #fix_labels(dir_n)
+    dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble-2-10-2_surf2seg-post'
+    dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_seg_post'
+    dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_smooth_seg_post'
+    dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_seg_postprocess2_post'
     jaccard = fix_excels(dir_n, 'jaccard')
     dice = fix_excels(dir_n, 'dice')
     surface = fix_excels_surface(dir_n)
+    print("Surface: ", surface['MR'][0][:])
     
     # plotting dice of LV (0), LA(3), Aorta(5), Whole heart(7)
     classes = ["LV", "Epi", "RV", "LA", "RA", "Aorta", "PA", "WH"] 
     ids = [0,3,5,7]
     
-    #fig, axes = plt.subplots(2, 3, figsize=(12,12))
-    ##fig.tight_layout()
-    #fig.subplots_adjust(hspace=.2)
-    #plot_boxplot(dice,axes[:,0], classes, ids, 'Dice scores')
-    #plot_boxplot(jaccard,axes[:,1], classes, ids, 'Jaccard scores')
-    #plot_boxplot(surface,axes[:,2], classes, ids, 'Surface errors (mm)')
-    #axes[0,0].set_ylabel('CT', fontsize=SIZE+5, rotation=0)
-    #axes[0,0].yaxis.set_label_coords(-0.3,0.5)
-    #axes[1,0].set_ylabel('MR', fontsize=SIZE+5, rotation=0)
-    #axes[1,0].yaxis.set_label_coords(-0.3,0.5)
-    ##plt.show()
+    fig, axes = plt.subplots(2, 3, figsize=(12,12))
+    #fig.tight_layout()
+    fig.subplots_adjust(hspace=.2)
+    plot_boxplot(dice,axes[:,0], classes, ids, 'Dice scores')
+    plot_boxplot(jaccard,axes[:,1], classes, ids, 'Jaccard scores')
+    plot_boxplot(surface,axes[:,2], classes, ids, 'Surface errors (mm)')
+    axes[0,0].set_ylabel('CT', fontsize=SIZE+5, rotation=0)
+    axes[0,0].yaxis.set_label_coords(-0.3,0.5)
+    axes[1,0].set_ylabel('MR', fontsize=SIZE+5, rotation=0)
+    axes[1,0].yaxis.set_label_coords(-0.3,0.5)
+    plt.show()
     #plt.savefig(os.path.join(dir_n, 'results.png'))
     
     plot_table(dice, jaccard, surface, classes, ids)
