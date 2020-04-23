@@ -1563,4 +1563,29 @@ def thresholdPolyData(poly, attr, threshold):
     surf_filter.SetInputData(surface_thresh.GetOutput())
     surf_filter.Update()
     return surf_filter.GetOutput()
+def convertPolyDataToImageData(poly, ref_im):
+    """
+    Convert the vtk polydata to imagedata 
 
+    Args:
+        poly: vtkPolyData
+        ref_im: reference vtkImage to match the polydata with
+    Returns:
+        output: resulted vtkImageData
+    """
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+    ref_im.GetPointData().SetScalars(numpy_to_vtk(np.zeros(vtk_to_numpy(ref_im.GetPointData().GetScalars()).shape)))
+    ply2im = vtk.vtkPolyDataToImageStencil()
+    ply2im.SetTolerance(0.1)
+    ply2im.SetInputData(poly)
+    ply2im.SetInformationInput(ref_im)
+    ply2im.Update()
+
+    stencil = vtk.vtkImageStencil()
+    stencil.SetInputData(ref_im)
+    stencil.ReverseStencilOn()
+    stencil.SetStencilData(ply2im.GetOutput())
+    stencil.Update()
+    output = stencil.GetOutput()
+
+    return output
