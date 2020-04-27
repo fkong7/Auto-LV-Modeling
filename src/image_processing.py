@@ -39,7 +39,7 @@ class lvImage(Images):
         self.label.GetPointData().SetScalars(numpy_to_vtk(pylabel.transpose(2, 1, 0).flatten()))
 
     def process(self, remove_list):
-        #self.label = utils.vtkImageResample(self.label, spacing=(1.2, 1.2, 1.2), opt='NN')
+        self.label = utils.vtkImageResample(self.label, spacing=(1.2, 1.2, 1.2), opt='NN')
         from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
         pylabel = vtk_to_numpy(self.label.GetPointData().GetScalars())
         pylabel = utils.swapLabels(pylabel)
@@ -55,19 +55,19 @@ class lvImage(Images):
         self.label = utils.extractLargestConnectedRegion(self.label, 2)
         #self.write_image('/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/construction_steps/extract_largest_region.vti')
         # remove connections between AA and LA
-        #self.label = utils.labelDilateErode(self.label, 6, 3, 8) #6 - AO id, 3 - LV id
+        self.label = utils.labelDilateErode(self.label, 6, 3, 8) #6 - AO id, 3 - LV id
         self.label = utils.labelOpenClose(self.label, 6, 0, size=7)
         self.label = utils.labelOpenClose(self.label, 0, 6, size=7)
-        #self.label = utils.labelDilateErode(self.label, 2, 3, 3) #6 - AO id, 3 - LV id
+        self.label = utils.labelDilateErode(self.label, 2, 3, 3) #6 - AO id, 3 - LV id
         self.label = utils.labelOpenClose(self.label, 2, 0, size=7)
         self.label = utils.labelOpenClose(self.label, 3, 0, size=7)
         self.label = utils.labelOpenClose(self.label, 0, 3, size=7)
         self.label = utils.labelOpenClose(self.label, 0, 2, size=7)
         #self.write_image('/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/construction_steps/remove_extrusion_hole.vti')
-        #ids = utils.locateRegionBoundaryIDs(self.label, 2, 6, size=3.,bg_id=0)
-        #self.ids = np.vstack((ids, utils.locateRegionBoundaryIDs(self.label, 6, 2, size=3., bg_id=0)))
-        #self.label = utils.labelOpenClose(self.label, 2, 0, size=7)
-        #self.label = utils.recolorVTKPixelsByIds(self.label, self.ids, 0)
+        ids = utils.locateRegionBoundaryIDs(self.label, 2, 6, size=4.,bg_id=0)
+        self.ids = np.vstack((ids, utils.locateRegionBoundaryIDs(self.label, 6, 2, size=5., bg_id=0)))
+        self.label = utils.labelOpenClose(self.label, 2, 0, size=7)
+        self.label = utils.recolorVTKPixelsByIds(self.label, self.ids, 0)
         #self.write_image('/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/construction_steps/separate_boundary.vti')
     
     def buildCutter(self, region_id, avoid_id, adjacent_id, FACTOR, op='valve', smooth_iter=50):
