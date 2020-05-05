@@ -99,6 +99,8 @@ def cropMask(mask, percentage):
     tmp = np.moveaxis(mask, i, 0)
     IDs = np.max(np.max(tmp,axis=-1),axis=-1)==0
     blank = boolCounter(IDs)
+    if len(blank)==0:
+        continue
     upper = int(blank[0]*percentage) if int(blank[0]*percentage) != 0 else 1
     lower = -1*int(blank[-1]*percentage) if int(blank[-1]*percentage) !=0 else -1
     mask = np.moveaxis(tmp[int(blank[0]*percentage): -1*int(blank[-1]*percentage),:,:],0,i)

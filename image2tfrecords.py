@@ -74,7 +74,9 @@ def data_preprocess(modality,data_folder,view, data_folder_out, comm, rank):
     for i in range(len(imgVol_fn)):
       img_path = imgVol_fn[i]
       mask_path = mask_fn[i]
-      imgVol = sitk.GetArrayFromImage(resample_spacing(img_path, order=1)[0])  # numpy array
+      imgVol = resample_spacing(img_path, order=1)[0]
+      print("Spacing: ", imgVol.GetSpacing())
+      imgVol = sitk.GetArrayFromImage(imgVol)  # numpy array
       #imgVol = HistogramEqualization(imgVol)
       imgVol = RescaleIntensity(imgVol, m, intensity)
       maskVol = sitk.GetArrayFromImage(resample_spacing(mask_path,order=0)[0])  # numpy array
