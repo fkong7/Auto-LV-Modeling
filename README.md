@@ -11,7 +11,7 @@ Two methods of slicing and segmenting the 3D image volumes are supported:
 * 2.5D segmentation along each axis of the 3D volume (multi-channel)
 ## Training data 
 We used the image and ground truth data provided by [MMWHS] (http://www.sdspeople.fudan.edu.cn/zhuangxiahai/0/mmwhs/) to train our models. 
-Our segmentation models were trainined simultaneously on CT and MR data and trained weights are in `weights`. 
+Our segmentation models were trainined simultaneously on CT and MR data and trained weights are [here] (https://drive.google.com/open?id=162Xr5OezSZL-0K3aoYO7WnHWuGTEXkkj). 
 ## Dependencies
 
 * Tensorflow
