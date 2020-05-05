@@ -24,8 +24,16 @@
 #SBATCH --time=10:30:00
 #
 ## Command(s) to run (example):
-module load gcc openmpi python
-module load tensorflow
+module load gcc/5.4.0
+module load python/3.5
+module load boost/1.63.0-gcc
+module load hdf5/1.8.18-gcc-p
+module load openmpi/2.0.2-gcc
+module load netcdf/4.4.1.1-gcc-p
+module load cmake/3.7.2
+module load swig/3.0.12
+#module load tensorflow/1.12.0-py36-pip-gpu
+module load tensorflow/1.7.0-py35-pip-cpu
 
 python /global/scratch/fanwei_kong/DeepLearning/2DUNet/util_scripts/data_alignment.py \
     --image_dir ImageData/MMWHS_editted \
@@ -42,9 +50,3 @@ python /global/scratch/fanwei_kong/DeepLearning/2DUNet/util_scripts/data_alignme
     --folder_attr _val\
     --aug_num 0
 
-#python /global/scratch/fanwei_kong/DeepLearning/2DUNet/util_scripts/data_alignment.py \
-#    --image_dir ImageData/MMWHS \
-#    --output ImageData/MMWHS_aug4 \
-#    --modality ct mr \
-#    --folder_attr _val\
-#    --aug_num 0

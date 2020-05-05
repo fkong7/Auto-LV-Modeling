@@ -3,7 +3,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "../src"))
 import numpy as np
 import SimpleITK as sitk
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from imageLoader import ImageLoader
 import preProcess
 from preProcess import RescaleIntensity

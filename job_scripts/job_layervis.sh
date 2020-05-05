@@ -26,5 +26,5 @@
 ## Command(s) to run (example):
 module load gcc openmpi python
 module load tensorflow/1.10.0-py36-pip-cpu
-#python /global/scratch/fanwei_kong/2DUNet/partition.py
+
 mpirun -n 20 python /global/scratch/fanwei_kong/DeepLearning/2DUNet/layer_visualization.py 

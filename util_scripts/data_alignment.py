@@ -6,12 +6,9 @@ import functools
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "../src"))
 import numpy as np
-import matplotlib.pyplot as plt
 import SimpleITK as sitk 
-from skimage.transform import resize
 
 from utils import getTrainNLabelNames, writeIm, sample_in_range
-from skimage.transform import resize
 from preProcess import resample_scale, resample_spacing, cropMask
 from intensity_inspector import apply_intensity_map
 import argparse

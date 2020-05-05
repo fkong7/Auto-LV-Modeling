@@ -148,7 +148,8 @@ class Prediction:
             ftr2.SetForegroundValue(int(i))
             if m =="ct":
                 #self.pred = ftr.Execute(ftr2.Execute(self.pred))
-                self.pred = self.pred
+                #self.pred = self.pred
+                self.pred = ftr.Execute(self.pred)
             else:
                 self.pred = ftr.Execute(self.pred)
 
@@ -191,6 +192,10 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
     for m in modality:
         im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_masks', ext='*.nii.gz')
         x_filenames, y_filenames = im_loader.load_imagefiles()
+        im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_masks', ext='*.nii')
+        x_filenames2, y_filenames2 = im_loader.load_imagefiles()
+        x_filenames += x_filenames2
+        y_filenames += y_filenames2
         dice_list = []
 
         for i in range(len(x_filenames)):
@@ -199,7 +204,7 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
             predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i], channel)
             predict.volume_prediction_average(256)
             predict.resample_prediction()
-            #predict.post_process(m)
+            predict.post_process(m)
             if y_filenames[i] is not None:
                 dice_list.append(predict.dice())
 
