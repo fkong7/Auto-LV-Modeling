@@ -204,7 +204,7 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
             predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i], channel)
             predict.volume_prediction_average(256)
             predict.resample_prediction()
-            predict.post_process(m)
+            #predict.post_process(m)
             if y_filenames[i] is not None:
                 dice_list.append(predict.dice())
 
