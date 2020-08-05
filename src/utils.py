@@ -1212,6 +1212,7 @@ def extractPolyDataFaces(poly, angle, expect_num=None):
         expect_num = num_surf
     saved_id = list(orders[:expect_num])
     face_list = [face_list[i] for i in orders[:expect_num]]
+    print("Face list: ", face_list)
     corr_list = []
     for i in range(expect_num):
         corr_list.append(findPointCorrespondence(copy, face_list[i]))
@@ -1347,7 +1348,7 @@ def fixPolydataNormals(poly):
     normAdj.Update()
     poly = normAdj.GetOutput()
     return poly
-def subdivisionWithCaps(poly,mode,num,cap_id=[2,3], wall_id=1):
+def subdivisionWithCaps(poly,mode,num,cap_id=[2,3], wall_id=1, clean=True):
     """
     Subvidie the polydata while perserving the sharp edges between the cap and the wall
 
@@ -1357,16 +1358,18 @@ def subdivisionWithCaps(poly,mode,num,cap_id=[2,3], wall_id=1):
         cap_id: id list of caps
         wall_id: id of wall --TO-DO possible to have >1 wall, combine first?
     """
-    cap_bounds = [None]*len(cap_id)
+    #cap_bounds = [None]*len(cap_id)
     wall = thresholdPolyData(poly, 'ModelFaceID', (wall_id, wall_id))
     wall = subdivision(wall, num, mode)
     for i, c_id in enumerate(cap_id):
         cap = thresholdPolyData(poly, 'ModelFaceID', (c_id, c_id))
-        cap_bounds[i] = boundaryEdges(cap)
+        #cap_bounds[i] = boundaryEdges(cap)
         cap = subdivision(cap, num, mode)
         wall = appendPolyData(wall,cap)
-    wall = cleanPolyData(wall, 1e-5) 
-    
+        if clean:
+            wall = cleanPolyData(wall, 0.) 
+    if clean:
+        wall = cleanPolyData(wall, 1e-5) 
     return wall
 
 def subdivision(poly,num,option='linear'):

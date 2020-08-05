@@ -242,6 +242,9 @@ def mean_template(fn_d):
     
 def map_new_template_by_existing_registration(reg_d, out_d, fn_old_tmplt, fn_tmplt):
     from models import leftVentricle
+    try:
+        os.makedirs(out_d)
+    except Exception as e: print(e)
     fns = glob.glob(os.path.join(reg_d, '*.vtp'))+glob.glob(os.path.join(reg_d, '*.vtk'))
     tmplt_old = label_io.loadVTKMesh(fn_old_tmplt)
     tmplt_new = label_io.loadVTKMesh(fn_tmplt)
@@ -283,12 +286,13 @@ def map_new_template_by_existing_registration(reg_d, out_d, fn_old_tmplt, fn_tmp
         poly_new.DeepCopy(tmplt_new)
         poly_new.GetPoints().SetData(numpy_to_vtk(coords))
         poly_new = utils.smoothVTKPolydata(poly_new)
-        lv = leftVentricle(tmplt_new_w_id, edge_size=1.)
+        #lv = leftVentricle(tmplt_new_w_id, edge_size=1.)
+        lv = leftVentricle(tmplt_new_w_id, edge_size=3.)
         poly_new = lv.update(poly_new)
 
         label_io.writeVTKPolyData(poly_new, os.path.join(out_d, os.path.basename(fn)))
 
-def upsample(tmplt_fn, tmplt_next_fn, out_fn=None):
+def upsample(tmplt_fn, tmplt_next_fn=None, out_fn=None):
     """
     Subdivide the template provided by tmplt_fn with VTK 
     mesh subdivision. Map the subdivided mesh using the template provided by tmplt_next_fn, which is computed in 3DPixel2Mesh
@@ -298,19 +302,46 @@ def upsample(tmplt_fn, tmplt_next_fn, out_fn=None):
     #project caps to planes
     lv = leftVentricle(tmplt, edge_size=3.)
     tmplt = lv.update(tmplt)
-    tmplt_new = utils.subdivisionWithCaps(tmplt,'loop',2)
-
-    tmplt_linear = label_io.loadVTKMesh(tmplt_next_fn)
-    idList = utils.findPointCorrespondence(tmplt_new, tmplt_linear.GetPoints())
-    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
-    update_coords = vtk_to_numpy(tmplt_new.GetPoints().GetData())[idList,:]
-    tmplt_linear.GetPoints().SetData(numpy_to_vtk(update_coords))
-    label_io.writeVTKPolyData(tmplt_linear, out_fn)
+    tmplt_new = utils.subdivisionWithCaps(tmplt,'loop',1)
+    if tmplt_next_fn is not None:
+        tmplt_linear = label_io.loadVTKMesh(tmplt_next_fn)
+        idList = utils.findPointCorrespondence(tmplt_new, tmplt_linear.GetPoints())
+        from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+        update_coords = vtk_to_numpy(tmplt_new.GetPoints().GetData())[idList,:]
+        tmplt_linear.GetPoints().SetData(numpy_to_vtk(update_coords))
+        label_io.writeVTKPolyData(tmplt_linear, out_fn)
+    else:
+        label_io.writeVTKPolyData(tmplt_new, out_fn)
 
 def local_smoothing(poly_fn, ctr, radius, poly_fn_out):
     model = label_io.loadVTKMesh(poly_fn)
     poly = utils.constrained_local_smoothing(model, ctr, radius, 50, 0.5)
     label_io.writeVTKPolyData(poly, poly_fn_out)
+
+def upsample_any(poly_dir, poly_out_dir, tmplt_fn=None):
+    '''
+    tmplt_fn works to provide face id list, face id should be 1 for wall, 2, 3 for caps
+    '''
+    fns = glob.glob(os.path.join(poly_dir, '*.vtp')) + glob.glob(os.path.join(poly_dir, '*.vtk'))
+    try:
+        os.makedirs(poly_out_dir)
+    except Exception as e: print(e)
+    if tmplt_fn is not None:
+        tmplt = label_io.loadVTKMesh(tmplt_fn)
+        tmplt = utils.extractPolyDataFaces(tmplt, 55., 3)
+    for fn in fns:
+        fn_out = os.path.join(poly_out_dir, os.path.basename(fn))
+        poly = label_io.loadVTKMesh(fn)
+        if tmplt_fn is not None:
+            poly_w_id = vtk.vtkPolyData()
+            poly_w_id.DeepCopy(tmplt)
+            poly_w_id.GetPoints().SetData(poly.GetPoints().GetData())
+            poly_w_id = utils.subdivisionWithCaps(poly_w_id,'loop',2, clean=False)
+        else:
+            #poly_w_id = utils.extractPolyDataFaces(poly, 45., 3)
+            #poly_w_id = utils.subdivisionWithCaps(poly,'loop',2, clean=False)
+            poly_w_id = utils.subdivision(poly,2,'loop')
+        label_io.writeVTKPolyData(poly_w_id, fn_out)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -321,12 +352,37 @@ if __name__ == "__main__":
     #decimate_mesh_in_folder(args.input, args.output, args.rate)
     #build_template()
     #mean_template('/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000')
+    #Building denser meshes
+    #upsample('/Users/fanweikong/Documents/Modeling/SVProject/Models/init1_flipped_n.vtp',
+    #       out_fn='/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template_w_face_fine/init1_upsample_smooth.vtp') 
+    #upsample('/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template_w_face_fine/init1_upsample_smooth.vtp',
+    #       out_fn='/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template_w_face_fine/init2_upsample_smooth.vtp') 
+    #upsample('/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template_w_face_fine/init2_upsample_smooth.vtp',
+    #       out_fn='/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template_w_face_fine/init3_upsample_smooth.vtp') 
     #upsample('/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init2.vtp',
     #       '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init3.vtp',
-    #       '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init3_smooth.vtp') 
+    #       '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init3_smooth_test.vtp') 
+    #upsample_any('/Users/fanweikong/Documents/ImageData/multi_dataset_compiled/ct_val_mesh',
+    #        '/Users/fanweikong/Documents/ImageData/multi_dataset_compiled/ct_val_mesh_dense')
     #map_new_template_by_existing_registration(
-    #        '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000_2_fine_tune',
-    #        '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000_2_template2',
+    #        '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/orCalScore_CTAI_test_1_1000_2_template2_fine_tune',
+    #        '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/orCalScore_CTAI_test_1_1000_2_template2',
     #        '/Users/fanweikong/Documents/Modeling/pycpd/data/left_heart/examples/template/mean_smoothed.vtp',
     #        '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/data/template/init3_smooth.vtp')
-    local_smoothing('/Users/fanweikong/Documents/SV-Python-examples/cylinder.vtp', np.array([0., 0., 0.]), 3., '/Users/fanweikong/Downloads/test.vtp')
+    #upsample_any('/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000_2_fine_tune',
+    #        '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000_2_fine_tune_upsample',
+    #        tmplt_fn='/Users/fanweikong/Documents/Modeling/pycpd/data/left_heart/examples/template/mean_smoothed.vtp')
+    #map_new_template_by_existing_registration(
+    #        '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000_2_fine_tune_upsample',
+    #        '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000_2_fine_tune_dense',
+    #        '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000_2_fine_tune_upsample/mean_smoothed.vtp',
+    #        '/Users/fanweikong/Documents/Modeling/pycpd/data/left_heart/examples/template/mean_smoothed_dense.vtp')
+    upsample_any('/Users/fanweikong/Documents/Modeling/pycpd/data/registered/orCalScore_CTAI_test_1_1000_2_template2_fine_tune',
+            '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/orCalScore_CTAI_test_1_1000_2_template2_fine_tune_upsample',
+            tmplt_fn='/Users/fanweikong/Documents/Modeling/pycpd/data/left_heart/examples/template/mean_smoothed.vtp')
+    map_new_template_by_existing_registration(
+            '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/orCalScore_CTAI_test_1_1000_2_template2_fine_tune_upsample',
+            '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/orCalScore_CTAI_test_1_1000_2_template2_dense',
+            '/Users/fanweikong/Documents/Modeling/pycpd/data/registered/multidataset_1_1000_2_fine_tune_upsample/mean_smoothed.vtp',
+            '/Users/fanweikong/Documents/Modeling/pycpd/data/left_heart/examples/template/mean_smoothed_dense.vtp')
+    #local_smoothing('/Users/fanweikong/Documents/SV-Python-examples/cylinder.vtp', np.array([0., 0., 0.]), 3., '/Users/fanweikong/Downloads/test.vtp')
