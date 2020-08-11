@@ -17,6 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--folder', nargs=1, help='Name of the folder containing the image data')
 parser.add_argument('--view', nargs=1, type=int, help='Which views 0, 1, 2, axial, coronal, sagittal')
 parser.add_argument('--modality', nargs='+', help='Name of the modality, mr, ct, split by space')
+parser.add_argument('--size', type=int, default=[256, 256, 256], nargs='+', help='Desired size of the input images')
 parser.add_argument('--out_folder', nargs='?', default='_train', help='Folder postfix of the folder to look for')
 parser.add_argument('--attr', help='Attribute of the output folder')
 parser.add_argument('--n_channel', nargs='?', const=1, default=1, type=int, help='Number of channels')
@@ -49,7 +50,7 @@ if channel>1:
 
 
 
-def data_preprocess(modality,data_folder,view, data_folder_out, comm, rank):
+def data_preprocess(modality,im_size, data_folder,view, data_folder_out, comm, rank):
   train_img_path = []
   train_mask_path = []
   train_weights = []
@@ -74,12 +75,15 @@ def data_preprocess(modality,data_folder,view, data_folder_out, comm, rank):
     for i in range(len(imgVol_fn)):
       img_path = imgVol_fn[i]
       mask_path = mask_fn[i]
-      imgVol = resample_spacing(img_path, order=1)[0]
+      imgVol = resample_spacing(img_path, order=1, template_size=tuple(im_size))[0]
+      sitk.WriteImage(imgVol, os.path.join(data_folder_out, m+'_train', os.path.basename(mask_path)))
       print("Spacing: ", imgVol.GetSpacing())
       imgVol = sitk.GetArrayFromImage(imgVol)  # numpy array
       #imgVol = HistogramEqualization(imgVol)
       imgVol = RescaleIntensity(imgVol, m, intensity)
-      maskVol = sitk.GetArrayFromImage(resample_spacing(mask_path,order=0)[0])  # numpy array
+      maskVol = resample_spacing(mask_path,order=0, template_size=tuple(im_size))[0]
+      sitk.WriteImage(maskVol, os.path.join(data_folder_out, m+'_train_masks', os.path.basename(mask_path)))
+      maskVol = sitk.GetArrayFromImage(maskVol)  # numpy array
       maskVol = swapLabels(maskVol)
       print("number of image slices in this view %d" % imgVol.shape[view])
       #remove the blank images with a probability - find the index first
@@ -116,6 +120,9 @@ if rank == 0:
     try:
       os.mkdir(os.path.join(data_folder_out, m+'_train'))
     except Exception as e: print(e)
+    try:
+      os.mkdir(os.path.join(data_folder_out, m+'_train_masks'))
+    except Exception as e: print(e)
 comm.barrier()
 
-data_preprocess(modality,data_folder,view, data_folder_out,comm,rank)
+data_preprocess(modality,args.size,data_folder,view, data_folder_out,comm,rank)
