@@ -40,7 +40,7 @@ def _process_pathnames(fname):
   return img, label
 
 def get_baseline_dataset(filenames, preproc_fn=functools.partial(_augment),
-                         threads=5, 
+                         threads=2, 
                          batch_size=10,
                          shuffle=True):           
   num_x = len(filenames)
