@@ -10,13 +10,13 @@ import SimpleITK as sitk
 def sample_in_range(range_):
   return (range_[1] - range_[0]) * np.random.random_sample() + range_[0]
 
-def getTrainNLabelNames(data_folder, m, ext='*.nii.gz',fn='_train'):
+def getTrainNLabelNames(data_folder, m, ext='*.nii.gz',fn='_train', post='_masks'):
   x_train_filenames = []
   y_train_filenames = []
   for subject_dir in sorted(glob.glob(os.path.join(data_folder,m+fn,ext))):
       x_train_filenames.append(os.path.realpath(subject_dir))
   try:
-      for subject_dir in sorted(glob.glob(os.path.join(data_folder ,m+fn+'_masks',ext))):
+      for subject_dir in sorted(glob.glob(os.path.join(data_folder ,m+fn+post,ext))):
           y_train_filenames.append(os.path.realpath(subject_dir))
   except Exception as e: print(e)
 

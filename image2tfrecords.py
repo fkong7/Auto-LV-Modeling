@@ -38,10 +38,10 @@ channel = args.n_channel
 intensity = args.intensity
 attr = args.attr
 
-data_folder = '/global/scratch/fanwei_kong/DeepLearning/ImageData/' + base_name
+data_folder = args.folder[0]
 print(data_folder)
 view_names = ['axial', 'coronal', 'sagittal']
-data_folder_out = '/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s%s%s' % (base_name, attr, view_names[view],fn)
+data_folder_out = os.path.join(data_folder, '2d_multiclass-%s%s%s' % (attr, view_names[view], fn))
 
 if channel>1:
     data_folder_out += '_multi%d' %  channel
@@ -56,9 +56,13 @@ def data_preprocess(modality,im_size, data_folder,view, data_folder_out, comm, r
   train_weights = []
   for m in modality:
     #imgVol_fn, mask_fn = getTrainNLabelNames(data_folder, m, fn='_test_nolabel')
-    imgVol_fn, mask_fn = getTrainNLabelNames(data_folder, m, fn=fn)
+    imgVol_fn, mask_fn = getTrainNLabelNames(data_folder, m, fn=fn, post='_masks')
+    imgVol_fn2, mask_fn2 = getTrainNLabelNames(data_folder, m,ext='*.nii',fn=fn, post='_masks')
+    imgVol_fn += imgVol_fn2
+    mask_fn += mask_fn2
     if rank ==0:
       print("number of training data %d" % len(imgVol_fn))
+      print("number of training data masks %d" % len(mask_fn))
     assert len(imgVol_fn) == len(mask_fn)
     
 

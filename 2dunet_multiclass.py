@@ -51,6 +51,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--image',  help='Name of the folder containing the image data')
+parser.add_argument('--val',  help='Name of the folder containing the image data')
 parser.add_argument('--attr', help='Attribute name of the folders containing 2d slices')
 parser.add_argument('--output',  help='Name of the output folder')
 parser.add_argument('--view', type=int, help='view id, axial(0), coronal(1), sagittal(2)')
@@ -58,6 +59,7 @@ parser.add_argument('--modality', nargs='+', help='Name of the modality, mr, ct,
 parser.add_argument('--num_epoch', type=int, help='Maximum number of epochs to run')
 parser.add_argument('--num_class', type=int, help='Number of classes')
 parser.add_argument('--channel', type=int, default=1, help='Number of channels of input images')
+parser.add_argument('--size', type=int, default=[256, 256], nargs='+', help='Desired size of the input images')
 parser.add_argument('--seed', type=int, default=41, help='Randome seed')
 parser.add_argument('--batch_size', type=int, default=10, help='Batch size')
 parser.add_argument('--lr', type=float, help='Learning rate')
@@ -72,7 +74,7 @@ num_class = args.num_class
 epochs = args.num_epoch
 channel = args.channel
 view = args.view
-img_shape = (256, 256, channel)
+img_shape = (args.size[0], args.size[1], channel)
 batch_size = args.batch_size
 attr = args.attr
 lr = args.lr
@@ -81,10 +83,10 @@ lr = args.lr
 weights = np.ones(num_class)
 weights[0] = 0.05
 
-data_folder = '/global/scratch/fanwei_kong/DeepLearning/ImageData/%s' % im_base_name
+#data_folder = '/global/scratch/fanwei_kong/DeepLearning/ImageData/%s' % im_base_name
 view_names = ['axial', 'coronal', 'sagittal']
-data_folder_out = ['/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s%s_train' % (im_base_name, attr,view_names[view])]*2
-data_val_folder_out = ['/global/scratch/fanwei_kong/DeepLearning/ImageData/%s/2d_multiclass-%s%s_val' % (im_base_name, attr,view_names[view])]*2
+data_folder_out = [ os.path.join(args.image, '2d_multiclass-%s%s_train' % (attr,view_names[view]))]*2
+data_val_folder_out = [os.path.join(args.val, '2d_multiclass-%s%s_val' % (attr,view_names[view]))]*2
 if channel>1:
    data_folder_out += '_multi%d' % channel
    data_val_folder_out += '_multi%d' % channel
@@ -136,7 +138,10 @@ if len(x_val_filenames) ==0:
     
 num_train_examples = len(x_train_filenames)
 num_val_examples = len(x_val_filenames)
-
+#total_images = 0
+#for f_i, file in enumerate(x_train_filenames): 
+#    print(f_i, file) 
+#    total_images += sum([1 for _ in tf.python_io.tf_record_iterator(file)])
 
 """## Set up train and validation datasets
 Note that we apply image augmentation to our training dataset but not our validation dataset.
@@ -195,7 +200,7 @@ model.summary()
 
 cp = tf.keras.callbacks.ModelCheckpoint(filepath=save_model_path, monitor='val_dice_loss', save_best_only=True, verbose=1)
 lr_schedule = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_dice_loss', factor=0.8, patience=5, min_lr=0.000005)
-erly_stp = tf.keras.callbacks.EarlyStopping(monitor='val_dice_loss', patience=15)
+erly_stp = tf.keras.callbacks.EarlyStopping(monitor='val_dice_loss', patience=30)
 # Alternatively, load the weights directly: model.load_weights(save_model_path)
 try:
   model = models.load_model(save_model_path, custom_objects={'bce_dice_loss': bce_dice_loss, 'dice_loss': dice_loss})
