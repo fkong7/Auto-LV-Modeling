@@ -29,10 +29,18 @@ def fitPlaneNormal(points_input):
         normal: normal of the fitting plane
     """
     G = points_input.sum(axis=0) / points_input.shape[0]
-
     u, s, vh = np.linalg.svd(points_input - G)
     normal = vh[2, :]
     return normal
+def getTrainNLabelNames(data_folder, m, ext='*.nii.gz',fn='_train', post='_masks'):
+  x_train_filenames = []
+  y_train_filenames = []
+  for subject_dir in sorted(glob.glob(os.path.join(data_folder,m+fn,ext))):
+      x_train_filenames.append(os.path.realpath(subject_dir))
+  try:
+      for subject_dir in sorted(glob.glob(os.path.join(data_folder ,m+fn+post,ext))):
+          y_train_filenames.append(os.path.realpath(subject_dir))
+  except Exception as e: print(e)
 
 def fitPlaneNormal2(points_input):
     """

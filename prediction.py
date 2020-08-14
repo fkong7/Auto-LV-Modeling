@@ -16,6 +16,30 @@ from imageLoader import ImageLoader
 import argparse
 import time
 
+def swapLabels_LH(labels):
+    labels[labels==421]=420
+    unique_label = np.unique(labels)
+
+    new_label = range(len(unique_label))
+    for i in range(len(unique_label)):
+        label = unique_label[i]
+        print(label)
+        newl = new_label[i]
+        print(newl)
+        labels[labels==label] = newl
+    
+    if len(unique_label) != 4:
+        labels[labels==1] = 0
+        labels[labels==4] = 0
+        labels[labels==5] = 0
+        labels[labels==7] = 0
+        labels[labels==2] = 1
+        labels[labels==3] = 2
+        labels[labels==6] = 3
+       
+    print(unique_label, np.unique(labels))
+
+    return labels
 def model_output_no_resize(model, im_vol, view, channel):
     im_vol = np.moveaxis(im_vol, view, 0)
     ipt = np.zeros([*im_vol.shape,channel])
@@ -24,9 +48,11 @@ def model_output_no_resize(model, im_vol, view, channel):
     shift = int((channel-1)/2)
     for i in range(channel):
         ipt[:,:,:,i] = np.roll(im_vol, shift-i, axis=0)
+    start = time.time()
     prob = model.predict(ipt)
+    end = time.time()
     prob = np.moveaxis(prob, 0, view)
-    return prob
+    return prob, end-start
 
 def predictVol(prob,labels):
     #im_vol, ori_shape, info = data_preprocess_test(image_vol_fn, view, 256, modality)
@@ -81,7 +107,7 @@ class Prediction:
         assert len(self.models)==len(self.views), "Missing view attributes for models"
 
     def volume_prediction_average(self, size):
-        img_vol = resample_spacing(self.image_fn, order=1)[0]
+        img_vol = resample_spacing(self.image_fn, order=1, template_size=(size, size, size) )[0]
         self.image_info = {}
         self.image_info['spacing'] = img_vol.GetSpacing()
         self.image_info['origin'] = img_vol.GetOrigin()
@@ -98,6 +124,7 @@ class Prediction:
         prob = np.zeros((*self.original_shape,8))
         unique_views = np.unique(self.views)
         
+        self.pred_time = 0.
         for view in unique_views:
             indices = np.where(self.views==view)[0]
             predict_shape = [size,size,size,8]
@@ -106,7 +133,9 @@ class Prediction:
             for i in indices:
                 model_path = self.models[i]
                 (self.unet).load_weights(model_path)
-                prob_view+=model_output_no_resize(self.unet, img_vol, self.views[i], self.channel)
+                p, t = model_output_no_resize(self.unet, img_vol, self.views[i], self.channel)
+                prob_view += p
+                self.pred_time += t
             prob += prob_view
         avg = prob/len(self.models)
         self.pred = predictVol(avg, np.zeros(1))
@@ -116,7 +145,9 @@ class Prediction:
         #assuming groud truth label has the same origin, spacing and orientation as input image
         label_vol = sitk.GetArrayFromImage(sitk.ReadImage(self.label_fn))
         pred_label = sitk.GetArrayFromImage(self.pred)
-        pred_label = swapLabelsBack(label_vol, pred_label)
+        #pred_label = swapLabelsBack(label_vol, pred_label)
+        label_vol = swapLabels_LH(label_vol)
+        pred_label = swapLabels_LH(pred_label)
         ds = dice_score(pred_label, label_vol)
         return ds
     
@@ -161,13 +192,14 @@ class Prediction:
             pass
         sitk.WriteImage(sitk.Cast(self.pred, sitk.sitkInt16), out_fn)
 
-def main(modality, data_folder, data_out_folder, model_folder, view_attributes, mode, channel, folder_postfix):
+def main(size, modality, data_folder, data_out_folder, model_folder, view_attributes, mode, channel, folder_postfix):
     print(modality)
     print(view_attributes)
     print(mode)
     print(os.path.join(data_out_folder, '%s_test.csv' % "ct"))
 
     time_list = []
+    time_pred_list = []
 
     model_postfix = "small2"
     model_folders = sorted(model_folder * len(view_attributes))
@@ -180,7 +212,7 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
     except Exception as e: print(e)
     
     #set up models
-    img_shape = (256, 256, channel)
+    img_shape = (size, size, channel)
     num_class = 8
     inputs, outputs = UNet2D(img_shape, num_class)
     unet = models_keras.Model(inputs=[inputs], outputs=[outputs])
@@ -190,32 +222,32 @@ def main(modality, data_folder, data_out_folder, model_folder, view_attributes, 
 
     t_start = time.time()
     for m in modality:
-        im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_masks', ext='*.nii.gz')
+        im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_seg', ext='*.nii.gz')
         x_filenames, y_filenames = im_loader.load_imagefiles()
-        im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_masks', ext='*.nii')
+        im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_seg', ext='*.nii')
         x_filenames2, y_filenames2 = im_loader.load_imagefiles()
         x_filenames += x_filenames2
         y_filenames += y_filenames2
         dice_list = []
-
         for i in range(len(x_filenames)):
             print("processing "+x_filenames[i])
             models = [os.path.realpath(i) + '/weights_multi-all-%s_%s.hdf5' % (j, model_postfix) for i, j in zip(model_folders, view_names)]
             predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i], channel)
-            predict.volume_prediction_average(256)
+            predict.volume_prediction_average(size)
+            time_pred_list.append(predict.pred_time)
             predict.resample_prediction()
             #predict.post_process(m)
-            if y_filenames[i] is not None:
-                dice_list.append(predict.dice())
 
             predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
 
             time_list.append(time.time()-t_start)
             t_start = time.time()
+            if y_filenames[i] is not None:
+                dice_list.append(predict.dice())
         if len(dice_list) >0:
             csv_path = os.path.join(data_out_folder, '%s_test.csv' % m)
             writeDiceScores(csv_path, dice_list)
-    return time_list            
+    return time_list, time_pred_list
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -224,6 +256,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', nargs='+',  help='Name of the folders containing the trained models')
     parser.add_argument('--view', type=int, nargs='+', help='List of views for single or ensemble prediction, split by space. For example, 0 1 2  axial(0), coronal(1), sagittal(2)')
     parser.add_argument('--modality', nargs='+', help='Name of the modality, mr, ct, split by space')
+    parser.add_argument('--size', type=int,default=256, help='Size of images')
     parser.add_argument('--mode', help='Test or validation (without or with ground truth label')
     parser.add_argument('--im_folder_postfix', default='test', help='Postfix of the folder containing image data, for ct_test, enter test')
     parser.add_argument('--n_channel',type=int, default=1, help='Number of image channels of input')
@@ -231,7 +264,10 @@ if __name__ == '__main__':
     print('Finished parsing...')
     
     t_start = time.time() 
-    time_list = main(args.modality, args.image, args.output, args.model, args.view, args.mode, args.n_channel, args.im_folder_postfix)
-    time_list.append(time.time()-t_start)
+    time_list, time_pred_list = main(args.size, args.modality, args.image, args.output, args.model, args.view, args.mode, args.n_channel, args.im_folder_postfix)
+    time_list.append(np.mean(time_list))
+    #time_list.append(time.time()-t_start)
+    time_pred_list.append(np.mean(time_pred_list))
     
     np.savetxt(os.path.join(args.output, 'time_results.csv'), np.transpose([np.array(time_list)]), fmt='%1.3f')
+    np.savetxt(os.path.join(args.output, 'time_pred_results.csv'), np.transpose([np.array(time_pred_list)]), fmt='%1.3f')
