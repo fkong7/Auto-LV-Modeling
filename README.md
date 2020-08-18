@@ -63,7 +63,7 @@ The model construction pipeline takes in the generated segmentation and output r
     ```
     ${sv_python_dir}/sv --python -- ${volume_mesh_script} --json_fn ${json_file}
     ```
-### Construt Point Corresponded LV Meshes from 4D Images
+### Construct Point Corresponded LV Meshes from 4D Images
 Building point-corresponded LV meshes require segmentations from all time frames. One surface mesh will be created at one time frame and propagated to the others by registering the corresponding segmentations. 
 * Update `info.json` with correct file and folder names. Specify the time phase id to construct LV surface mesh.
 * Run `elastix_main.py`.
