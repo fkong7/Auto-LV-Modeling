@@ -1,17 +1,17 @@
 {
-    "Patient ID": "MMWHS/ct_test",
+    "Patient ID": "examples",
     "Start Phase": 6,
     "Total Phase": 10,
-    "Image Name": "phase%d.nii",
-    "Output Surface Model Name": "phase%d.nii.vtk",
-    "Output Dir Name": "/Users/fanweikong/Documents/Modeling/SurfaceModeling/test_ensemble_4_20_surf",
-    "Segmentation Name": "phase%d.nii",
-    "Image Top Dir": "/Users/fanweikong/Documents/ImageData",
-    "Segmentation Folder Name": "wall_motion_labels_gt",
-    "Image Folder Name": "wall_motion_labels_gt",
-    "Mask Folder Name": "wall_motion_labels_gt",
+    "Image Name": "",
+    "Output Surface Model Name": "test.nii.gz.vtk",
+    "Output Dir Name": "output",
+    "Segmentation Name": "test.nii.gz",
+    "Image Top Dir": "example/images",
+    "Segmentation Folder Name": "",
+    "Image Folder Name": "wall_motion_labels",
+    "Mask Folder Name": "wall_motion_labels",
     "Number of Interpolations": 199,
     "Number of Cardiac Cycles": 1,
     "Cycle Duration (s)": 1,
-    "Mesh Size": 1.5
+    "Mesh Size": 2.5
 }
