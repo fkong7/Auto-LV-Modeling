@@ -3,7 +3,8 @@ import numpy as np
 import glob
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
-
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 #plt.gca().yaxis.set_major_formatter(StrMethodFormatter('{x:,.1f}'))
 #import matplotlib
 #font = {'family' : 'normal',
@@ -12,14 +13,16 @@ from matplotlib.ticker import FormatStrFormatter
 #
 #matplotlib.rc('font', **font)
 SIZE = 15
-def fix_labels(dir_n):
+def fix_labels(dir_n,dir_im=None):
     import SimpleITK as sitk
     ids = [0, 205, 420, 500, 550, 600, 820, 850] 
     
     
     fns = sorted(glob.glob(os.path.join(dir_n, '*.nii.gz')))
-    
-    for n in fns:
+    if dir_im is not None:
+        from preProcess import centering
+        im_fns = sorted(glob.glob(os.path.join(dir_im, '*.nii.gz')))
+    for i, n in enumerate(fns):
         print(n)
         im = sitk.ReadImage(n)
         pyarr = sitk.GetArrayFromImage(im)
@@ -29,6 +32,8 @@ def fix_labels(dir_n):
         im_new.SetOrigin(im.GetOrigin())
         im_new.SetDirection(im.GetDirection())
         im_new.SetSpacing(im.GetSpacing())
+        if dir_im is not None:
+            im_new = centering(im_new, sitk.ReadImage(im_fns[i]), order=0)
     
         sitk.WriteImage(im_new, n)
     
@@ -166,12 +171,13 @@ def plot_table(dice, jaccard, surfd, classes, ids):
     print(table_df.to_latex(index = True, multirow = True,multicolumn=True, escape=False))
 if __name__ =='__main__':
     #dir_n = '/Users/fanweikong/Downloads/test_ensemble_post-1'
-    #dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_seg_postprocess2'
-    #fix_labels(dir_n)
+    #dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_seg_postprocess4'
+    dir_n = '/Users/fanweikong/Documents/ImageData/orCalScore_CTAI/ct_test_masks2'
+    fix_labels(dir_n)
     dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble-2-10-2_surf2seg-post'
     dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_seg_post'
     dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_smooth_seg_post'
-    dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_seg_postprocess2_post'
+    dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_seg_postprocess5_post'
     jaccard = fix_excels(dir_n, 'jaccard')
     dice = fix_excels(dir_n, 'dice')
     surface = fix_excels_surface(dir_n)
