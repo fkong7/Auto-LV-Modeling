@@ -1455,7 +1455,7 @@ def capPolyDataOpenings(poly,  size):
         #_plotPoints(points)
         ctr = np.mean(points, axis=0)
         length = np.mean(np.linalg.norm(points-ctr, axis = 1))
-        r = np.linspace(0.5*size/length, (length-size*0.8)/length,np.floor(length/size))
+        r = np.linspace(0.5*size/length, (length-size*0.8)/length,int(np.floor(length/size)))
         addedPts = vtk.vtkPoints()
         for rf in r:
             newPts = vtk.vtkPoints()

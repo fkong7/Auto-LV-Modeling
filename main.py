@@ -13,7 +13,7 @@ import utils
 import vtk
 import time
 
-def buildLVModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=2,aa_id=6, edge_size = 1., timming=False):
+def buildLVModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=2,aa_id=6, edge_size = 1., timming=False, use_SV=True):
     """
     Modified test6 to cut on the PolyData directly to create better defined inlet/outlet geometry
     The left atrium is cut normal to the direction defined by the normal of the mitral plane
@@ -53,24 +53,21 @@ def buildLVModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=
         
         model = leftVentricle(image.generate_surface(0, smooth_iter=20, band=0.02))
         #process models
-        #model.writeSurfaceMesh('/Users/fanweikong/Downloads/test.vtp')
         model.processWall(la_cutter, aa_cutter)
-        #model.writeSurfaceMesh('/Users/fanweikong/Downloads/test2.vtp')
         model.processCap(5.) 
-        #model.writeSurfaceMesh('/Users/fanweikong/Downloads/test3.vtp')
         if timming:
             surf_time = time.time() - time_now
             time_now = time.time()
         fn = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(poly_fn))
-        #model.writeSurfaceMesh(fn)
-        model.remesh(edge_size, fn, poly_fn, ug_fn)
+        if use_SV:
+            model.remesh(edge_size, fn, poly_fn, ug_fn)
         model.writeSurfaceMesh(poly_fn)
         if timming:
             mesh_time = time.time() - time_now
             time_list.append([im_time, surf_time, mesh_time])
     return time_list
 
-def buildLeftHeartModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7], la_id=2, aa_id=6, edge_size = 1., timming=False):
+def buildLeftHeartModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7], la_id=2, aa_id=6, edge_size = 1., timming=False, use_SV=True):
     
     MESH_RESOLUTION = (0.5,0.5,0.5)
     FACTOR_AA = 38
@@ -99,7 +96,8 @@ def buildLeftHeartModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7]
             surf_time = time.time() - time_now
             time_now = time.time()
         fn = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(poly_fn))
-        model.remesh(edge_size, fn, poly_fn, ug_fn)
+        if use_SV:
+            model.remesh(edge_size, fn, poly_fn, ug_fn)
         model.writeSurfaceMesh(poly_fn)
         if timming:
             mesh_time = time.time() - time_now
@@ -114,6 +112,7 @@ if __name__=="__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--json_fn', nargs=1, help='Name of the json file')
+    parser.add_argument('--disable_SV',default=True, action='store_false', help='Whether to disable SV for remeshing')
     parser.add_argument('--seg_name', help='Name of the segmentation file')
     args = parser.parse_args()
     
@@ -145,7 +144,7 @@ if __name__=="__main__":
     fn_ug = 'temp'
     timming = True
     #time_list = buildLeftHeartModelFromImage([seg_fn], [fn_poly], fn_ug, edge_size=paras['edge_size'], timming=timming)
-    time_list = buildLVModelFromImage([seg_fn], [fn_poly], fn_ug, edge_size=paras['edge_size'], timming=timming)
+    time_list = buildLVModelFromImage([seg_fn], [fn_poly], fn_ug, edge_size=paras['edge_size'], timming=timming, use_SV=args.disable_SV)
     if timming:
         import csv
         with open(os.path.join(output_dir, 'time_results.csv'), 'a' , newline="") as f:
