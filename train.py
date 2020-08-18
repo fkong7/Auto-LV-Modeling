@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-"""2dUNet_multiclass.ipynb
-"""
 import os
 import glob
 import functools
@@ -47,7 +45,6 @@ from tensorflow.python.keras.optimizers import Adam
 
 from pickle import dump
 import argparse
-"""# Set up"""
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--image',  help='Name of the folder containing the image data')
@@ -64,35 +61,18 @@ parser.add_argument('--seed', type=int, default=41, help='Randome seed')
 parser.add_argument('--batch_size', type=int, default=10, help='Batch size')
 parser.add_argument('--lr', type=float, help='Learning rate')
 args = parser.parse_args()
-print('Finished parsing...')
 
-modality = args.modality
-im_base_name = args.image
-base_name = args.output
-seed = args.seed
-num_class = args.num_class
-epochs = args.num_epoch
-channel = args.channel
-view = args.view
-img_shape = (args.size[0], args.size[1], channel)
-batch_size = args.batch_size
-attr = args.attr
-lr = args.lr
+img_shape = (args.size[0], args.size[1], args.channel)
 
-#WEIGHT ADJUSTMENTS
-weights = np.ones(num_class)
-weights[0] = 0.05
-
-#data_folder = '/global/scratch/fanwei_kong/DeepLearning/ImageData/%s' % im_base_name
 view_names = ['axial', 'coronal', 'sagittal']
-data_folder_out = [ os.path.join(args.image, '2d_multiclass-%s%s_train' % (attr,view_names[view]))]*2
-data_val_folder_out = [os.path.join(args.val, '2d_multiclass-%s%s_val' % (attr,view_names[view]))]*2
-if channel>1:
-   data_folder_out += '_multi%d' % channel
-   data_val_folder_out += '_multi%d' % channel
+data_folder_out = [ os.path.join(args.image, '2d_multiclass-%s%s_train' % (args.attr,view_names[args.view]))]*2
+data_val_folder_out = [os.path.join(args.val, '2d_multiclass-%s%s_val' % (args.attr,view_names[args.view]))]*2
+if args.channel>1:
+   data_folder_out += '_multi%d' % args.channel
+   data_val_folder_out += '_multi%d' % args.channel
 
-save_model_path = '/global/scratch/fanwei_kong/DeepLearning/2DUNet/Logs/%s/weights_multi-all-%s_small2.hdf5' % (base_name,view_names[view])
-save_loss_path = '/global/scratch/fanwei_kong/DeepLearning/2DUNet/Logs/%s/%s' % (base_name,view_names[view])
+save_model_path = os.path.join(args.output, 'weights_multi-all-%s_small2.hdf5' % view_names[args.view])
+save_loss_path = os.path.join(args.output, view_names[args.view])
 
 """ Create new directories """
 try:
@@ -126,13 +106,13 @@ def buildImageDataset(data_folder_out, modality, seed):
 
     return x_train_filenames
 
-x_train_filenames = buildImageDataset(data_folder_out, modality, seed)
-x_val_filenames = buildImageDataset(data_val_folder_out, modality, seed)
+x_train_filenames = buildImageDataset(data_folder_out, args.modality, args.seed)
+x_val_filenames = buildImageDataset(data_val_folder_out, args.modality, args.seed)
 print("Number of training examples after sampling: {}".format(len(x_train_filenames)))
 print("Number of validation examples after sampling: {}".format(len(x_val_filenames)))
 
 if len(x_val_filenames) ==0:
-    x_train_filenames, x_val_filenames = train_test_split(x_train_filenames, test_size=0.2, random_state=seed)
+    x_train_filenames, x_val_filenames = train_test_split(x_train_filenames, test_size=0.2, random_state=args.seed)
     print("Number of training examples after sampling: {}".format(len(x_train_filenames)))
     print("Number of validation examples after sampling: {}".format(len(x_val_filenames)))
     
@@ -148,7 +128,7 @@ Note that we apply image augmentation to our training dataset but not our valida
 """
 
 tr_cfg = {
-    #'num_class': num_class,
+    #'num_class': args.num_class,
     'resize': [img_shape[0], img_shape[1]],
     'horizontal_flip': True,
     #'rotation': 10.,
@@ -164,33 +144,15 @@ val_cfg = {
 val_preprocessing_fn = functools.partial(_augment, **val_cfg)
 
 train_ds = get_baseline_dataset(x_train_filenames, preproc_fn=tr_preprocessing_fn,
-                                batch_size=batch_size)
+                                batch_size=args.batch_size)
 val_ds = get_baseline_dataset(x_val_filenames, preproc_fn=val_preprocessing_fn,
-                              batch_size=batch_size)
-
-"""# DEBUG """
-#data_aug_iter = val_ds.make_one_shot_iterator()
-#next_element = data_aug_iter.get_next()
-#with tf.Session() as sess: 
-#    batch_of_imgs, label = sess.run(next_element)
-#    print("****DEBUG PRINT****")
-#    print(batch_of_imgs.shape)
-#    print(label.shape)
+                              batch_size=args.batch_size)
 
 """# Build the model"""
-# Build U-net
-#inputs, outputs = UNet2D(img_shape, num_class)
-#
-#model = models.Model(inputs=[inputs], outputs=[outputs])
-
-# Build U-net Isensee
-#from model import UNet2DIsensee
-#unet_isensee = UNet2DIsensee(img_shape, num_class)
-#model = unet_isensee.build()
-inputs, outputs = UNet2D(img_shape, num_class)
+inputs, outputs = UNet2D(img_shape, args.num_class)
 model = models.Model(inputs=[inputs], outputs=[outputs])
 
-adam = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=None, decay=1e-6, amsgrad=False)
+adam = Adam(lr=args.lr, beta_1=0.9, beta_2=0.999, epsilon=None, decay=1e-6, amsgrad=False)
 #model.compile(optimizer=adam, loss=bce_dice_loss, metrics=[dice_loss])
 model.compile(optimizer=adam, loss=bce_dice_loss, metrics=[dice_loss])
 
@@ -210,10 +172,10 @@ except:
 
 """ Training """
 history = model.fit(train_ds, 
-                   steps_per_epoch=int(np.ceil(num_train_examples / float(batch_size))),
-                   epochs=epochs,
+                   steps_per_epoch=int(np.ceil(num_train_examples / float(args.batch_size))),
+                   epochs=args.num_epochs,
                    validation_data=val_ds,
-                   validation_steps=int(np.ceil(num_val_examples / float(batch_size))),
+                   validation_steps=int(np.ceil(num_val_examples / float(args.batch_size))),
                    callbacks=[cp, lr_schedule, erly_stp])
 
 
