@@ -17,4 +17,3 @@ for file in ${dir}/*.nii.gz; do echo ${file} &&  python ${model_script} --json_f
 #conda deactivate
 #
 #${sv_python_dir}/sv --python -- ${volume_mesh_script} --json_fn ${json_file}
-
