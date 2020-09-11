@@ -71,5 +71,6 @@ Building point-corresponded LV meshes require segmentations from all time frames
     registration_script=Modeling/elastix_main.py
     python ${registration_script} --json_fn ${json_file} --write --smooth
     ```
-
+## Acknowledgement
+This work was supported by the NSF, Award #1663747. 
 
