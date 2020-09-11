@@ -178,6 +178,8 @@ if __name__ =='__main__':
     dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_seg_post'
     dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_smooth_seg_post'
     dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_seg_postprocess5_post'
+    dir_n = '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/results/2D segmentation/results/128-sagittal'
+    dir_n = '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/results/3D segmentation/results/Isensee_tf_MMWHS_editted2_aug2_seg'
     jaccard = fix_excels(dir_n, 'jaccard')
     dice = fix_excels(dir_n, 'dice')
     surface = fix_excels_surface(dir_n)
@@ -185,7 +187,8 @@ if __name__ =='__main__':
     
     # plotting dice of LV (0), LA(3), Aorta(5), Whole heart(7)
     classes = ["LV", "Epi", "RV", "LA", "RA", "Aorta", "PA", "WH"] 
-    ids = [0,3,5,7]
+    #ids = [0,3,5,7]
+    ids = [1,3,0,4,2,5,6]
     
     fig, axes = plt.subplots(2, 3, figsize=(12,12))
     #fig.tight_layout()

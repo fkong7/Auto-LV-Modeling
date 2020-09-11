@@ -23,9 +23,7 @@ def swapLabels_LH(labels):
     new_label = range(len(unique_label))
     for i in range(len(unique_label)):
         label = unique_label[i]
-        print(label)
         newl = new_label[i]
-        print(newl)
         labels[labels==label] = newl
     
     if len(unique_label) != 4:
@@ -36,9 +34,6 @@ def swapLabels_LH(labels):
         labels[labels==2] = 1
         labels[labels==3] = 2
         labels[labels==6] = 3
-       
-    print(unique_label, np.unique(labels))
-
     return labels
 def model_output_no_resize(model, im_vol, view, channel):
     im_vol = np.moveaxis(im_vol, view, 0)
@@ -49,7 +44,9 @@ def model_output_no_resize(model, im_vol, view, channel):
     for i in range(channel):
         ipt[:,:,:,i] = np.roll(im_vol, shift-i, axis=0)
     start = time.time()
-    prob = model.predict(ipt)
+    prob = np.zeros(list(ipt.shape[:-1])+[model.layers[-1].output_shape[-1]])
+    for i in range(prob.shape[0]):
+        prob[i,:,:,:] = model.predict(np.expand_dims(ipt[i,:,:,:],axis=0))
     end = time.time()
     prob = np.moveaxis(prob, 0, view)
     return prob, end-start
@@ -61,7 +58,6 @@ def predictVol(prob,labels):
     predicted_label = swapLabelsBack(labels,predicted_label)
     return predicted_label
 
-from scipy.spatial.distance import dice
 def dice_score(pred, true):
     pred = pred.astype(np.int)
     true = true.astype(np.int)  
@@ -153,7 +149,6 @@ class Prediction:
     
     def resample_prediction(self):
         #resample prediction so it matches the original image
-        print(self.pred.shape)
         im = sitk.GetImageFromArray(self.pred)
         im.SetSpacing(self.image_info['spacing'])
         im.SetOrigin(self.image_info['origin'])
@@ -193,10 +188,6 @@ class Prediction:
         sitk.WriteImage(sitk.Cast(self.pred, sitk.sitkInt16), out_fn)
 
 def main(size, modality, data_folder, data_out_folder, model_folder, view_attributes, mode, channel, folder_postfix):
-    print(modality)
-    print(view_attributes)
-    print(mode)
-    print(os.path.join(data_out_folder, '%s_test.csv' % "ct"))
 
     time_list = []
     time_pred_list = []
@@ -230,7 +221,7 @@ def main(size, modality, data_folder, data_out_folder, model_folder, view_attrib
         y_filenames += y_filenames2
         dice_list = []
         for i in range(len(x_filenames)):
-            print("processing "+x_filenames[i])
+            print("Processing "+x_filenames[i])
             models = [os.path.realpath(i) + '/weights_multi-all-%s_%s.hdf5' % (j, model_postfix) for i, j in zip(model_folders, view_names)]
             predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i], channel)
             predict.volume_prediction_average(size)
@@ -257,11 +248,10 @@ if __name__ == '__main__':
     parser.add_argument('--view', type=int, nargs='+', help='List of views for single or ensemble prediction, split by space. For example, 0 1 2  axial(0), coronal(1), sagittal(2)')
     parser.add_argument('--modality', nargs='+', help='Name of the modality, mr, ct, split by space')
     parser.add_argument('--size', type=int,default=256, help='Size of images')
-    parser.add_argument('--mode', help='Test or validation (without or with ground truth label')
+    parser.add_argument('--mode', default='test',help='Test or validation (without or with ground truth label')
     parser.add_argument('--im_folder_postfix', default='test', help='Postfix of the folder containing image data, for ct_test, enter test')
     parser.add_argument('--n_channel',type=int, default=1, help='Number of image channels of input')
     args = parser.parse_args()
-    print('Finished parsing...')
     
     t_start = time.time() 
     time_list, time_pred_list = main(args.size, args.modality, args.image, args.output, args.model, args.view, args.mode, args.n_channel, args.im_folder_postfix)
