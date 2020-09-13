@@ -9,6 +9,8 @@ from tensorflow.python.keras import models as models_keras
 
 import SimpleITK as sitk 
 from preProcess import swapLabelsBack, resample_spacing, isometric_transform, centering, RescaleIntensity
+#from preProcess import *
+#from utils import *
 from loss import bce_dice_loss, dice_loss
 from tensorflow.python.keras import backend as K
 from model import UNet2D
@@ -104,13 +106,22 @@ class Prediction:
 
     def volume_prediction_average(self, size):
         img_vol = resample_spacing(self.image_fn, order=1, template_size=(size, size, size) )[0]
+        #sitk.WriteImage(img_vol, '/Users/fanweikong/Documents/Segmentation/2DUnet/debug/sitk.nii.gz')
+        #vtk_img = load_vtk_image(self.image_fn.split('.')[0]+'.vti')
+        #vtk_img = vtk_reslice_image(vtk_img, np.eye(4))
+        #vtk_img = vtk_resample_to_size(vtk_img, (256, 256, 256))
+        #print("VTK check: ", vtk_img.GetDimensions(), vtk_img.GetSpacing())
+        #writeVTKImage(vtk_img, '/Users/fanweikong/Documents/Segmentation/2DUnet/debug/vtk.vti')
+
         self.image_info = {}
         self.image_info['spacing'] = img_vol.GetSpacing()
         self.image_info['origin'] = img_vol.GetOrigin()
         self.image_info['direction'] = img_vol.GetDirection()
 
         img_vol = sitk.GetArrayFromImage(img_vol)
-
+        #img_vol = get_array_from_vtkImage(vtk_img)
+        #sitk.WriteImage(sitk.GetImageFromArray(img_vol.transpose(2,1,0)), '/Users/fanweikong/Documents/Segmentation/2DUnet/output/numpy.nii')
+        #print("VTK Python check: ", img_vol.shape)
 
         img_vol = RescaleIntensity(img_vol,self.modality, [750, -750])
         
@@ -178,7 +189,6 @@ class Prediction:
                 self.pred = ftr.Execute(self.pred)
             else:
                 self.pred = ftr.Execute(self.pred)
-
 
     def write_prediction(self, out_fn):
         try:

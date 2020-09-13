@@ -5,7 +5,7 @@ try:
     import tensorflow as tf
 except Exception as e: print(e)
 import SimpleITK as sitk
-
+import vtk
 
 def sample_in_range(range_):
   return (range_[1] - range_[0]) * np.random.random_sample() + range_[0]
@@ -89,3 +89,87 @@ def np_to_tfrecords(X, Y, file_path_prefix=None, Prob=None, verbose=True, debug=
     
     if verbose:
         print("Writing {} done!".format(result_tf_file))
+
+def load_vtk_image(fn):
+    """
+    This function imports image file as vtk image.
+    Args:
+        fn: filename of the image data
+    Return:
+        label: label map as a vtk image
+    """
+    import vtk
+    _, ext = fn.split(os.extsep, 1)
+
+    if ext=='vti':
+        reader = vtk.vtkXMLImageDataReader()
+        reader.SetFileName(fn)
+        reader.Update()
+        label = reader.GetOutput()
+    elif ext=='nii' or ext=='nii.gz':
+        reader = vtk.vtkNIFTIImageReader()
+        reader.SetFileName(fn)
+        reader.Update()
+
+        image = reader.GetOutput()
+        matrix = reader.GetQFormMatrix()
+        if matrix is None:
+            matrix = reader.GetSFormMatrix()
+        matrix.Invert()
+        reslice = vtk.vtkImageReslice()
+        reslice.SetInputData(image)
+        reslice.SetResliceAxes(matrix)
+        reslice.SetInterpolationModeToLinear()
+        reslice.Update()
+        reslice2 = vtk.vtkImageReslice()
+        reslice2.SetInputData(reslice.GetOutput())
+        matrix = vtk.vtkMatrix4x4()
+        for i in range(4):
+            matrix.SetElement(i,i,1)
+        matrix.SetElement(0,0,-1)
+        matrix.SetElement(1,1,-1)
+        reslice2.SetResliceAxes(matrix)
+        reslice2.SetInterpolationModeToLinear()
+        reslice2.Update()
+        label = reslice2.GetOutput()
+    else:
+        raise IOError("File extension is not recognized: ", ext)
+    return label
+
+def writeVTKImage(vtkIm, fn):
+    """
+    This function writes a vtk image to disk
+    Args:
+        vtkIm: the vtk image to write
+        fn: file name
+    Returns:
+        None
+    """
+    print("Writing vti with name: ", fn)
+
+    _, extension = os.path.splitext(fn)
+    if extension == '.vti':
+        writer = vtk.vtkXMLImageDataWriter()
+    elif extension == '.mhd':
+        writer = vtk.vtkMetaImageWriter()
+    else:
+        raise ValueError("Incorrect extension " + extension)
+    writer.SetInputData(vtkIm)
+    writer.SetFileName(fn)
+    writer.Update()
+    writer.Write()
+    return
+
+def get_array_from_vtkImage(image):
+    from vtk.util.numpy_support import vtk_to_numpy
+    py_im = vtk_to_numpy(image.GetPointData().GetScalars())
+    x , y, z = image.GetDimensions()
+    out_im = py_im.reshape(z, y, x)
+    return out_im
+
+def get_vtkImage_from_array(py_im):
+    from vtk.util.numpy_support import numpy_to_vtk
+    vtkArray = numpy_to_vtk(img.transpose(2,1,0).flatten())
+    image = vtk.vtkImageData()
+    image.GetPointData().SetScalars(vtkArray)
+    return image
