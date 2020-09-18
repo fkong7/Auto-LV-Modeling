@@ -99,6 +99,7 @@ def load_vtk_image(fn):
         label: label map as a vtk image
     """
     import vtk
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
     _, ext = fn.split(os.extsep, 1)
 
     if ext=='vti':
@@ -110,8 +111,8 @@ def load_vtk_image(fn):
         reader = vtk.vtkNIFTIImageReader()
         reader.SetFileName(fn)
         reader.Update()
-
         image = reader.GetOutput()
+        print("Origin ck1: ", image.GetOrigin())
         matrix = reader.GetQFormMatrix()
         if matrix is None:
             matrix = reader.GetSFormMatrix()
@@ -123,15 +124,20 @@ def load_vtk_image(fn):
         reslice.Update()
         reslice2 = vtk.vtkImageReslice()
         reslice2.SetInputData(reslice.GetOutput())
-        matrix = vtk.vtkMatrix4x4()
+        matrix2 = vtk.vtkMatrix4x4()
+        print("Q FAC: ", reader.GetQFac())
         for i in range(4):
-            matrix.SetElement(i,i,1)
-        matrix.SetElement(0,0,-1)
-        matrix.SetElement(1,1,-1)
-        reslice2.SetResliceAxes(matrix)
+            matrix2.SetElement(i,i,1)
+        matrix2.SetElement(0,0,-1)
+        matrix2.SetElement(1,1,-1)
+        reslice2.SetResliceAxes(matrix2)
         reslice2.SetInterpolationModeToLinear()
         reslice2.Update()
         label = reslice2.GetOutput()
+        py_label = vtk_to_numpy(label.GetPointData().GetScalars())
+        py_label = (py_label + reader.GetRescaleIntercept())/reader.GetRescaleSlope()
+        label.GetPointData().SetScalars(numpy_to_vtk(py_label))
+        print("Origin ck2: ", label.GetOrigin())
     else:
         raise IOError("File extension is not recognized: ", ext)
     return label
@@ -160,16 +166,59 @@ def writeVTKImage(vtkIm, fn):
     writer.Write()
     return
 
+def vtk_write_mask_as_nifty(mask, image_fn, mask_fn):
+    import vtk
+    print("Origin ck4: ", mask.GetOrigin())
+    reader = vtk.vtkNIFTIImageReader()
+    reader.SetFileName(image_fn)
+    reader.Update()
+    writer = vtk.vtkNIFTIImageWriter()
+    matrix = reader.GetQFormMatrix()
+    if matrix is None:
+        matrix = reader.GetSFormMatrix()
+    matrix.Invert()
+    matrix2 = vtk.vtkMatrix4x4()
+    for i in range(4):
+        matrix2.SetElement(i,i,1)
+    matrix2.SetElement(0,0,-1)
+    matrix2.SetElement(1,1,-1)
+    matrix3 = vtk.vtkMatrix4x4() 
+    matrix3.Multiply4x4(matrix2, matrix, matrix3)
+    matrix3.Invert()
+    
+    reslice2 = vtk.vtkImageReslice()
+    reslice2.SetInputData(mask)
+    reslice2.SetResliceAxes(matrix3)
+    reslice2.SetInterpolationModeToNearestNeighbor()
+    reslice2.Update()
+    mask = reslice2.GetOutput()
+    print("Origin ck5: ", mask.GetOrigin())
+    print(matrix3)
+    writer.SetInputData(mask)
+    writer.SetFileName(mask_fn)
+    writer.SetQFac(reader.GetQFac())
+    q_mat = reader.GetQFormMatrix()
+    print(q_mat)
+    writer.SetQFormMatrix(q_mat)
+    s_mat = reader.GetSFormMatrix()
+    writer.SetSFormMatrix(s_mat)
+    print(s_mat)
+    writer.Write()
+    return
+
 def get_array_from_vtkImage(image):
     from vtk.util.numpy_support import vtk_to_numpy
     py_im = vtk_to_numpy(image.GetPointData().GetScalars())
+    print(np.min(py_im),np.max(py_im))
     x , y, z = image.GetDimensions()
     out_im = py_im.reshape(z, y, x)
     return out_im
 
 def get_vtkImage_from_array(py_im):
     from vtk.util.numpy_support import numpy_to_vtk
-    vtkArray = numpy_to_vtk(img.transpose(2,1,0).flatten())
+    z, y, x = py_im.shape
+    vtkArray = numpy_to_vtk(py_im.flatten())
     image = vtk.vtkImageData()
+    image.SetDimensions(x, y, z)
     image.GetPointData().SetScalars(vtkArray)
     return image

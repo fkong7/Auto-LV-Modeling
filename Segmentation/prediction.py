@@ -8,9 +8,9 @@ import tensorflow.contrib as tfcontrib
 from tensorflow.python.keras import models as models_keras
 
 import SimpleITK as sitk 
-from preProcess import swapLabelsBack, resample_spacing, isometric_transform, centering, RescaleIntensity
-#from preProcess import *
-#from utils import *
+import vtk
+from preProcess import swapLabelsBack, resample_spacing, isometric_transform, centering, RescaleIntensity, vtk_resample_to_size, vtk_reslice_image, vtk_resample_with_info_dict
+from utils import load_vtk_image, writeVTKImage, get_array_from_vtkImage,get_vtkImage_from_array,vtk_write_mask_as_nifty
 from loss import bce_dice_loss, dice_loss
 from tensorflow.python.keras import backend as K
 from model import UNet2D
@@ -103,28 +103,31 @@ class Prediction:
         self.dice_score = None
         self.original_shape = None
         assert len(self.models)==len(self.views), "Missing view attributes for models"
-
-    def volume_prediction_average(self, size):
+    def prepare_input_sitk(self, size):
         img_vol = resample_spacing(self.image_fn, order=1, template_size=(size, size, size) )[0]
-        #sitk.WriteImage(img_vol, '/Users/fanweikong/Documents/Segmentation/2DUnet/debug/sitk.nii.gz')
-        #vtk_img = load_vtk_image(self.image_fn.split('.')[0]+'.vti')
-        #vtk_img = vtk_reslice_image(vtk_img, np.eye(4))
-        #vtk_img = vtk_resample_to_size(vtk_img, (256, 256, 256))
-        #print("VTK check: ", vtk_img.GetDimensions(), vtk_img.GetSpacing())
-        #writeVTKImage(vtk_img, '/Users/fanweikong/Documents/Segmentation/2DUnet/debug/vtk.vti')
-
         self.image_info = {}
         self.image_info['spacing'] = img_vol.GetSpacing()
         self.image_info['origin'] = img_vol.GetOrigin()
         self.image_info['direction'] = img_vol.GetDirection()
-
         img_vol = sitk.GetArrayFromImage(img_vol)
-        #img_vol = get_array_from_vtkImage(vtk_img)
-        #sitk.WriteImage(sitk.GetImageFromArray(img_vol.transpose(2,1,0)), '/Users/fanweikong/Documents/Segmentation/2DUnet/output/numpy.nii')
-        #print("VTK Python check: ", img_vol.shape)
-
         img_vol = RescaleIntensity(img_vol,self.modality, [750, -750])
-        
+        return img_vol 
+    def prepare_input_vtk(self, size):
+        vtk_img = load_vtk_image(self.image_fn)
+        self.image_info = {}
+        self.image_info['spacing'] = vtk_img.GetSpacing()
+        self.image_info['origin'] = vtk_img.GetOrigin()
+        self.image_info['extent'] = vtk_img.GetExtent()
+        self.image_info['size'] = vtk_img.GetDimensions()
+        print(self.image_info)
+        writeVTKImage(vtk_img, '/Users/fanweikong/Documents/Segmentation/2DUnet/output/input_noresize.vti')
+        vtk_img = vtk_resample_to_size(vtk_img, (size, size, size))
+        img_vol = get_array_from_vtkImage(vtk_img)
+        img_vol = RescaleIntensity(img_vol,self.modality, [750, -750])
+        return img_vol
+    def volume_prediction_average(self, size):
+        img_vol = self.prepare_input_vtk(size)
+        #sitk.WriteImage(sitk.GetImageFromArray(img_vol.transpose(2,1,0)), '/Users/fanweikong/Documents/Segmentation/2DUnet/output/numpyi_vtk.nii')
         
         self.original_shape = img_vol.shape
         
@@ -166,7 +169,13 @@ class Prediction:
         im.SetDirection(self.image_info['direction'])
         self.pred = centering(im, sitk.ReadImage(self.image_fn), order=0)
         return
-
+    def resample_prediction_vtk(self):
+        im = get_vtkImage_from_array(self.pred.astype(np.uint8))
+        writeVTKImage(im, '/Users/fanweikong/Documents/Segmentation/2DUnet/debug/pred.vti')
+        self.pred = vtk_resample_with_info_dict(im, self.image_info, order=0)
+        writeVTKImage(self.pred, '/Users/fanweikong/Documents/Segmentation/2DUnet/debug/pred2.vti')
+        print("Origin ck3: ", self.pred.GetOrigin())
+        return 
     def post_process(self, m):
         spacing = self.pred.GetSpacing()
         ids = np.unique(sitk.GetArrayFromImage(self.pred))
@@ -193,9 +202,19 @@ class Prediction:
     def write_prediction(self, out_fn):
         try:
             os.makedirs(os.path.dirname(out_fn))
-        except:
-            pass
-        sitk.WriteImage(sitk.Cast(self.pred, sitk.sitkInt16), out_fn)
+        except Exception as e: print(e)
+        _, extension = os.path.splitext(out_fn)
+        #sitk.WriteImage(sitk.Cast(self.pred, sitk.sitkInt16), out_fn)
+        if extension == '.vti' or extension == 'mhd':
+            writeVTKImage(self.pred, out_fn)
+        elif extension == 'nii' or extension == 'nii.gz':
+            vtk_write_mask_as_nifty(self.pred, self.image_fn, out_fn)
+        else:
+            print(extension)
+            vtk_write_mask_as_nifty(self.pred, self.image_fn, out_fn)
+            raise IOError("File extension not supported")
+        return 
+
 
 def main(size, modality, data_folder, data_out_folder, model_folder, view_attributes, mode, channel, folder_postfix):
 
@@ -236,7 +255,8 @@ def main(size, modality, data_folder, data_out_folder, model_folder, view_attrib
             predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i], channel)
             predict.volume_prediction_average(size)
             time_pred_list.append(predict.pred_time)
-            predict.resample_prediction()
+            #predict.resample_prediction()
+            predict.resample_prediction_vtk()
             #predict.post_process(m)
 
             predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
