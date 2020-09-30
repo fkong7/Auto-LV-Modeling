@@ -109,7 +109,6 @@ class Prediction:
     def volume_prediction_average(self, size):
 
         img_vol = self.prepare_input_sitk(size)
-        img_vol = self.prepare_input_vtk(size)
         
         self.original_shape = img_vol.shape
         
@@ -178,12 +177,7 @@ class Prediction:
         try:
             os.makedirs(os.path.dirname(out_fn))
         except Exception as e: print(e)
-        if out_fn[-4:] == '.vti' or out_fn[-4:] == '.mhd':
-            writeVTKImage(self.pred, out_fn)
-        elif out_fn[-4:] == '.nii' or out_fn[-7:] == '.nii.gz':
-            vtk_write_mask_as_nifty(self.pred, self.image_fn, out_fn)
-        else:
-            raise IOError("Output file extension not supported: %s" % out_fn)
+        sitk.WriteImage(sitk.Cast(self.pred, sitk.sitkInt16), out_fn)
         return 
 
 
@@ -226,8 +220,7 @@ def main(size, modality, data_folder, data_out_folder, model_folder, view_attrib
             predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i], channel)
             predict.volume_prediction_average(size)
             time_pred_list.append(predict.pred_time)
-            #predict.resample_prediction()
-            predict.resample_prediction_vtk()
+            predict.resample_prediction()
             #predict.post_process(m)
 
             predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
