@@ -240,15 +240,6 @@ def vtk_reslice_image(image, ori, order=1):
     return reslice.GetOutput()
 
 def vtk_resample_to_size(image, new_size, order=1):
-    interp = vtk.vtkImageInterpolator()
-    if order==1:
-        interp.SetInterpolationModeToLinear()
-    elif order==0:
-        interp.SetInterpolationModeToNearest()
-    elif order==3:
-        interp.SetInterpolationModeToCubic()
-    else:
-        raise ValueError("interpolation option not recognized")
     size = image.GetDimensions()
     spacing = image.GetSpacing()
     reference_spacing = np.array(size)/np.array(new_size)*np.array(spacing)
@@ -256,7 +247,14 @@ def vtk_resample_to_size(image, new_size, order=1):
     resize = vtk.vtkImageReslice()
     resize.SetInputData(image)
     resize.SetBackgroundLevel(0.)
-    resize.SetInterpolator(interp)
+    if order==1:
+        resize.SetInterpolationModeToLinear()
+    elif order==0:
+        resize.SetInterpolationModeToNearest()
+    elif order==3:
+        resize.SetInterpolationModeToCubic()
+    else:
+        raise ValueError("interpolation option not recognized")
     resize.SetOutputSpacing(reference_spacing)
     resize.SetOutputExtent(0, new_size[0]-1, 0, new_size[1]-1, 0, new_size[2]-1)
     resize.Update()
@@ -280,7 +278,6 @@ def vtk_resample_with_info_dict(image, img_info, order=1):
     resize.SetInputData(image)
     resize.SetInterpolator(interp)
     resize.SetBackgroundLevel(0.)
-    #resize.SetOutputOrigin(img_info['origin'])
     resize.SetOutputExtent(img_info['extent'])
     resize.SetOutputSpacing(img_info['spacing'])
     resize.Update()
@@ -311,6 +308,7 @@ def vtk_resample_image(image, spacing, order=1):
         raise ValueError("interpolation option not recognized")
 
     reslicer.SetOutputSpacing(*spacing)
+    reslicer.SetBackgroundLevel(0.)
     reslicer.Update()
 
     return reslicer.GetOutput()

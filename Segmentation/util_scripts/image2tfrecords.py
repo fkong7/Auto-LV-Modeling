@@ -104,6 +104,7 @@ def data_preprocess(modality,im_size, data_folder,view, data_folder_out, comm, r
             print(sid, down, up)
             continue
         slice_im = np.moveaxis(imgVol,view,0)[sid-up:sid+down,:,:]
+        slice_im = (slice_im - np.mean(slice_im))/np.std(slice_im)
         slice_msk = np.moveaxis(maskVol,view,0)[sid,:,:]
         if slice_im.shape[0]!=channel:
             print("Image channel size is incorrect!")

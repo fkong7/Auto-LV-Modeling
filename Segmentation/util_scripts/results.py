@@ -58,7 +58,7 @@ def fix_excels(dir_n, metric):
         out.close()
     return results
 
-def fix_excels_surface(dir_n):
+def fix_excels_surface(dir_n, masks):
     modality = ["ct", "mr"]
     classes = ["LV", "Epi", "RV", "LA", "RA", "LO", "PA", "WHS"]
     #classes = ["LV"]
@@ -67,10 +67,13 @@ def fix_excels_surface(dir_n):
     for m in modality:
         results[m.upper()] = []
         for c in classes:
+            print(c)
             try:
                 out = open(os.path.join(dir_n, m+ '_surfaces_'+c + '.xls'), 'w+')
                 score = []
                 for i in range(1, 41):
+                    if i in masks:
+                        continue
                     fn = os.path.join(dir_n, m+'_surface'+str(i)+'_'+c+'.xls')
                     print(fn)
                     with open(fn) as f:
@@ -89,6 +92,7 @@ def fix_excels_surface(dir_n):
                 results[m.upper()].append(list(np.zeros(40)))
             out.close()
         results[m.upper()] = np.array(results[m.upper()]).transpose()
+        print("Surface", results[m.upper()])
 
 
     return results
@@ -173,22 +177,40 @@ if __name__ =='__main__':
     #dir_n = '/Users/fanweikong/Downloads/test_ensemble_post-1'
     #dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_seg_postprocess4'
     dir_n = '/Users/fanweikong/Documents/ImageData/orCalScore_CTAI/ct_test_masks2'
-    fix_labels(dir_n)
+    dir_n = '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/debug/Isensee_tf_multidataset_whole_heart_seg_only_mr_aug/test'
+    dir_n = '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/debug/2020-9-20/set8_TmpltFine_EdgeThresh_ct_aug_lap1/test'
+    dir_n = '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/debug/2020-9-20/set8_TmpltFine_EdgeThresh_aug_lap1'
+    dir_n = '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/debug/2020-9-4/set8_TmpltFine_aug10smooth150_Amp1_ctmr_result'
+    dir_n = '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/debug/2020-9-20/set8_TmpltFine_EdgeThresh_ctmr_aug_lap1_saveCD/test'
+    #fix_labels(dir_n)
     dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble-2-10-2_surf2seg-post'
     dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_seg_post'
     dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_smooth_seg_post'
     dir_n = '/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_seg_postprocess5_post'
     dir_n = '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/results/2D segmentation/results/128-sagittal'
     dir_n = '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/results/3D segmentation/results/Isensee_tf_MMWHS_editted2_aug2_seg'
+    #dir_n = '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/results/3D segmentation/set8_TmpltFine_EdgeThresh_aug_lap1'
+    #dir_n = '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/results/3D segmentation/Isensee_tf_multidataset_whole_heart_seg_only_aug'
+    #dir_n = '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/results/3D segmentation/set8_TmpltFine_aug10smooth150_Amp1_ctmr_result'
+    #dir_n = '/Users/fanweikong/Documents/Modeling/3DPixel2Mesh/results/3D segmentation/set8_TmpltFine_EdgeThresh_ctmr_aug_lap1_saveCD'
+    mask = [3, 8, 9, 20, 24, 25, 30, 32,34, 36, 37, 39]
+    mask2 = [12, 17, 18, 28, 31, 32, 37, 39, 40, 6, 7, 9]
+    #mask = []
+    #mask2 = []
+    # plotting dice of LV (0), LA(3), Aorta(5), Whole heart(7)
+    classes = ["LV", "Epi", "RV", "LA", "RA", "Ao", "PA", "WH"] 
+    #ids = [0,3,5,7]
+    ids = [1,3,0,4,2,5,6,7]
+
     jaccard = fix_excels(dir_n, 'jaccard')
     dice = fix_excels(dir_n, 'dice')
-    surface = fix_excels_surface(dir_n)
-    print("Surface: ", surface['MR'][0][:])
-    
-    # plotting dice of LV (0), LA(3), Aorta(5), Whole heart(7)
-    classes = ["LV", "Epi", "RV", "LA", "RA", "Aorta", "PA", "WH"] 
-    #ids = [0,3,5,7]
-    ids = [1,3,0,4,2,5,6]
+    surface = fix_excels_surface(dir_n, mask2)
+    jaccard['MR'] = np.delete(jaccard['MR'], mask, 0)
+    dice['MR'] = np.delete(dice['MR'], mask, 0)
+    #for i in range(len(classes)):
+    #    surface['MR'][i] = [surface['MR'][i][j] for j in range(len(surface['MR'][i])) if j not in mask2]
+    #print("Surface: ", surface['MR'][0][:])
+    print(surface['MR'])    
     
     fig, axes = plt.subplots(2, 3, figsize=(12,12))
     #fig.tight_layout()
@@ -201,8 +223,8 @@ if __name__ =='__main__':
     axes[1,0].set_ylabel('MR', fontsize=SIZE+5, rotation=0)
     axes[1,0].yaxis.set_label_coords(-0.3,0.5)
     plt.show()
-    #plt.savefig(os.path.join(dir_n, 'results.png'))
-    
+    ##plt.savefig(os.path.join(dir_n, 'results.png'))
+    #
     plot_table(dice, jaccard, surface, classes, ids)
 
 

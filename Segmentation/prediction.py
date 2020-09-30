@@ -18,25 +18,6 @@ from imageLoader import ImageLoader
 import argparse
 import time
 
-def swapLabels_LH(labels):
-    labels[labels==421]=420
-    unique_label = np.unique(labels)
-
-    new_label = range(len(unique_label))
-    for i in range(len(unique_label)):
-        label = unique_label[i]
-        newl = new_label[i]
-        labels[labels==label] = newl
-    
-    if len(unique_label) != 4:
-        labels[labels==1] = 0
-        labels[labels==4] = 0
-        labels[labels==5] = 0
-        labels[labels==7] = 0
-        labels[labels==2] = 1
-        labels[labels==3] = 2
-        labels[labels==6] = 3
-    return labels
 def model_output_no_resize(model, im_vol, view, channel):
     im_vol = np.moveaxis(im_vol, view, 0)
     ipt = np.zeros([*im_vol.shape,channel])
@@ -48,7 +29,8 @@ def model_output_no_resize(model, im_vol, view, channel):
     start = time.time()
     prob = np.zeros(list(ipt.shape[:-1])+[model.layers[-1].output_shape[-1]])
     for i in range(prob.shape[0]):
-        prob[i,:,:,:] = model.predict(np.expand_dims(ipt[i,:,:,:],axis=0))
+        slice_im = np.expand_dims(ipt[i,:,:,:],axis=0)
+        prob[i,:,:,:] = model.predict(slice_im)
     end = time.time()
     prob = np.moveaxis(prob, 0, view)
     return prob, end-start
@@ -111,6 +93,7 @@ class Prediction:
         self.image_info['direction'] = img_vol.GetDirection()
         img_vol = sitk.GetArrayFromImage(img_vol)
         img_vol = RescaleIntensity(img_vol,self.modality, [750, -750])
+        #img_vol = (img_vol - np.mean(img_vol))/np.std(img_vol)
         return img_vol 
     def prepare_input_vtk(self, size):
         vtk_img = load_vtk_image(self.image_fn)
@@ -119,15 +102,14 @@ class Prediction:
         self.image_info['origin'] = vtk_img.GetOrigin()
         self.image_info['extent'] = vtk_img.GetExtent()
         self.image_info['size'] = vtk_img.GetDimensions()
-        print(self.image_info)
-        writeVTKImage(vtk_img, '/Users/fanweikong/Documents/Segmentation/2DUnet/output/input_noresize.vti')
         vtk_img = vtk_resample_to_size(vtk_img, (size, size, size))
         img_vol = get_array_from_vtkImage(vtk_img)
         img_vol = RescaleIntensity(img_vol,self.modality, [750, -750])
         return img_vol
     def volume_prediction_average(self, size):
+
+        img_vol = self.prepare_input_sitk(size)
         img_vol = self.prepare_input_vtk(size)
-        #sitk.WriteImage(sitk.GetImageFromArray(img_vol.transpose(2,1,0)), '/Users/fanweikong/Documents/Segmentation/2DUnet/output/numpyi_vtk.nii')
         
         self.original_shape = img_vol.shape
         
@@ -155,9 +137,7 @@ class Prediction:
         #assuming groud truth label has the same origin, spacing and orientation as input image
         label_vol = sitk.GetArrayFromImage(sitk.ReadImage(self.label_fn))
         pred_label = sitk.GetArrayFromImage(self.pred)
-        #pred_label = swapLabelsBack(label_vol, pred_label)
-        label_vol = swapLabels_LH(label_vol)
-        pred_label = swapLabels_LH(pred_label)
+        pred_label = swapLabelsBack(label_vol, pred_label)
         ds = dice_score(pred_label, label_vol)
         return ds
     
@@ -171,10 +151,7 @@ class Prediction:
         return
     def resample_prediction_vtk(self):
         im = get_vtkImage_from_array(self.pred.astype(np.uint8))
-        writeVTKImage(im, '/Users/fanweikong/Documents/Segmentation/2DUnet/debug/pred.vti')
         self.pred = vtk_resample_with_info_dict(im, self.image_info, order=0)
-        writeVTKImage(self.pred, '/Users/fanweikong/Documents/Segmentation/2DUnet/debug/pred2.vti')
-        print("Origin ck3: ", self.pred.GetOrigin())
         return 
     def post_process(self, m):
         spacing = self.pred.GetSpacing()
@@ -193,8 +170,6 @@ class Prediction:
             ftr.SetForegroundValue(int(i))
             ftr2.SetForegroundValue(int(i))
             if m =="ct":
-                #self.pred = ftr.Execute(ftr2.Execute(self.pred))
-                #self.pred = self.pred
                 self.pred = ftr.Execute(self.pred)
             else:
                 self.pred = ftr.Execute(self.pred)
@@ -203,16 +178,12 @@ class Prediction:
         try:
             os.makedirs(os.path.dirname(out_fn))
         except Exception as e: print(e)
-        _, extension = os.path.splitext(out_fn)
-        #sitk.WriteImage(sitk.Cast(self.pred, sitk.sitkInt16), out_fn)
-        if extension == '.vti' or extension == 'mhd':
+        if out_fn[-4:] == '.vti' or out_fn[-4:] == '.mhd':
             writeVTKImage(self.pred, out_fn)
-        elif extension == 'nii' or extension == 'nii.gz':
+        elif out_fn[-4:] == '.nii' or out_fn[-7:] == '.nii.gz':
             vtk_write_mask_as_nifty(self.pred, self.image_fn, out_fn)
         else:
-            print(extension)
-            vtk_write_mask_as_nifty(self.pred, self.image_fn, out_fn)
-            raise IOError("File extension not supported")
+            raise IOError("Output file extension not supported: %s" % out_fn)
         return 
 
 
