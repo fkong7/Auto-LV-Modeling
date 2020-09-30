@@ -1,7 +1,6 @@
 import tensorflow as tf
 import tensorflow.contrib as tfcontrib
 from tensorflow.python.keras import layers
-from tensorflow.python.keras import losses
 from tensorflow.python.keras import models
 from tensorflow.python.keras import backend as K
 
@@ -275,4 +274,3 @@ class InstanceNormalization(layers.Layer):
         }
         base_config = super(InstanceNormalization, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
-
