@@ -45,7 +45,7 @@ def RescaleIntensity(slice_im,m,limit):
         slice_im = slice_im/rng*2
         slice_im -= 1
     return slice_im
-    
+
 def vtk_resample_to_size(image, new_size, order=1):
     size = image.GetDimensions()
     spacing = image.GetSpacing()

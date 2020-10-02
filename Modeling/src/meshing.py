@@ -27,8 +27,6 @@ def meshPolyData(fn, fns_out, args):
     #Create new mesh
     msh.NewMesh()
     msh.SetWalls([1])
-    print("GetModelFaceInfo")
-    print(msh.GetModelFaceInfo())
     
     for key in args:
         msh.SetMeshOptions(key,[args[key]])

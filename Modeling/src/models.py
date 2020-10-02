@@ -28,8 +28,7 @@ class Geometry(object):
         if mmg:
             Repository.ImportVtkPd(self.poly, "mmg_poly")
             meshing.remeshPolyData("mmg_poly", "mmg_poly_remesh", 1.,1.5, fn)
-        #print("MMG GLOBAL REMESHING DONE")
-        #self.writeSurfaceMesh(fn)
+        self.writeSurfaceMesh(fn)
         # generate volumetric mesh:
         mesh_ops = {
                 'SurfaceMeshFlag': True,

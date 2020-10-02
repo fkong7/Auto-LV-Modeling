@@ -14,7 +14,6 @@ def swapLabels(pyImage):
     Swap label ids
     """
     ids = np.unique(pyImage)
-    print("UNIQUE IDS: ", ids)
     for i, v in enumerate(ids):
         pyImage[pyImage==v] = i
     return pyImage
@@ -1107,7 +1106,6 @@ def projectOpeningToFitPlane(poly, boundary_ids, points, MESH_SIZE):
     proj_pts = projectPointsToFitPlane(pts)
     dist = np.max(np.linalg.norm(proj_pts - vtk_to_numpy(pts.GetData()), axis=1))
     ITER = int(np.ceil(dist/MESH_SIZE)*3)
-    print("ITER: ", ITER)
     for factor in np.linspace(0.8, 0., ITER, endpoint=False):
         ids, pts,  proj_pts = _moveConnectedPoints(ids, pts, proj_pts, factor)
     poly = changePolyDataPointsCoordinates(poly, ids, proj_pts)
@@ -1212,7 +1210,6 @@ def extractPolyDataFaces(poly, angle, expect_num=None):
         expect_num = num_surf
     saved_id = list(orders[:expect_num])
     face_list = [face_list[i] for i in orders[:expect_num]]
-    print("Face list: ", face_list)
     corr_list = []
     for i in range(expect_num):
         corr_list.append(findPointCorrespondence(copy, face_list[i]))

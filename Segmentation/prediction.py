@@ -152,15 +152,15 @@ def main(size, modality, data_folder, data_out_folder, model_folder, view_attrib
     
     #load image filenames
     filenames = {}
-
+    
+    ext_list = ['.nii.gz', '.nii', '.vti']
     for m in modality:
-        im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_seg', ext='*.nii.gz')
-        x_filenames, y_filenames = im_loader.load_imagefiles()
-        im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_seg', ext='*.nii')
-        x_filenames2, y_filenames2 = im_loader.load_imagefiles()
-        x_filenames += x_filenames2
-        y_filenames += y_filenames2
-        #dice_list = []
+        x_filenames, y_filenames = [], []
+        for ext in ext_list:
+            im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_seg', ext='*'+ext)
+            x_temp, y_temp = im_loader.load_imagefiles()
+            x_filenames += x_temp
+            y_filenames += y_temp
         for i in range(len(x_filenames)):
             print("Processing "+x_filenames[i])
             models = [os.path.realpath(i) + '/weights_multi-all-%s_%s.hdf5' % (j, model_postfix) for i, j in zip(model_folders, view_names)]

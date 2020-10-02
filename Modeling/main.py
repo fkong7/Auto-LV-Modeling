@@ -29,8 +29,6 @@ def buildLVModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=
     """
     FACTOR_LA = 18
     FACTOR_AA = 38
-    #FACTOR_LA = 100
-    #FACTOR_AA = 48
     MESH_RESOLUTION = (1.,1.,1.)
         
         
@@ -58,6 +56,9 @@ def buildLVModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=
         if timming:
             surf_time = time.time() - time_now
             time_now = time.time()
+        try:
+            os.makedirs(os.path.join(os.path.dirname(__file__), "debug"))
+        except Exception as e: print(e)
         fn = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(poly_fn))
         if use_SV:
             model.remesh(edge_size, fn, poly_fn, ug_fn)
@@ -139,7 +140,6 @@ if __name__=="__main__":
     #seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], paras['seg_name'] % paras['start_phase'])
     #fn_poly = os.path.join(output_dir, "surfaces", paras['model_output'] % paras['start_phase'])
 
-    print(seg_fn, fn_poly)
     #run volume mesh to generate ids but not using it
     fn_ug = 'temp'
     timming = True
@@ -152,4 +152,4 @@ if __name__=="__main__":
             writer.writerows(time_list)
 
     end = time.time()
-    print("Time spend in main.py: ", end-start)
+    print("Time spend in Modeling/main.py: ", end-start)
