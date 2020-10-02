@@ -20,9 +20,13 @@ if __name__ == '__main__':
     
     output_dir = os.path.join(paras['out_dir'], paras['patient_id'], "surfaces")
 
-    volume_fn = np.load(os.path.join(output_dir, "volume.npy"))
     if args.phase == -1:
-        phase = volume_fn[:,0][int(np.argmax(volume_fn[:,1]))]
+        try:
+            volume_fn = np.load(os.path.join(output_dir, "volume.npy"))
+            phase = volume_fn[:,0][int(np.argmax(volume_fn[:,1]))]
+        except:
+            print("Mesh volumes not found, the first model will be meshed")
+            phase = 0
     else:
         phase = args.phase
     poly_fn = os.path.join(output_dir, paras['model_output'] % phase)

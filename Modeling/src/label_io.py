@@ -38,12 +38,12 @@ def loadLabelMap(fn):
     """
     _, ext = fn.split(os.extsep, 1)  
 
-    if ext=='vti':
+    if fn[-3:]=='vti':
         reader = vtk.vtkXMLImageDataReader()
         reader.SetFileName(fn)
         reader.Update()
         label = reader.GetOutput()
-    elif ext=='nii' or ext=='nii.gz':
+    elif ext[-3:]=='nii' or ext[-6:]=='nii.gz':
         reader = vtk.vtkNIFTIImageReader()
         reader.SetFileName(fn)
         reader.Update()

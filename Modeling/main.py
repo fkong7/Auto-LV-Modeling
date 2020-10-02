@@ -115,39 +115,31 @@ if __name__=="__main__":
     parser.add_argument('--json_fn', nargs=1, help='Name of the json file')
     parser.add_argument('--disable_SV',default=True, action='store_false', help='Whether to disable SV for remeshing')
     parser.add_argument('--seg_name', help='Name of the segmentation file')
+    parser.add_argument('--input_dir', help='Path to the segmentation directory')
+    parser.add_argument('--output_dir', help='Path to the output directory')
+    parser.add_argument('--edge_size', type=float, help='Maximum edge size of the surface mesh')
     args = parser.parse_args()
     
-    paras = label_io.loadJsonArgs(args.json_fn[0])
-
-    image_dir = os.path.join(paras['im_top_dir'] , paras['patient_id'], paras['im_folder_name'])
-    output_dir = os.path.join(paras['out_dir'], paras['patient_id'])
     try:
-        os.makedirs(os.path.join(output_dir, "surfaces"))
+        os.makedirs(os.path.join(args.output_dir, "surfaces"))
     except Exception as e: print(e)
     try:
-        os.makedirs(os.path.join(output_dir, "volumes"))
+        os.makedirs(os.path.join(args.output_dir, "volumes"))
     except Exception as e: print(e)
-    fn_tempPts = os.path.join(output_dir, "surfaces", 'outputpoints.txt')
+    fn_tempPts = os.path.join(args.output_dir, "surfaces", 'outputpoints.txt')
     
-    if args.seg_name is not None:
-        seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], args.seg_name)
-        fn_poly = os.path.join(output_dir, "surfaces", args.seg_name+'.vtk')
-    else:
-        seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], paras['seg_name'])
-        fn_poly = os.path.join(output_dir, "surfaces", paras['model_output'])
+    seg_fn = os.path.join(args.input_dir, args.seg_name)
+    print(seg_fn)
+    fn_poly = os.path.join(args.output_dir, "surfaces", args.seg_name+'.vtk')
     
-    # needed for time-resolved data
-    #seg_fn = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['seg_folder_name'], paras['seg_name'] % paras['start_phase'])
-    #fn_poly = os.path.join(output_dir, "surfaces", paras['model_output'] % paras['start_phase'])
-
-    #run volume mesh to generate ids but not using it
+    #run volume mesh to generate ids but do not use it
     fn_ug = 'temp'
     timming = True
     #time_list = buildLeftHeartModelFromImage([seg_fn], [fn_poly], fn_ug, edge_size=paras['edge_size'], timming=timming, use_SV=args.disable_SV)
-    time_list = buildLVModelFromImage([seg_fn], [fn_poly], fn_ug, edge_size=paras['edge_size'], timming=timming, use_SV=args.disable_SV)
+    time_list = buildLVModelFromImage([seg_fn], [fn_poly], fn_ug, edge_size=args.edge_size, timming=timming, use_SV=args.disable_SV)
     if timming:
         import csv
-        with open(os.path.join(output_dir, 'time_results.csv'), 'a' , newline="") as f:
+        with open(os.path.join(args.output_dir, 'time_results.csv'), 'a' , newline="") as f:
             writer = csv.writer(f)
             writer.writerows(time_list)
 
