@@ -53,7 +53,7 @@ parser.add_argument('--attr', help='Attribute name of the folders containing 2d 
 parser.add_argument('--output',  help='Name of the output folder')
 parser.add_argument('--view', type=int, help='view id, axial(0), coronal(1), sagittal(2)')
 parser.add_argument('--modality', nargs='+', help='Name of the modality, mr, ct, split by space')
-parser.add_argument('--num_epoch', type=int, help='Maximum number of epochs to run')
+parser.add_argument('--num_epochs', type=int, help='Maximum number of epochs to run')
 parser.add_argument('--num_class', type=int, help='Number of classes')
 parser.add_argument('--channel', type=int, default=1, help='Number of channels of input images')
 parser.add_argument('--size', type=int, default=[256, 256], nargs='+', help='Desired size of the input images')
