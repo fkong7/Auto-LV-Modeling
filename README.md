@@ -51,7 +51,7 @@ The model construction pipeline takes in the generated segmentation and output r
     ```
 * Use `--disable_SV` to turn off SimVascular (no remeshing would be performed). 
     ```
-for file in ${dir}/*.nii.gz; do echo ${file} &&  ${sv_python_dir}/simvascular --python -- ${model_script} --input_dir ${dir} --output_dir ${output_dir} --seg_name ${file##*/} --edge_size 2.5 --disable_SV; done
+    for file in ${dir}/*.nii.gz; do echo ${file} &&  ${sv_python_dir}/simvascular --python -- ${model_script} --input_dir ${dir} --output_dir ${output_dir} --seg_name ${file##*/} --edge_size 2.5 --disable_SV; done
     ```
     
 ## Acknowledgement
