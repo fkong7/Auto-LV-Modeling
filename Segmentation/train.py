@@ -130,11 +130,11 @@ Note that we apply image augmentation to our training dataset but not our valida
 tr_cfg = {
     #'num_class': args.num_class,
     'resize': [img_shape[0], img_shape[1]],
-    'horizontal_flip': True,
+    #'horizontal_flip': True,
     #'rotation': 10.,
     'changeIntensity': {"scale": [0.9, 1.1],"shift": [-0.1, 0.1]}, 
-    'width_shift_range': 0.15,
-    'height_shift_range': 0.15
+    #'width_shift_range': 0.15,
+    #'height_shift_range': 0.15
 }
 tr_preprocessing_fn = functools.partial(_augment, **tr_cfg)
 

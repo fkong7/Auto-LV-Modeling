@@ -56,8 +56,8 @@ def data_preprocess(modality,im_size, data_folder,view, data_folder_out, comm, r
   train_weights = []
   for m in modality:
     #imgVol_fn, mask_fn = getTrainNLabelNames(data_folder, m, fn='_test_nolabel')
-    imgVol_fn, mask_fn = getTrainNLabelNames(data_folder, m, fn=fn, post='_masks')
-    imgVol_fn2, mask_fn2 = getTrainNLabelNames(data_folder, m,ext='*.nii',fn=fn, post='_masks')
+    imgVol_fn, mask_fn = getTrainNLabelNames(data_folder, m, fn=fn, post='_seg')
+    imgVol_fn2, mask_fn2 = getTrainNLabelNames(data_folder, m,ext='*.nii',fn=fn, post='_seg')
     imgVol_fn += imgVol_fn2
     mask_fn += mask_fn2
     if rank ==0:
@@ -80,13 +80,13 @@ def data_preprocess(modality,im_size, data_folder,view, data_folder_out, comm, r
       img_path = imgVol_fn[i]
       mask_path = mask_fn[i]
       imgVol = resample_spacing(img_path, order=1, template_size=tuple(im_size))[0]
-      sitk.WriteImage(imgVol, os.path.join(data_folder_out, m+'_train', os.path.basename(mask_path)))
+      #sitk.WriteImage(imgVol, os.path.join(data_folder_out, m+'_train', os.path.basename(mask_path)))
       print("Spacing: ", imgVol.GetSpacing())
       imgVol = sitk.GetArrayFromImage(imgVol)  # numpy array
       #imgVol = HistogramEqualization(imgVol)
       imgVol = RescaleIntensity(imgVol, m, intensity)
       maskVol = resample_spacing(mask_path,order=0, template_size=tuple(im_size))[0]
-      sitk.WriteImage(maskVol, os.path.join(data_folder_out, m+'_train_masks', os.path.basename(mask_path)))
+      #sitk.WriteImage(maskVol, os.path.join(data_folder_out, m+'_train_masks', os.path.basename(mask_path)))
       maskVol = sitk.GetArrayFromImage(maskVol)  # numpy array
       maskVol = swapLabels(maskVol)
       print("number of image slices in this view %d" % imgVol.shape[view])
