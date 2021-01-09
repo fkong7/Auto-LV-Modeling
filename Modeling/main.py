@@ -107,8 +107,8 @@ def buildLeftHeartModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7]
 
 if __name__=="__main__":
     start = time.time()
-    from pip._internal import main as pipmain
-    pipmain(['install', 'scipy'])
+    #from pip._internal import main as pipmain
+    #pipmain(['install', 'scipy'])
    
     import argparse
     parser = argparse.ArgumentParser()
