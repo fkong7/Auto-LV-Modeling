@@ -826,7 +826,7 @@ def extractLargestConnectedRegion(vtk_im, label_id):
     vtk_im.GetPointData().SetScalars(numpy_to_vtk(py_im))
     return vtk_im
 
-def cutPolyDataWithAnother(poly1, poly2, inside=False):
+def cutPolyDataWithAnother(poly1, poly2, plane_info):
     """
     Cuts the first VTK PolyData with another
     
@@ -839,19 +839,41 @@ def cutPolyDataWithAnother(poly1, poly2, inside=False):
     """
     implicit = vtk.vtkImplicitPolyDataDistance()
     implicit.SetInput(poly2)
+    
+    signedDistances = vtk.vtkFloatArray()
+    signedDistances.SetNumberOfComponents(1)
+    signedDistances.SetName("SignedDistances")
+    
+    # Evaluate the signed distance function at all of the grid points
+    points = poly1.GetPoints()
 
-    #clipper = vtk.vtkClipPolyData()
-    clipper = vtk.vtkExtractPolyDataGeometry()
-    #clipper.SetClipFunction(implicit)
-    clipper.SetImplicitFunction(implicit)
-    clipper.SetInputData(poly1)
-    #clipper.SetInsideOut(inside)
-    clipper.SetExtractInside(inside)
-    clipper.SetExtractBoundaryCells(True)
-    clipper.Update()
+    ctr, nrm = plane_info
+    for pointId in range(points.GetNumberOfPoints()):
+        p = points.GetPoint(pointId)
+        signedDistance = implicit.EvaluateFunction(p)
+        plane_sign = np.sum(np.array(p-ctr)*nrm)
+        signedDistance = np.abs(signedDistance) if plane_sign<0 else signedDistance
+        signedDistances.InsertNextValue(signedDistance)
+    poly1.GetPointData().SetScalars(signedDistances)
 
+    ##clipper = vtk.vtkClipPolyData()
+    #clipper = vtk.vtkExtractPolyDataGeometry()
+    ##clipper.SetClipFunction(implicit)
+    #clipper.SetImplicitFunction(implicit)
+    #clipper.SetInputData(poly1)
+    ##clipper.SetInsideOut(inside)
+    #clipper.SetExtractInside(inside)
+    #clipper.SetExtractBoundaryCells(True)
+    #clipper.Update()
+    p2c= vtk.vtkPointDataToCellData()
+    p2c.SetInputData(poly1)
+    p2c.Update()
+    poly1=p2c.GetOutput()
+
+    clipper = thresholdPolyData(poly1, 'SignedDistances', (0., np.inf))   
     connectivity = vtk.vtkPolyDataConnectivityFilter()
-    connectivity.SetInputData(clipper.GetOutput())
+    #connectivity.SetInputData(clipper.GetOutput())
+    connectivity.SetInputData(clipper)
     connectivity.SetExtractionModeToLargestRegion()
     connectivity.Update()
     poly = connectivity.GetOutput()

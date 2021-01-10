@@ -64,14 +64,13 @@ class leftHeart(Geometry):
         self.cap_processed = False
         self.cap_pts_ids = None
 
-    def processWall(self, aa_cutter):
+    def processWall(self, aa_cutter, aa_plane):
         if self.wall_processed:
             print("Left heart  wall has been processed!")
             return
-        self.poly = utils.cutPolyDataWithAnother(self.poly, aa_cutter,False)
+        self.poly = utils.cutPolyDataWithAnother(self.poly, aa_cutter,aa_plane)
         self.poly = utils.fillHole(self.poly, size=25.)
         id_lists,boundaries = utils.getPointIdsOnBoundaries(self.poly)
-        #self.writeSurfaceMesh('/Users/fanweikong/Downloads/test_1.vtp')
         for idx, (ids, boundary) in enumerate(zip(id_lists, boundaries)):
             boundary = utils.smoothVTKPolyline(boundary, 5)
             self.poly = utils.projectOpeningToFitPlane(self.poly, ids, boundary.GetPoints(), self.edge_size)
@@ -96,13 +95,13 @@ class leftVentricle(Geometry):
         self.cap_processed = False
         self.cap_pts_ids = None
 
-    def processWall(self, la_cutter, aa_cutter):
+    def processWall(self, la_cutter, la_plane, aa_cutter, aa_plane):
         if self.wall_processed:
             print("Left ventricle wall has been processed!")
             return
         # cut with la and aorta cutter:
-        self.poly = utils.cutPolyDataWithAnother(self.poly, la_cutter,False)
-        self.poly = utils.cutPolyDataWithAnother(self.poly, aa_cutter,False)
+        self.poly = utils.cutPolyDataWithAnother(self.poly, la_cutter, la_plane)
+        self.poly = utils.cutPolyDataWithAnother(self.poly, aa_cutter, aa_plane)
         #fill small cutting artifacts:
         self.poly = utils.fillHole(self.poly, size=15.)
         #improve valve opening geometry

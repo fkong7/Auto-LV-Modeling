@@ -51,7 +51,7 @@ def buildLVModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=
         
         model = leftVentricle(image.generate_surface(0, smooth_iter=20, band=0.02))
         #process models
-        model.processWall(la_cutter, aa_cutter)
+        model.processWall(*la_cutter, *aa_cutter)
         model.processCap(5.) 
         if timming:
             surf_time = time.time() - time_now
@@ -91,7 +91,7 @@ def buildLeftHeartModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7]
             time_now = time.time()
         
         model = leftHeart(image.generate_surface(0, smooth_iter=20, band=0.02))
-        model.processWall(aa_cutter)
+        model.processWall(*aa_cutter)
         model.processCap(5.) 
         if timming:
             surf_time = time.time() - time_now
@@ -135,7 +135,6 @@ if __name__=="__main__":
     #run volume mesh to generate ids but do not use it
     fn_ug = 'temp'
     timming = True
-    #time_list = buildLeftHeartModelFromImage([seg_fn], [fn_poly], fn_ug, edge_size=paras['edge_size'], timming=timming, use_SV=args.disable_SV)
     time_list = buildLVModelFromImage([seg_fn], [fn_poly], fn_ug, edge_size=args.edge_size, timming=timming, use_SV=args.disable_SV)
     if timming:
         import csv
