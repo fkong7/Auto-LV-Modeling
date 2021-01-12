@@ -3,16 +3,10 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(
 __file__), "src"))
 
-import glob
 import numpy as np
 import label_io
 from models import leftVentricle
-from marching_cube import marching_cube, vtk_marching_cube
-from image_processing import lvImage
-import utils
 from registration import Registration
-import vtk
-import SimpleITK as sitk
 import time
 
 def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, image_dir, output_dir, mask_dir, write=False, smooth=False):
@@ -34,6 +28,8 @@ def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, imag
     # Only need to register N-1 mesh
     fixed_im_fn =os.path.join(image_dir, IMAGE_NAME % START_PHASE)
     fixed_mask_fn =os.path.join(mask_dir, IMAGE_NAME % START_PHASE)
+    fn_poly = os.path.join(output_dir, MODEL_NAME % START_PHASE)
+    lvmodel.writeSurfaceMesh(fn_poly)
     volume = list()
     volume.append([START_PHASE,lvmodel.getVolume()])
     image_output_dir = os.path.join(reg_output_dir, "images")
@@ -72,19 +68,27 @@ if __name__=='__main__':
     import argparse
     parser = argparse.ArgumentParser()
     
-    parser.add_argument('--json_fn', help="Name of the json file")
+    parser.add_argument('--image_dir', help='Path to the ct/mr images or segmentation results')
+    parser.add_argument('--mask_dir', help='Path to the mask file')
+    parser.add_argument('--surface_dir', help='Path to the unregistered surface mesh')
+    parser.add_argument('--output_dir', help='Path to the registered surface meshes')
+    parser.add_argument('--start_phase', type=int, help='Phase ID of the surface mesh used as the registration target')
+    parser.add_argument('--total_phase', type=int, help='Total number of phases')
+    parser.add_argument('--edge_size', type=float, help='Maximum edge size of the surface mesh')
+    parser.add_argument('--model_output', help='Output format of registered surfaces')
+    parser.add_argument('--im_name', help='Name of the images in image_dir')
     parser.add_argument('--write', default=False, action='store_true')
     parser.add_argument('--smooth', default=False, action='store_true')
     args = parser.parse_args()
     
-    paras = label_io.loadJsonArgs(args.json_fn)
-    image_dir = os.path.join(paras['im_top_dir'] , paras['patient_id'], paras['im_folder_name'])
-    output_dir = os.path.join(paras['out_dir'], paras['patient_id'], "surfaces")
-    mask_dir = os.path.join(paras['im_top_dir'], paras['patient_id'], paras['mask_folder_name'])
-    fn_poly = os.path.join(output_dir, paras['model_output'] % paras['start_phase'])
+    image_dir = args.image_dir
+    surface_dir = args.surface_dir
+    output_dir = args.output_dir
+    mask_dir = args.mask_dir
+    fn_poly = os.path.join(surface_dir, args.model_output % args.start_phase)
 
     #
-    lvmodel = leftVentricle(label_io.loadVTKMesh(fn_poly), edge_size=paras['edge_size'] )
-    registration(lvmodel, paras['start_phase'],paras['total_phase'], paras['model_output'], paras['im_name'], image_dir,output_dir, mask_dir, args.write, args.smooth)
+    lvmodel = leftVentricle(label_io.loadVTKMesh(fn_poly), edge_size=args.edge_size )
+    registration(lvmodel, args.start_phase,args.total_phase, args.model_output, args.im_name, image_dir, output_dir, mask_dir, args.write, args.smooth)
     end = time.time()
-    print("Time spent in elastix_main.py: ", end- start)
+    print("Time spent in elastix_main.py: ", end-start)

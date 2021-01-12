@@ -1,6 +1,12 @@
-image_dir=examples
-output_dir=output
-weight_dir=/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/test_ensemble_4_20_weights
-#weight_dir=/Users/fanweikong/Documents/Modeling/SurfaceModeling/results/run0_zscore
+patient_id=BD9702
+image_dir=01-Images
+output_dir=02-Segmnts
+weight_dir=./Weights
 
-/usr/local/bin/simvascular  --python -- ./Segmentation/prediction.py --image $image_dir --output $output_dir --model $weight_dir --view  1 --modality ct
+python ./Segmentation/prediction.py \
+    --pid $patient_id \
+    --image $image_dir \
+    --output $output_dir \
+    --model $weight_dir \
+    --view  0 1 2 \
+    --modality ct

@@ -112,7 +112,6 @@ if __name__=="__main__":
    
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--json_fn', nargs=1, help='Name of the json file')
     parser.add_argument('--disable_SV',default=True, action='store_false', help='Whether to disable SV for remeshing')
     parser.add_argument('--seg_name', help='Name of the segmentation file')
     parser.add_argument('--input_dir', help='Path to the segmentation directory')
@@ -121,16 +120,16 @@ if __name__=="__main__":
     args = parser.parse_args()
     
     try:
-        os.makedirs(os.path.join(args.output_dir, "surfaces"))
+        os.makedirs(os.path.join(args.output_dir))
     except Exception as e: print(e)
-    try:
-        os.makedirs(os.path.join(args.output_dir, "volumes"))
-    except Exception as e: print(e)
-    fn_tempPts = os.path.join(args.output_dir, "surfaces", 'outputpoints.txt')
+    # try:
+    #     os.makedirs(os.path.join(args.output_dir, "volumes"))
+    # except Exception as e: print(e)
+    # fn_tempPts = os.path.join(args.output_dir, "surfaces", 'outputpoints.txt')
     
     seg_fn = os.path.join(args.input_dir, args.seg_name)
     print(seg_fn)
-    fn_poly = os.path.join(args.output_dir, "surfaces", args.seg_name+'.vtk')
+    fn_poly = os.path.join(args.output_dir, args.seg_name+'.vtp')
     
     #run volume mesh to generate ids but do not use it
     fn_ug = 'temp'
