@@ -31,16 +31,16 @@ The code repository consists of two parts
 
 The segmentation models can generate segmentations for LV blood pool, LV myocardium, LA, RA, RV blood pool, aorta and pulmonary artery.
 ### Input Requirements
-The preferred input format of the image volumes is **.nii.gz or nii**. VTK image volumes (.vti) are also accepted; however they should be reoriented to have an orientation matrix of identity. This is because the segmnetation method requires identity-oriented image volumes while the version of VTK within SimVascular does not include orientation matrix with VTI images. 
+The preferred input format of the image volumes is **.nii.gz or nii**. VTK image volumes (.vti) are also accepted; however they should be reoriented to have an orientation matrix of identity. This is because the segmnetation method requires identity-oriented image volumes while the version of VTK within SimVascular does not include orientation matrix with VTI images. **It is recommended to number the files starting from 0.**
 The directory containing the input image data should be organized as follows:
 
 ```
 image_dir
     |__ ct_test
         |__ patient_id (optional)
+          	|__ image_volume0.nii.gz
           	|__ image_volume1.nii.gz
           	|__ image_volume2.nii.gz
-          	|__ image_volume3.nii.gz
           	|__ ...
 ```
 ### Trained Models
