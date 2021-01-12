@@ -11,7 +11,24 @@ The code repository consists of two parts
 
 ## Dependencies
 
- * [SimVascular](https://github.com/SimVascular/SimVascular) 
+* Segmentation 
+    * Tensorflow (V 1.12)
+    * Python
+    * SimpleITK<sup>1</sup>
+    * h5py (V 2.10.0)
+* Model Generation
+    * Python
+    
+    * VTK
+    
+    * [SimVascular](https://github.com/SimVascular/SimVascular) (Meshing)
+    
+    * [SimpleElastix](https://github.com/SuperElastix/SimpleElastix) (Registration)<sup>1</sup>
+    
+
+<sup>1</sup>  Install SimpleElastix commit 8244e0001f4137514b0f545f1e846910b3dd7769. This will automatically install a proper version of SimpleITK. Generally speaking, SimpleITK version higher than 2.0 will not work due to syntax changes.
+    
+      
 
 ## Segmentation Usage 
 
@@ -33,8 +50,7 @@ Our segmentation models were trainined simultaneously on CT and MR data and trai
 ### Prediction
 To generate segmentations for 3D CT or MR image volumes:
 ```
-sv_python_dir=/usr/local/bin
-${sv_python_dir}/simvascular  --python -- Segmentation/prediction.py \
+python Segmentation/prediction.py \
     --image /path/to/image/dir \ # the images should be saved in nii.gz format under a folder named as [modality]_test within /path/to/image/dir. 
     --output /path/to/output \
     --model /path/to/model/weights \
@@ -42,6 +58,8 @@ ${sv_python_dir}/simvascular  --python -- Segmentation/prediction.py \
     --modality ct \ # Image modality, ct or mr
     --mode test
 ```
+
+
 
 ## LV Modeling Usage
 
@@ -60,7 +78,19 @@ The model construction pipeline takes in the generated segmentation and output r
     ```
     for file in ${dir}/*.nii.gz; do echo ${file} &&  ${sv_python_dir}/simvascular --python -- ${model_script} --input_dir ${dir} --output_dir ${output_dir} --seg_name ${file##*/} --edge_size 2.5 --disable_SV; done
     ```
-    
+### Volumetric Meshing using SimVascular 
+*  Update `info.json` with correct file/folder names and mesh edge size
+    ```
+    ${sv_python_dir}/sv --python -- ${volume_mesh_script} --json_fn ${json_file}
+    ```
+### Construct Point Corresponded LV Meshes from 4D Images
+Building point-corresponded LV meshes require segmentations from all time frames. One surface mesh will be created at one time frame and propagated to the others by registering the corresponding segmentations. 
+* Update `info.json` with correct file and folder names. Specify the time phase id to construct LV surface mesh.
+* Run `elastix_main.py`.
+    ```
+    registration_script=Modeling/elastix_main.py
+    python ${registration_script} --json_fn ${json_file} --write --smooth
+    ```
 ## Acknowledgement
 This work was supported by the NSF, Award #1663747. 
 
