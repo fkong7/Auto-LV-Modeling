@@ -7,7 +7,7 @@ mask_dir=./02-Segmnts/BD9702
 # Path to the unregistered surface mesh
 surface_dir=./03-Surfaces/BD9702
 # Path to the registered surface meshes
-output_dir=./05-SurfReg/BD9702
+output_dir=./04-SurfReg/BD9702
 
 # Phase ID of the surface mesh used as the registration target
 start_phase=10

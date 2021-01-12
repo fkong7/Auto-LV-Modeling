@@ -63,7 +63,7 @@ python Segmentation/prediction.py \
     --mode test
 ```
 
-A shell file (`run_seg.sh`) is provided for ease of use. Patient ID is optional, and should supply `None` in the shell file if not used.
+A shell script (`run_seg.sh`) is provided for ease of use. Patient ID is optional, and should supply `None` in the shell script if not used.
 
 
 
@@ -73,7 +73,7 @@ The model construction pipeline takes in the generated segmentation and output r
 
 ### 1.  Construct LV Surface Meshes with Tagged Boundary Faces
 * Update run_svsurfaces.sh with correct file and folder names.
-* Run the shell file to generate a LV surface mesh for each segmentation file in a folder.   
+* Run the shell script to generate a LV surface mesh for each segmentation file in a folder.   
     ```
     sv_python_dir=/usr/local/bin
     model_script=Modeling/main.py
@@ -84,15 +84,18 @@ The model construction pipeline takes in the generated segmentation and output r
     ```
     for file in ${dir}/*.nii.gz; do echo ${file} &&  ${sv_python_dir}/simvascular --python -- ${model_script} --input_dir ${dir} --output_dir ${output_dir} --seg_name ${file##*/} --edge_size 2.5 --disable_SV; done
     ```
-### Volumetric Meshing using SimVascular 
-*  Update `info.json` with correct file/folder names and mesh edge size
-    ```
-    ${sv_python_dir}/sv --python -- ${volume_mesh_script} --json_fn ${json_file}
-    ```
+
 ### 2.  Construct Point Corresponded LV Meshes from 4D Images
 Building point-corresponded LV meshes require segmentations from all time frames. One surface mesh will be created at one time frame and propagated to the others by registering the corresponding segmentations. 
 * Update `run_surfregist.sh` with correct file and folder names. Specify the time phase id to construct LV surface mesh.
-* Run `elastix_main.py` through the shell file.
+* Run `elastix_main.py` through the shell script.
+
+### 3.  Volumetric Meshing using SimVascular 
+*  Update `run_volmesh.sh` with correct file/folder names and mesh edge size
+    
+*  Run `volume_mesh_main.py` through the shell script.
+    
+    
 ## Acknowledgement
 This work was supported by the NSF, Award #1663747. 
 

@@ -9,7 +9,7 @@ from models import leftVentricle
 from registration import Registration
 import time
 
-def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, image_dir, surface_dir, output_dir, mask_dir, write=False, smooth=False):
+def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, image_dir, output_dir, mask_dir, write=False, smooth=False):
     """
     Registration of surface mesh point set using Elastix
     Performs 3D image registration and move points based on the computed transform
@@ -89,6 +89,6 @@ if __name__=='__main__':
 
     #
     lvmodel = leftVentricle(label_io.loadVTKMesh(fn_poly), edge_size=args.edge_size )
-    registration(lvmodel, args.start_phase,args.total_phase, args.model_output, args.im_name, image_dir,surface_dir, output_dir, mask_dir, args.write, args.smooth)
+    registration(lvmodel, args.start_phase,args.total_phase, args.model_output, args.im_name, image_dir, output_dir, mask_dir, args.write, args.smooth)
     end = time.time()
     print("Time spent in elastix_main.py: ", end-start)
