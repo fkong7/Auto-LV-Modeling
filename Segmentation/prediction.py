@@ -132,7 +132,7 @@ class Prediction:
         return 
 
 
-def main(size, modality, data_folder, data_out_folder, model_folder, view_attributes, mode, channel, folder_postfix):
+def main(size, modality, patient_id, data_folder, data_out_folder, model_folder, view_attributes, mode, channel, folder_postfix):
 
     model_postfix = "small2"
     model_folders = sorted(model_folder * len(view_attributes))
@@ -157,18 +157,21 @@ def main(size, modality, data_folder, data_out_folder, model_folder, view_attrib
     for m in modality:
         x_filenames, y_filenames = [], []
         for ext in ext_list:
-            im_loader = ImageLoader(m, data_folder, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_seg', ext='*'+ext)
+            im_loader = ImageLoader(m, data_folder, patient_id, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_seg', ext='*'+ext)
             x_temp, y_temp = im_loader.load_imagefiles()
             x_filenames += x_temp
             y_filenames += y_temp
         for i in range(len(x_filenames)):
             print("Processing "+x_filenames[i])
+
+            print(os.path.join(data_out_folder,patient_id,os.path.basename(x_filenames[i])))
+            
             models = [os.path.realpath(i) + '/weights_multi-all-%s_%s.hdf5' % (j, model_postfix) for i, j in zip(model_folders, view_names)]
             predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i], channel)
             predict.volume_prediction_average(size)
             predict.resample_prediction_vtk()
 
-            predict.write_prediction(os.path.join(data_out_folder,os.path.basename(x_filenames[i])))
+            predict.write_prediction(os.path.join(data_out_folder,patient_id,os.path.basename(x_filenames[i])))
 
             #if y_filenames[i] is not None:
             #    dice_list.append(predict.dice())
@@ -176,6 +179,7 @@ def main(size, modality, data_folder, data_out_folder, model_folder, view_attrib
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--pid',  help='Patient ID. If none, put None here.')
     parser.add_argument('--image',  help='Name of the folder containing the image data')
     parser.add_argument('--output',  help='Name of the output folder')
     parser.add_argument('--model', nargs='+',  help='Name of the folders containing the trained models')
@@ -186,5 +190,8 @@ if __name__ == '__main__':
     parser.add_argument('--im_folder_postfix', default='test', help='Postfix of the folder containing image data, for ct_test, enter test')
     parser.add_argument('--n_channel',type=int, default=1, help='Number of image channels of input')
     args = parser.parse_args()
+
+    if args.pid.lower() == "none":
+        args.pid = ''
     
-    main(args.size, args.modality, args.image, args.output, args.model, args.view, args.mode, args.n_channel, args.im_folder_postfix)
+    main(args.size, args.modality, args.pid, args.image, args.output, args.model, args.view, args.mode, args.n_channel, args.im_folder_postfix)
