@@ -1,4 +1,4 @@
-patient_id=None
+patient_id=BD9702
 image_dir=01-Images
 output_dir=02-Segmnts
 weight_dir=./Weights

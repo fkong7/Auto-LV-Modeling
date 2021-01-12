@@ -162,10 +162,7 @@ def main(size, modality, patient_id, data_folder, data_out_folder, model_folder,
             x_filenames += x_temp
             y_filenames += y_temp
         for i in range(len(x_filenames)):
-            print("Processing "+x_filenames[i])
-
-            print(os.path.join(data_out_folder,patient_id,os.path.basename(x_filenames[i])))
-            
+            print("Processing "+x_filenames[i])            
             models = [os.path.realpath(i) + '/weights_multi-all-%s_%s.hdf5' % (j, model_postfix) for i, j in zip(model_folders, view_names)]
             predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i], channel)
             predict.volume_prediction_average(size)

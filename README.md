@@ -44,6 +44,7 @@ image_dir
           	|__ image_volume1.nii.gz
           	|__ image_volume2.nii.gz
           	|__ image_volume3.nii.gz
+          	|__ ...
 ```
 ### Trained Models
 We used the image and ground truth data provided by [MMWHS](http://www.sdspeople.fudan.edu.cn/zhuangxiahai/0/mmwhs/) to train our models. 
@@ -54,23 +55,25 @@ To generate segmentations for 3D CT or MR image volumes:
 ```
 python Segmentation/prediction.py \
     --pid patient_id \ # Patient ID.
-    --image image_dir \ # the images should be saved in nii.gz format under a folder named as [modality]_test/patient_id within image_dir. 
+    --image image_dir \ # the images should be saved in proper format in a folder named [modality]_test/patient_id within image_dir. 
     --output output_dir \
     --model weight_dir \
     --view 0 1 2 \ # Use models trained on axial (0), coronal (1) and/or sagittal (2) view[s].
-    --modality ct \ # Image modality, ct or mr
+    --modality ct \ # Image modality, ct or mr.
     --mode test
 ```
 
-A bash file (`run_seg.sh`) is provided for ease of use. Patient ID is optional, and should supply `None` in the bash file if not used.
+A shell file (`run_seg.sh`) is provided for ease of use. Patient ID is optional, and should supply `None` in the shell file if not used.
+
+
 
 ## LV Modeling Usage
 
-The model construction pipeline takes in the generated segmentation and output reconstructed LV surface meshes for CFD simulations. 
+The model construction pipeline takes in the generated segmentation and output reconstructed LV surface meshes for CFD simulations. The pipeline consists of the following four steps: 1) Construct LV surface meshes from segmentation results; 2) Register the surface meshes to get consistent mesh topology; 3) Obtain volumetric mesh using SimVascular; 4) Interpolate the registered surface meshes to obtain sufficient temporal resolution.
 
-### Construct LV Surface Meshes with Tagged Boundary Faces
-* Update `info.json` with correct file and folder names.
-* Run `main.py` to generate a LV surface mesh for each segmentation file in a folder.   
+### 1.  Construct LV Surface Meshes with Tagged Boundary Faces
+* Update run_svsurfaces.sh with correct file and folder names.
+* Run the shell file to generate a LV surface mesh for each segmentation file in a folder.   
     ```
     sv_python_dir=/usr/local/bin
     model_script=Modeling/main.py
