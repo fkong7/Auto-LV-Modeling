@@ -31,7 +31,6 @@ if __name__ == '__main__':
     else:
         phase = args.phase
     poly_fn = os.path.join(input_dir, args.model_out % phase)
-    print(poly_fn)
 
     lvmodel = models.leftVentricle(label_io.loadVTKMesh(poly_fn))
     
@@ -40,3 +39,4 @@ if __name__ == '__main__':
     lvmodel.writeMeshComplete(output_vol)
     end = time.time()
     print("Time spent in volume_mesh_main.py: ", end-start)
+    print("Mesh generated for ", poly_fn)

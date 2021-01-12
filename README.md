@@ -18,11 +18,8 @@ The code repository consists of two parts
     * h5py (V 2.10.0)
 * Model Generation
     * Python
-    
     * VTK
-    
     * [SimVascular](https://github.com/SimVascular/SimVascular) (Meshing)
-    
     * [SimpleElastix](https://github.com/SuperElastix/SimpleElastix) (Registration)<sup>1</sup>
     
 
@@ -91,11 +88,18 @@ Building point-corresponded LV meshes require segmentations from all time frames
 * Run `elastix_main.py` through the shell script.
 
 ### 3.  Volumetric Meshing using SimVascular 
-*  Update `run_volmesh.sh` with correct file/folder names and mesh edge size
-    
+* Update `run_volmesh.sh` with correct file/folder names and mesh edge size.
+
 *  Run `volume_mesh_main.py` through the shell script.
-    
-    
+   
+
+### 4.  Generate Mesh Motion File for [svFSI](https://github.com/SimVascular/svFSI)
+* Run `run_simulation.sh` to generate mesh motion file.
+  Input: Surface mesh from segmented geometry with the same connectivity.
+  Output: Displacement files for all the surfaces in this [format](https://simvascular.github.io/docssvFSI.html#app_app_prescribed_wall_motion).
+  
+  
+
 ## Acknowledgement
 This work was supported by the NSF, Award #1663747. 
 
