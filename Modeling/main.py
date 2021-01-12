@@ -129,7 +129,7 @@ if __name__=="__main__":
     
     seg_fn = os.path.join(args.input_dir, args.seg_name)
     print(seg_fn)
-    fn_poly = os.path.join(args.output_dir, args.seg_name+'.vtk')
+    fn_poly = os.path.join(args.output_dir, args.seg_name+'.vtp')
     
     #run volume mesh to generate ids but do not use it
     fn_ug = 'temp'
