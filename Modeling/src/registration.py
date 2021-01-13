@@ -66,9 +66,11 @@ class Registration:
         res = np.array(self.fixed.GetSpacing())
         res = np.min(res)/res * 0.8
         self.fixed = utils.resample(self.fixed, res, order=1)
+        self.fixed = utils.normalizeLabelMap(self.fixed, rng=[-2, 2])
         #self.fixed_mask = utils.resample(self.fixed_mask)
         #self.fixed_mask.SetOrigin(self.fixed.GetOrigin())
         self.moving = utils.resample(self.moving, res, order=1)
+        self.moving = utils.normalizeLabelMap(self.moving, rng=[-2, 2])
         #self.moving_mask = utils.resample(self.moving_mask)
         #self.moving_mask.SetOrigin(self.moving.GetOrigin())
 
@@ -82,10 +84,10 @@ class Registration:
         #p_map_1 = sitk.GetDefaultParameterMap('translation')
         #p_map_2 = sitk.GetDefaultParameterMap('affine')
         #p_map_3 = sitk.GetDefaultParameterMap('bspline')
-        #p_map_3['MaximumNumberOfIterations'] = ['256']
+        #p_map_3['MaximumNumberOfIterations'] = ['512']
         #p_map_3['FinalGridSpacingInPhysicalUnits'] = []
         #p_map_3["MaximumNumberOfSamplingAttempts"] = ['4']
-        #p_map_3["FinalGridSpacingInVoxels"] = ['12']
+        #p_map_3["FinalGridSpacingInVoxels"] = ['16']
         #p_map_3['FinalBSplineInterpolationOrder'] = ['3']
         #sitk.PrintParameterMap(p_map_3)
         #elastixImageFilter.SetParameterMap(p_map_1)

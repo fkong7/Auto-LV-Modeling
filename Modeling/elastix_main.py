@@ -1,4 +1,5 @@
 import os
+import glob
 import sys
 sys.path.append(os.path.join(os.path.dirname(
 __file__), "src"))
@@ -7,16 +8,17 @@ import numpy as np
 import label_io
 from models import leftVentricle
 from registration import Registration
+from utils import natural_sort
 import time
 
-def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, image_dir, output_dir, mask_dir, write=False, smooth=False):
+def registration(lvmodel, START_PHASE, MODEL_NAME, IMAGE_NAME, image_fns, output_dir, mask_fns, write=False, smooth=False):
     """
     Registration of surface mesh point set using Elastix
     Performs 3D image registration and move points based on the computed transform
     Cap the surface mesh with test6_2()
     """
     # compute volume of all phases to select systole and diastole:
-
+    TOTAL_PHASE = len(image_fns)
     ids = list(range(START_PHASE,TOTAL_PHASE)) + list(range(0,START_PHASE))
     #ids = [9, START_PHASE]
     reg_output_dir = os.path.join(output_dir, "registration")
@@ -26,8 +28,8 @@ def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, imag
 
     register = Registration(smooth)
     # Only need to register N-1 mesh
-    fixed_im_fn =os.path.join(image_dir, IMAGE_NAME % START_PHASE)
-    fixed_mask_fn =os.path.join(mask_dir, IMAGE_NAME % START_PHASE)
+    fixed_im_fn = image_fns[START_PHASE]
+    fixed_mask_fn = mask_fns[START_PHASE]
     fn_poly = os.path.join(output_dir, MODEL_NAME % START_PHASE)
     lvmodel.writeSurfaceMesh(fn_poly)
     volume = list()
@@ -37,11 +39,9 @@ def registration(lvmodel, START_PHASE, TOTAL_PHASE, MODEL_NAME, IMAGE_NAME, imag
         print("REGISTERING FROM %d TO %d " % (START_PHASE, (index+1)%TOTAL_PHASE))
     
         #ASSUMING increment is 1
-        moving_im_fn = os.path.join(image_dir, IMAGE_NAME % ((index+1)%TOTAL_PHASE)) 
-        #moving_mask_fn = os.path.join(mask_dir, IMAGE_NAME % ((index+1)%TOTAL_PHASE)) 
+        moving_im_fn = image_fns[(index+1)%TOTAL_PHASE]
         
         register.updateMovingImage(moving_im_fn)
-        #register.updateMovingMask(moving_mask_fn)
         register.updateFixedImage(fixed_im_fn)
         register.updateFixedMask(fixed_mask_fn)
 
@@ -73,7 +73,6 @@ if __name__=='__main__':
     parser.add_argument('--surface_dir', help='Path to the unregistered surface mesh')
     parser.add_argument('--output_dir', help='Path to the registered surface meshes')
     parser.add_argument('--start_phase', type=int, help='Phase ID of the surface mesh used as the registration target')
-    parser.add_argument('--total_phase', type=int, help='Total number of phases')
     parser.add_argument('--edge_size', type=float, help='Maximum edge size of the surface mesh')
     parser.add_argument('--model_output', help='Output format of registered surfaces')
     parser.add_argument('--im_name', help='Name of the images in image_dir')
@@ -81,14 +80,16 @@ if __name__=='__main__':
     parser.add_argument('--smooth', default=False, action='store_true')
     args = parser.parse_args()
     
-    image_dir = args.image_dir
     surface_dir = args.surface_dir
     output_dir = args.output_dir
-    mask_dir = args.mask_dir
     fn_poly = os.path.join(surface_dir, args.model_output % args.start_phase)
 
     #
     lvmodel = leftVentricle(label_io.loadVTKMesh(fn_poly), edge_size=args.edge_size )
-    registration(lvmodel, args.start_phase,args.total_phase, args.model_output, args.im_name, image_dir, output_dir, mask_dir, args.write, args.smooth)
+
+    image_fns = natural_sort(glob.glob(os.path.join(args.image_dir, '*.nii.gz')))
+    mask_fns = natural_sort(glob.glob(os.path.join(args.mask_dir, '*.nii.gz')))
+
+    registration(lvmodel, args.start_phase,args.model_output, args.im_name, image_fns,  output_dir, mask_fns, args.write, args.smooth)
     end = time.time()
     print("Time spent in elastix_main.py: ", end-start)

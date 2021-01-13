@@ -6,6 +6,12 @@ Utility functions for label map editing
 import numpy as np
 import vtk
 
+def natural_sort(l):
+    import re
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ]
+    return sorted(l, key = alphanum_key)
+
 ##########################
 ## Numpy Utility functions
 ##########################
@@ -143,6 +149,26 @@ def convert2binary(labels):
     
 
     return pyLabel
+
+def normalizeLabelMap(labels, rng=[-1, 1]):
+    """
+    Normalize the intensity value of segmentation to a specified range
+    Args:
+        labels: SimpleITK segmentation
+    """
+    import SimpleITK as sitk
+    py_label = sitk.GetArrayFromImage(labels)
+
+    ids = np.unique(py_label)
+
+    values = np.linspace(rng[0], rng[1], len(ids), endpoint=True)
+    for index, i in enumerate(ids):
+        py_label[py_label==i] = values[index]
+    labels_new = sitk.GetImageFromArray(py_label)
+    labels_new.SetOrigin(labels.GetOrigin())
+    labels_new.SetDirection(labels.GetDirection())
+    labels_new.SetSpacing(labels.GetSpacing())
+    return labels_new
 
 def eraseBoundary(labels, pixels, bg_id):
     """
