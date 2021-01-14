@@ -15,7 +15,7 @@ start_phase=8
 #total_phase=10
 
 # Input format of unregistered surfaces
-surf_format=frame%03d.nii.gz.vtp
+surf_fn=$(printf "$surface_dir/frame%03d.nii.gz.vtp" $start_phase)
 # Name of the images in image_dir
 imag_format=frame%03d.nii.gz
 
@@ -23,10 +23,9 @@ imag_format=frame%03d.nii.gz
 python Modeling/elastix_main.py \
     --image_dir $mask_dir \
     --mask_dir $mask_dir \
-    --surface_dir $surface_dir \
     --output_dir $output_dir \
     --start_phase $start_phase \
-    --model_output $surf_format \
+    --surface_fn $surf_fn \
     --im_name $imag_format \
     --edge_size 2.5 \
     --write \

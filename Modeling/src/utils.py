@@ -150,20 +150,26 @@ def convert2binary(labels):
 
     return pyLabel
 
-def normalizeLabelMap(labels, rng=[-1, 1]):
+def normalizeLabelMap(labels, values=[], keep=[]):
     """
     Normalize the intensity value of segmentation to a specified range
     Args:
         labels: SimpleITK segmentation
     """
     import SimpleITK as sitk
+    #labels = sitk.Cast(labels,  sitk.sitkFloat32)
     py_label = sitk.GetArrayFromImage(labels)
 
     ids = np.unique(py_label)
-
-    values = np.linspace(rng[0], rng[1], len(ids), endpoint=True)
+    #values = np.linspace(rng[0], rng[1], len(keep), endpoint=True) #if keep is empty, convert to binary
+    print("ids: ", ids)
+    print("normalizeLabelMap", values)
     for index, i in enumerate(ids):
-        py_label[py_label==i] = values[index]
+        if i in keep:
+            py_label[py_label==i] = values[keep.index(i)]
+        else:
+            py_label[py_label==i] = 0.
+    print("ids new: ", np.unique(py_label))
     labels_new = sitk.GetImageFromArray(py_label)
     labels_new.SetOrigin(labels.GetOrigin())
     labels_new.SetDirection(labels.GetDirection())

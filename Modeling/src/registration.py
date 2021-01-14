@@ -65,14 +65,10 @@ class Registration:
         #self.moving = label_io.exportVTK2Sitk(moving.label)
         res = np.array(self.fixed.GetSpacing())
         res = np.min(res)/res * 0.8
-        self.fixed = utils.resample(self.fixed, res, order=1)
-        self.fixed = utils.normalizeLabelMap(self.fixed, rng=[-2, 2])
-        #self.fixed_mask = utils.resample(self.fixed_mask)
-        #self.fixed_mask.SetOrigin(self.fixed.GetOrigin())
-        self.moving = utils.resample(self.moving, res, order=1)
-        self.moving = utils.normalizeLabelMap(self.moving, rng=[-2, 2])
-        #self.moving_mask = utils.resample(self.moving_mask)
-        #self.moving_mask.SetOrigin(self.moving.GetOrigin())
+        self.fixed = utils.resample(self.fixed, res, order=0)
+        self.fixed = utils.normalizeLabelMap(self.fixed, values=[100,110,120,130], keep=[1, 2, 3, 6])
+        self.moving = utils.resample(self.moving, res, order=0)
+        self.moving = utils.normalizeLabelMap(self.moving, values=[100,110,120,130], keep=[1, 2, 3, 6])
 
     def computeTransform(self):
 
@@ -81,18 +77,18 @@ class Registration:
         elastixImageFilter = sitk.ElastixImageFilter()
         elastixImageFilter.SetFixedImage(self.fixed)
         #elastixImageFilter.SetFixedMask(self.fixed_mask)
-        #p_map_1 = sitk.GetDefaultParameterMap('translation')
-        #p_map_2 = sitk.GetDefaultParameterMap('affine')
-        #p_map_3 = sitk.GetDefaultParameterMap('bspline')
-        #p_map_3['MaximumNumberOfIterations'] = ['512']
-        #p_map_3['FinalGridSpacingInPhysicalUnits'] = []
-        #p_map_3["MaximumNumberOfSamplingAttempts"] = ['4']
-        #p_map_3["FinalGridSpacingInVoxels"] = ['16']
-        #p_map_3['FinalBSplineInterpolationOrder'] = ['3']
-        #sitk.PrintParameterMap(p_map_3)
-        #elastixImageFilter.SetParameterMap(p_map_1)
-        #elastixImageFilter.AddParameterMap(p_map_2)
-        #elastixImageFilter.AddParameterMap(p_map_3)
+        p_map_1 = sitk.GetDefaultParameterMap('translation')
+        p_map_2 = sitk.GetDefaultParameterMap('affine')
+        p_map_3 = sitk.GetDefaultParameterMap('bspline')
+        p_map_3['MaximumNumberOfIterations'] = ['256']
+        p_map_3['FinalGridSpacingInPhysicalUnits'] = []
+        p_map_3["MaximumNumberOfSamplingAttempts"] = ['4']
+        p_map_3["FinalGridSpacingInVoxels"] = ['18']
+        p_map_3['FinalBSplineInterpolationOrder'] = ['2']
+        sitk.PrintParameterMap(p_map_3)
+        elastixImageFilter.SetParameterMap(p_map_1)
+        elastixImageFilter.AddParameterMap(p_map_2)
+        elastixImageFilter.AddParameterMap(p_map_3)
         elastixImageFilter.SetMovingImage(self.moving)
         #elastixImageFilter.SetMovingMask(self.moving_mask)
         elastixImageFilter.Execute()
