@@ -785,6 +785,25 @@ def recolorVTKPixelsByPlaneByRegion(labels, ori, nrm, region_id, bg_id):
 
     return labels
 
+def recolorVTKImageByPolyData(poly, vtk_image, new_id):
+    """
+    Change the id value of the pixels within the Polydata
+
+    Args:
+        poly: VTK PolyData
+        vtk_image: VTK ImageData
+        new_id: int, new id
+    Return:
+        new_image: modified vtk image
+    """
+    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+    poly_im = convertPolyDataToImageData(poly, vtk_image)
+    poly_im_py = vtk_to_numpy(poly_im.GetPointData().GetScalars())
+    vtk_im_py = vtk_to_numpy(vtk_image.GetPointData().GetScalars())
+    vtk_im_py[poly_im_py>0] = new_id
+    vtk_image.GetPointData().SetScalars(numpy_to_vtk(vtk_im_py))
+    return vtk_image
+
 def vtkImageResample(image, spacing, opt):
     """
     Resamples the vtk image to the given dimenstion
@@ -1490,7 +1509,6 @@ def capPolyDataOpenings(poly,  size):
     # TRY NOT USE TO USE THE POINT IDS, START FROM FEATURE EDGE DIRECTLY SINCE IT REQUIRES THE BOUNDARY POLYDATA
     #import matplotlib.pyplot as plt
     from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
-    import label_io
     import os
     def _plotPoints(points):
         fig = plt.figure()
@@ -1617,7 +1635,7 @@ def thresholdPolyData(poly, attr, threshold):
     surf_filter.SetInputData(surface_thresh.GetOutput())
     surf_filter.Update()
     return surf_filter.GetOutput()
-def convertPolyDataToImageData(poly, ref_im):
+def convertPolyDataToImageData(poly, ref_im, reverse=True):
     """
     Convert the vtk polydata to imagedata 
 
@@ -1628,16 +1646,21 @@ def convertPolyDataToImageData(poly, ref_im):
         output: resulted vtkImageData
     """
     from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
-    ref_im.GetPointData().SetScalars(numpy_to_vtk(np.zeros(vtk_to_numpy(ref_im.GetPointData().GetScalars()).shape)))
+    # Have to copy to create a zeroed vtk image data
+    ref_im_zeros = vtk.vtkImageData()
+    ref_im_zeros.DeepCopy(ref_im)
+    ref_im_zeros.GetPointData().SetScalars(numpy_to_vtk(np.zeros(vtk_to_numpy(ref_im_zeros.GetPointData().GetScalars()).shape)))
     ply2im = vtk.vtkPolyDataToImageStencil()
-    ply2im.SetTolerance(0.1)
+    ply2im.SetTolerance(0.05)
     ply2im.SetInputData(poly)
-    ply2im.SetInformationInput(ref_im)
+    ply2im.SetOutputSpacing(ref_im.GetSpacing())
+    ply2im.SetInformationInput(ref_im_zeros)
     ply2im.Update()
 
     stencil = vtk.vtkImageStencil()
-    stencil.SetInputData(ref_im)
-    stencil.ReverseStencilOn()
+    stencil.SetInputData(ref_im_zeros)
+    if reverse:
+        stencil.ReverseStencilOn()
     stencil.SetStencilData(ply2im.GetOutput())
     stencil.Update()
     output = stencil.GetOutput()
