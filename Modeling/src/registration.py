@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import glob
 import SimpleITK as sitk
@@ -48,28 +49,29 @@ class Registration:
         self.fixed_mask_fn = fixed_mask_fn
         self.fixed_mask = None
         self.parameter_map = None
-
-    def loadImages(self):
-        self.fixed = sitk.ReadImage(self.fixed_fn)
-        #self.fixed_mask = sitk.Cast(sitk.ReadImage(self.fixed_mask_fn), sitk.sitkUInt8 )
-        self.moving = sitk.ReadImage(self.moving_fn)
-        #self.moving_mask = sitk.Cast(sitk.ReadImage(self.moving_mask_fn),sitk.sitkUInt8 )
-        if self.smooth:
-            self.fixed = utils.closing(self.fixed, [7, 6, 5, 4, 3, 2, 1])
-            self.moving = utils.closing(self.moving, [ 7, 6, 5, 4, 3, 2, 1])
-        #fixed = lvImage(self.fixed_fn)
-        #moving = lvImage(self.moving_fn)
-        #fixed.process([1, 4, 5, 7])
-        #moving.process([1, 4, 5, 7])
-        #self.fixed = label_io.exportVTK2Sitk(fixed.label)
-        #self.moving = label_io.exportVTK2Sitk(moving.label)
-        res = np.array(self.fixed.GetSpacing())
+    @staticmethod
+    def processImages(image):
+        FACTOR_LA = 18 # TO-DO: change to global variables
+        FACTOR_AA = 38
+        lv_image = lvImage(image)
+        lv_image.process([1, 4, 5, 7])
+        la_cutter, la_nrm = lv_image.buildCutter(2, 6, 3, FACTOR_LA, op='valve')
+        aa_cutter, aa_nrm = lv_image.buildCutter(6, 2, 3, FACTOR_AA, op='tissue')
+        lv_label = utils.recolorVTKImageByPolyData(la_cutter, lv_image.label, 0)
+        lv_label = utils.recolorVTKImageByPolyData(aa_cutter, lv_label,0)
+        sitk_image = label_io.exportVTK2Sitk(lv_label)
+        #sitk_image = sitk.ReadImage(image)
+        res = np.array(sitk_image.GetSpacing())
         res = np.min(res)/res * 0.8
-        self.fixed = utils.resample(self.fixed, res, order=0)
-        self.fixed = utils.normalizeLabelMap(self.fixed, values=[100,110,120,130], keep=[1, 2, 3, 6])
-        self.moving = utils.resample(self.moving, res, order=0)
-        self.moving = utils.normalizeLabelMap(self.moving, values=[100,110,120,130], keep=[1, 2, 3, 6])
-
+        sitk_image = utils.resample(sitk_image, res, order=0)
+        sitk_image = utils.normalizeLabelMap(sitk_image, values=[100,110,120,130], keep=[1, 2, 3, 6])
+        return sitk_image
+    
+    def loadImages(self):
+        self.moving = self.processImages(self.moving_fn)
+        if self.fixed is None:
+            self.fixed = self.processImages(self.fixed_fn)
+    
     def computeTransform(self):
 
         if (self.fixed is None) or (self.moving is None):
@@ -80,6 +82,8 @@ class Registration:
         p_map_1 = sitk.GetDefaultParameterMap('translation')
         p_map_2 = sitk.GetDefaultParameterMap('affine')
         p_map_3 = sitk.GetDefaultParameterMap('bspline')
+        p_map_3['Registration'] = ['MultiResolutionRegistration']
+        p_map_3['Metric'] = ['AdvancedMeanSquares']
         p_map_3['MaximumNumberOfIterations'] = ['256']
         p_map_3['FinalGridSpacingInPhysicalUnits'] = []
         p_map_3["MaximumNumberOfSamplingAttempts"] = ['4']
