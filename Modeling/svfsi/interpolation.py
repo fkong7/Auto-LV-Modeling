@@ -60,6 +60,8 @@ def move_mesh(fns, start_point, intpl_num, num_cycle):
     total_num_phase = len(fns)
     total_steps = total_num_phase * (intpl_num+1)*num_cycle
     initialized = False
+    print("Starting at mesh: ", fns[start_point])    
+    print("The mesh list are: ", fns)
     poly_template = label_io.loadVTKMesh(fns[start_point])
     ref_coords = vtk_to_numpy(poly_template.GetPoints().GetData())
     store = np.zeros((poly_template.GetNumberOfPoints(), 3, total_steps+1)) 
@@ -89,7 +91,6 @@ def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, 
     total_num_phase = len(fns)
     total_steps = num_cycle* total_num_phase * (intpl_num+1)
     initialized = False
-    
     poly_template = label_io.loadVTKMesh(fns[start_point])
     
     displacements = move_mesh(fns, start_point, intpl_num, num_cycle)

@@ -1046,7 +1046,7 @@ def changePolyDataPointsCoordinates(poly, pt_ids, pt_coords):
 
     return poly
 
-def projectPointsToFitPlane(points):
+def projectPointsToFitPlane(points, ref=None):
     """
     Find the best fit plane of VTK points, project the points to the plane
 
@@ -1054,7 +1054,7 @@ def projectPointsToFitPlane(points):
 
     Args:
         points: vtkPoints
-        #ref: a reference point above the plane (helps to determine the direction of normal)
+        #ref: a reference point below the plane (helps to determine the direction of normal)
     Returns:
         pyPts: projected points in Python
     """
@@ -1069,14 +1069,14 @@ def projectPointsToFitPlane(points):
     nrm /= np.linalg.norm(nrm)
     ori = np.mean(pyPts, axis=0)
 
-    #if np.dot(nrm, ref-ori)<0:
-    #    nrm = -1*nrm
-
+    if ref is not None:
+        nrm = -1.*nrm if np.dot(nrm, ref-ori)>0 else nrm
 
     num = pyPts.shape[0]
-    #distance = np.sum((pyPts-np.repeat(ori[np.newaxis,:],num,axis=0))
-    #            * np.repeat(nrm[np.newaxis,:],num,axis=0),axis=1)
-    #ori += np.max(distance)*nrm
+    if ref is not None:
+        distance = np.sum((pyPts-np.repeat(ori[np.newaxis,:],num,axis=0))
+                * np.repeat(nrm[np.newaxis,:],num,axis=0),axis=1)
+        ori += np.max(distance)*nrm
 
     plane = vtk.vtkPlane()
     plane.SetOrigin(*ori)
@@ -1176,9 +1176,25 @@ def projectOpeningToFitPlane(poly, boundary_ids, points, MESH_SIZE):
     
     #make a copy of the pt ids
     ids = boundary_ids.copy()
-    proj_pts = projectPointsToFitPlane(pts)
+    #get one ring of connected points to calculate normal direction
+    next_ctr = np.zeros(3)
+    ct = 0
+    for i in range(pts.GetNumberOfPoints()):
+        cell_ids = vtk.vtkIdList()
+        poly.GetPointCells(ids[i], cell_ids)
+        connected_pt_ids = vtk.vtkIdList()
+        for j in range(cell_ids.GetNumberOfIds()):
+            poly.GetCellPoints(cell_ids.GetId(j), connected_pt_ids)
+            for k in range(connected_pt_ids.GetNumberOfIds()):
+                pt_id = connected_pt_ids.GetId(k)
+                if pt_id not in ids:
+                    next_ctr += np.array(poly.GetPoints().GetPoint(pt_id))
+                    ct += 1
+    next_ctr /= float(ct)
+    proj_pts = projectPointsToFitPlane(pts, ref=next_ctr)
     dist = np.max(np.linalg.norm(proj_pts - vtk_to_numpy(pts.GetData()), axis=1))
     ITER = int(np.ceil(dist/MESH_SIZE)*3)
+    print("ITER: ", ITER)
     for factor in np.linspace(0.8, 0., ITER, endpoint=False):
         ids, pts,  proj_pts = _moveConnectedPoints(ids, pts, proj_pts, factor)
     poly = changePolyDataPointsCoordinates(poly, ids, proj_pts)
