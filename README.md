@@ -12,7 +12,7 @@ The code repository consists of two parts
 ## Dependencies
 
 * Segmentation 
-    * Tensorflow (V 1.12)
+    * Tensorflow (V 1.14)
     * Python
     * SimpleITK<sup>1</sup>
     * h5py (V 2.10.0)
