@@ -69,7 +69,7 @@ A shell script (`run_seg.sh`) is provided for ease of use. Patient ID is optiona
 The model construction pipeline takes in the generated segmentation and output reconstructed LV surface meshes for CFD simulations. The pipeline consists of the following four steps: 1) Construct LV surface meshes from segmentation results; 2) Register the surface meshes to get consistent mesh topology; 3) Obtain volumetric mesh using SimVascular; 4) Interpolate the registered surface meshes to obtain sufficient temporal resolution.
 
 ### 1.  Construct LV Surface Meshes with Tagged Boundary Faces
-* Update run_svsurfaces.sh with correct file and folder names.
+* Update `run_svsurfaces.sh` with correct file and folder names.
 * Run the shell script to generate a LV surface mesh for each segmentation file in a folder.   
     ```
     sv_python_dir=/usr/local/bin
