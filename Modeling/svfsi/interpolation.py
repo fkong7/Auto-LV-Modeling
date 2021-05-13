@@ -64,30 +64,34 @@ def move_mesh(fns, start_point, intpl_num, num_cycle):
     ref_coords = vtk_to_numpy(poly_template.GetPoints().GetData())
     store = np.zeros((poly_template.GetNumberOfPoints(), 3, total_steps+1)) 
     count = 0
-    for c in range(num_cycle):
-        for msh_idx in list(range(start_point, total_num_phase))+ list(range(0, start_point)):
-            if not initialized:
-                boundary_queue = collections.deque(4*[None], 4)
-                boundary_queue.append(label_io.loadVTKMesh(fns[msh_idx]))
-                boundary_queue.append(label_io.loadVTKMesh(fns[msh_idx]))
-                boundary_queue.append(label_io.loadVTKMesh(fns[(msh_idx+1)%total_num_phase]))
-                boundary_queue.append(label_io.loadVTKMesh(fns[(msh_idx+2)%total_num_phase]))
-                initialized = True
-            else:
-                print(msh_idx)
-                boundary_queue.append(label_io.loadVTKMesh(fns[(msh_idx+2)%total_num_phase]))
+    # First cycle
+    for msh_idx in list(range(start_point, total_num_phase))+ list(range(0, start_point)):
+        if not initialized:
+            boundary_queue = collections.deque(4*[None], 4)
+            boundary_queue.append(label_io.loadVTKMesh(fns[(msh_idx+total_num_phase-1)%total_num_phase]))
+            boundary_queue.append(label_io.loadVTKMesh(fns[msh_idx]))
+            boundary_queue.append(label_io.loadVTKMesh(fns[(msh_idx+1)%total_num_phase]))
+            boundary_queue.append(label_io.loadVTKMesh(fns[(msh_idx+2)%total_num_phase]))
+            initialized = True
+        else:
+            boundary_queue.append(label_io.loadVTKMesh(fns[(msh_idx+2)%total_num_phase]))
 
-            for i_idx in range(intpl_num+1):
-                new_coords = cubic_spline_ipl(i_idx, 0, intpl_num, boundary_queue)
-                displacement = new_coords- ref_coords
-                store[:, :, count] = displacement
-                count+=1
+        for i_idx in range(intpl_num+1):
+            new_coords = cubic_spline_ipl(i_idx, 0, intpl_num+1, boundary_queue)
+            displacement = new_coords- ref_coords
+            store[:, :, count] = displacement
+            count+=1
+    # The rest cycles are copies of first cycle
+    for c in range(1,num_cycle):
+        s = c*total_num_phase * (intpl_num+1)
+        e = s + total_num_phase * (intpl_num+1)
+        store[:,:,s:e] = store[:, :,0:count]
 
     return store
 
 def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, debug=False):
     total_num_phase = len(fns)
-    total_steps = num_cycle* total_num_phase * (intpl_num+1)
+    total_steps = num_cycle* total_num_phase * (intpl_num+1)+1
     initialized = False
     
     poly_template = label_io.loadVTKMesh(fns[start_point])
@@ -141,7 +145,7 @@ if __name__=='__main__':
     parser.add_argument('--output_dir', help="Path to the volume meshes")
     parser.add_argument('--num_interpolation', type=int, help="Number of interpolations")
     parser.add_argument('--num_cycle', type=int, help="Number of cardiac cycles")
-    parser.add_argument('--duration', type=float, help="Cycle duriation in seconds")
+    parser.add_argument('--duration', type=float, help="Cycle duration in seconds")
     parser.add_argument('--phase', default=-1, type=int, help="Id of the phase to generate volume mesh")
     args = parser.parse_args()
     
