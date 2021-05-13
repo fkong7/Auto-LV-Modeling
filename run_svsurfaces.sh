@@ -1,7 +1,7 @@
 # Use SimVascular to construct LV surface meshes
 
 # Path to SimVascular exectuable
-sv_python_dir=/Applications/SimVascular.app/Contents/Resources
+sv_python_dir=/usr/local/bin
 model_script=Modeling/main.py
 # Path to the segmentation results
 input_dir=./02-Segmnts/BD9702
