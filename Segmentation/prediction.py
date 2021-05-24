@@ -8,8 +8,8 @@ from tensorflow.python.keras import models as models_keras
 from tensorflow.python.keras import backend as K
 
 import vtk
-from pre_process import swapLabelsBack, RescaleIntensity, vtk_resample_to_size, vtk_resample_with_info_dict
-from utils import load_vtk_image, writeVTKImage, get_array_from_vtkImage,get_vtkImage_from_array,vtk_write_mask_as_nifty
+from pre_process import swap_labels_back, rescale_intensity, vtk_resample_to_size, vtk_resample_with_info_dict
+from utils import load_vtk_image, write_vtk_image, get_array_from_vtkImage,get_vtkImage_from_array,vtk_write_mask_as_nifty
 from model import UNet2D
 from image_loader import ImageLoader
 import argparse
@@ -32,11 +32,11 @@ def model_output_no_resize(model, im_vol, view, channel):
     prob = np.moveaxis(prob, 0, view)
     return prob, end-start
 
-def predictVol(prob,labels):
+def predict_volume(prob,labels):
     #im_vol, ori_shape, info = data_preprocess_test(image_vol_fn, view, 256, modality)
     predicted_label = np.argmax(prob, axis=-1)
 
-    predicted_label = swapLabelsBack(labels,predicted_label)
+    predicted_label = swap_labels_back(labels,predicted_label)
     return predicted_label
 
 def dice_score(pred, true):
@@ -78,7 +78,7 @@ class Prediction:
         self.image_info['size'] = vtk_img.GetDimensions()
         vtk_img = vtk_resample_to_size(vtk_img, (size, size, size))
         img_vol = get_array_from_vtkImage(vtk_img)
-        img_vol = RescaleIntensity(img_vol,self.modality, [750, -750])
+        img_vol = rescale_intensity(img_vol,self.modality, [750, -750])
         return img_vol
     def volume_prediction_average(self, size):
 
@@ -103,14 +103,14 @@ class Prediction:
                 self.pred_time += t
             prob += prob_view
         avg = prob/len(self.models)
-        self.pred = predictVol(avg, np.zeros(1))
+        self.pred = predict_volume(avg, np.zeros(1))
         return 
 
     def dice(self):
         #assuming groud truth label has the same origin, spacing and orientation as input image
         label_vol = sitk.GetArrayFromImage(sitk.ReadImage(self.label_fn))
         pred_label = sitk.GetArrayFromImage(self.pred)
-        pred_label = swapLabelsBack(label_vol, pred_label)
+        pred_label = swap_labels_back(label_vol, pred_label)
         ds = dice_score(pred_label, label_vol)
         return ds
     
@@ -124,7 +124,7 @@ class Prediction:
             os.makedirs(os.path.dirname(out_fn))
         except Exception as e: print(e)
         if out_fn[-4:] == '.vti' or out_fn[-4:] == '.mhd':
-            writeVTKImage(self.pred, out_fn)
+            write_vtk_image(self.pred, out_fn)
         elif out_fn[-4:] == '.nii' or out_fn[-7:] == '.nii.gz':
             vtk_write_mask_as_nifty(self.pred, self.image_fn, out_fn)
         else:

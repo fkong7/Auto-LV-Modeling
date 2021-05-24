@@ -22,7 +22,7 @@ class Images(object):
         return self.label
     
     def write_image(self,fn):
-        label_io.writeVTKImage(self.label, fn)
+        label_io.write_vtk_image(self.label, fn)
 
     def generate_surface(self, region_id, smooth_iter, band):
         poly = m_c.vtk_marching_cube(self.label, region_id, smooth_iter, band)
@@ -42,7 +42,7 @@ class lvImage(Images):
         self.label = utils.vtkImageResample(self.label, spacing=(1.2, 1.2, 1.2), opt='NN')
         from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
         pylabel = vtk_to_numpy(self.label.GetPointData().GetScalars())
-        pylabel = utils.swapLabels(pylabel)
+        pylabel = utils.swap_labels(pylabel)
 
         #remove myocardium, RV, RA and PA
         for tissue in remove_list:

@@ -52,7 +52,7 @@ def load_vtk_image(fn):
         raise IOError("File extension is not recognized: ", ext)
     return label
 
-def writeVTKImage(vtkIm, fn):
+def write_vtk_image(vtkIm, fn):
     """
     This function writes a vtk image to disk
     Args:

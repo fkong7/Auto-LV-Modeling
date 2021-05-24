@@ -1,7 +1,7 @@
 import numpy as np
 import vtk
 
-def swapLabels(labels):
+def swap_labels(labels):
     labels[labels==421]=420
     unique_label = np.unique(labels)
 
@@ -12,7 +12,7 @@ def swapLabels(labels):
         labels[labels==label] = newl
     return labels
   
-def swapLabelsBack(labels,pred):
+def swap_labels_back(labels,pred):
     labels[labels==421]=420
     unique_label = np.unique(labels)
     new_label = range(len(unique_label))
@@ -23,7 +23,7 @@ def swapLabelsBack(labels,pred):
     return pred
     
 
-def RescaleIntensity(slice_im,m,limit):
+def rescale_intensity(slice_im,m,limit):
     if type(slice_im) != np.ndarray:
         raise RuntimeError("Input image is not numpy array")
     #slice_im: numpy array

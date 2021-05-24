@@ -15,7 +15,7 @@ def natural_sort(l):
 ##########################
 ## Numpy Utility functions
 ##########################
-def swapLabels(pyImage):
+def swap_labels(pyImage):
     """
     Swap label ids
     """

@@ -197,7 +197,7 @@ def writeVTKPolyData(poly, fn):
     writer.Write()
     return
 
-def writeVTKImage(vtkIm, fn):
+def write_vtk_image(vtkIm, fn):
     """
     This function writes a vtk image to disk
     Args:
