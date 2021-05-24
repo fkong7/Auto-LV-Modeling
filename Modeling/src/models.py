@@ -22,37 +22,29 @@ class Geometry(object):
         return utils.thresholdPolyData(self.poly, attr, (region_id, region_id))
     
     def remesh(self, edge_size, fn, poly_fn=None, ug_fn=None, mmg=True):
-        from sv import Repository
         import meshing
         self.edge_size = edge_size
         if mmg:
-            Repository.ImportVtkPd(self.poly, "mmg_poly")
-            meshing.remeshPolyData("mmg_poly", "mmg_poly_remesh", 1.,1.5, fn)
+            meshing.remeshPolyData(self.poly, 1., 1.5)
         self.writeSurfaceMesh(fn)
         # generate volumetric mesh:
         mesh_ops = {
-                'SurfaceMeshFlag': True,
-                'VolumeMeshFlag': True,
-                'GlobalEdgeSize': edge_size, 
-                'MeshWallFirst': True, 
-                'NoMerge':True,
-                'NoBisect': True,
-                'Epsilon': 1e-8,
-                'Optimization': 3,
-                'QualityRatio': 1.4
+                'surface_mesh_flag': True,
+                'volume_mesh_flag': True,
+                'global_edge_size': edge_size, 
         }
         if poly_fn is None:
-            mesh_ops['SurfaceMeshFlag']=False
+            mesh_ops['surface_mesh_flag']=False
         if ug_fn is None:
-            mesh_ops['VolumeMeshFlag']=False
-        meshing.meshPolyData(fn, (poly_fn, ug_fn), mesh_ops)
-        if poly_fn is not None:
-            self.poly = Repository.ExportToVtk(poly_fn)
-        if ug_fn is not None:
-            self.ug = Repository.ExportToVtk(ug_fn)
-        return poly_fn, ug_fn 
-    
+            mesh_ops['surface_mesh_flag']=False
+        surface, volume = meshing.meshPolyData(fn, mesh_ops, (poly_fn, ug_fn))
+        if surface is not None:
+            self.poly = surface
+        if volume is not None:
+            self.ug = volume
+        return 
     def writeMeshComplete(self, path):
+
         pass
 
 

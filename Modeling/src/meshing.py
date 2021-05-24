@@ -1,90 +1,46 @@
 import os
-from sv import *
+import vtk
+import sv
 
-def meshPolyData(fn, fns_out, args):
+def meshPolyData(fn, args, fns_out=None):
     """
     Use SimVascular to mesh a file containing a VTK PolyData and write the volumetric mesh to disk
     Args:
         fn: file name of the VTK PolyData
+        args: meshing options, dic
         fns_out: file names of the output mesh (poly_fn, ug_fn)
-        args: meshing options, python dic
     Returns:
-        None
+        return (surface, volumetric)
     """    
-    #Set mesh kernel
-    MeshObject.SetKernel('TetGen')
-    
-    #Create mesh object
-    msh = MeshObject.pyMeshObject()
-    if Repository.Exists(fn+'mesh'):
-        msh.GetMesh(fn+'mesh')
-    else:
-        msh.NewObject(fn+'mesh')
-   
-    #Load Model
-    msh.LoadModel(fn)
-    
-    #Create new mesh
-    msh.NewMesh()
-    msh.SetWalls([1])
-    
-    for key in args:
-        msh.SetMeshOptions(key,[args[key]])
 
-   # msh.SetSizeFunctionBasedMesh(args['MeshSizingFunction'],'MeshSizingFunction')
-    msh.GenerateMesh()
-    #Save mesh to file
-    #msh.WriteMesh(fns_out[0])
-   
-    poly_fn, ug_fn = fns_out
-    if args['SurfaceMeshFlag']:
-        msh.GetPolyData(poly_fn)
-    if args['VolumeMeshFlag']:
-        msh.GetUnstructuredGrid(ug_fn)
-    return (poly_fn, ug_fn)
+    mesher = sv.meshing.TetGen()
+    mesher.load_model(fn)
+    mesher.set_walls([1])
+    face_ids = mesher.get_model_face_ids()
+    options = sv.meshing.TetGenOptions(**args)
+    options.no_merge = True
+    options.no_bisect = True
+    options.optimization = 3
+    options.quality_ratio = 1.4
+    mesher.generate_mesh(options)
+    volumetric = mesher.get_mesh()
+    surface = mesher.get_surface()
+    return (surface, volumetric)
 
-def capPolyDataWithIds(poly, poly_name, capped_name, start=1, write=False, remesh=True):
-    """
-    Use SimVascular to cap a surface mesh with IDs
-
-    Args:
-        poly: VTK PolyData
-        poly_name: name to store the VTK PolyData in repository
-        capped_name: name to store the output in repository
-        start: smallest id to assign
-    Returns:
-        None
-    """
-    if Repository.Exists(poly_name):
-        Repository.Delete(poly_name)
-    Repository.ImportVtkPd(poly, poly_name)
-
-    ids = VMTKUtils.Cap_with_ids(poly_name, capped_name, start, 2) 
-    Repository.Delete(poly_name)
-    if write:
-        Repository.WriteVtkPolyData(capped_name, 'ascii', capped_name)
-    return
-
-def remeshPolyData(poly_name, remeshed_name, hmin, hmax,write=False):
+def remeshPolyData(poly, hmin, hmax,write_fn=None):
     """
     Use SimVascular MMG remesh to remesh a surfac mesh
     
     Args:
-        poly_name: name of the polydata in repository
-        remeshed_name: name of the remeshed polydata in reporitory
+        poly: input polydata
         hmin: min edge size
         hmax: max edge size
-        write: if write the remeshed surface to disk
+        write: output filename 
     Returns:
-        None
+        remeshed: remeshed polydata
     """
-
-    if not Repository.Exists(poly_name):
-        raise AttributeError("%s not in repository" % poly_name)
-        return
-
-    MeshUtil.Remesh(poly_name, remeshed_name, hmin, hmax)
-    if write is not None:
-        Repository.WriteVtkPolyData(remeshed_name, 'ascii', write)
-    return
+    remeshed = sv.mesh_utils.remesh(poly, hmin=hmin, hmax=hmax)
+    if write_fn is not None:
+        writeVTKPolyData(remeshed, write_fn)
+    return remeshed
 
