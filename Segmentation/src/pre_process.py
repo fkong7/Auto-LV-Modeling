@@ -2,7 +2,6 @@ import numpy as np
 import vtk
 
 def swap_labels(labels):
-    labels[labels==421]=420
     unique_label = np.unique(labels)
 
     new_label = range(len(unique_label))
@@ -13,7 +12,6 @@ def swap_labels(labels):
     return labels
   
 def swap_labels_back(labels,pred):
-    labels[labels==421]=420
     unique_label = np.unique(labels)
     new_label = range(len(unique_label))
 

@@ -3,6 +3,7 @@ import numpy as np
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 import gc
+import glob
 import tensorflow as tf
 from tensorflow.python.keras import models as models_keras
 from tensorflow.python.keras import backend as K
@@ -11,7 +12,6 @@ import vtk
 from pre_process import swap_labels_back, rescale_intensity, vtk_resample_to_size, vtk_resample_with_info_dict
 from utils import load_vtk_image, write_vtk_image, get_array_from_vtkImage,get_vtkImage_from_array,vtk_write_mask_as_nifty
 from model import UNet2D
-from image_loader import ImageLoader
 import argparse
 import time
 
@@ -35,7 +35,6 @@ def model_output_no_resize(model, im_vol, view, channel):
 def predict_volume(prob,labels):
     #im_vol, ori_shape, info = data_preprocess_test(image_vol_fn, view, 256, modality)
     predicted_label = np.argmax(prob, axis=-1)
-
     predicted_label = swap_labels_back(labels,predicted_label)
     return predicted_label
 
@@ -132,7 +131,7 @@ class Prediction:
         return 
 
 
-def main(size, modality, patient_id, data_folder, data_out_folder, model_folder, view_attributes, mode, channel, folder_postfix):
+def main(size, modality, patient_id, data_folder, data_out_folder, model_folder, view_attributes, channel):
 
     model_postfix = "small2"
     model_folders = sorted(model_folder * len(view_attributes))
@@ -155,23 +154,16 @@ def main(size, modality, patient_id, data_folder, data_out_folder, model_folder,
     
     ext_list = ['.nii.gz', '.nii', '.vti']
     for m in modality:
-        x_filenames, y_filenames = [], []
+        x_filenames = []
         for ext in ext_list:
-            im_loader = ImageLoader(m, data_folder, patient_id, fn='_'+folder_postfix, fn_mask=None if mode=='test' else '_test_seg', ext='*'+ext)
-            x_temp, y_temp = im_loader.load_imagefiles()
-            x_filenames += x_temp
-            y_filenames += y_temp
+            x_filenames += sorted(glob.glob(os.path.join(data_folder, patient_id, '*'+ext)))
         for i in range(len(x_filenames)):
             print("Processing "+x_filenames[i])            
             models = [os.path.realpath(i) + '/weights_multi-all-%s_%s.hdf5' % (j, model_postfix) for i, j in zip(model_folders, view_names)]
-            predict = Prediction(unet, models,m,view_attributes,x_filenames[i],y_filenames[i], channel)
+            predict = Prediction(unet, models,m,view_attributes,x_filenames[i], None, channel)
             predict.volume_prediction_average(size)
             predict.resample_prediction_vtk()
-
             predict.write_prediction(os.path.join(data_out_folder,patient_id,os.path.basename(x_filenames[i])))
-
-            #if y_filenames[i] is not None:
-            #    dice_list.append(predict.dice())
     return 
 
 if __name__ == '__main__':
@@ -183,12 +175,10 @@ if __name__ == '__main__':
     parser.add_argument('--view', type=int, nargs='+', help='List of views for single or ensemble prediction, split by space. For example, 0 1 2  axial(0), coronal(1), sagittal(2)')
     parser.add_argument('--modality', nargs='+', help='Name of the modality, mr, ct, split by space')
     parser.add_argument('--size', type=int,default=256, help='Size of images')
-    parser.add_argument('--mode', default='test',help='Test or validation (without or with ground truth label')
-    parser.add_argument('--im_folder_postfix', default='test', help='Postfix of the folder containing image data, for ct_test, enter test')
     parser.add_argument('--n_channel',type=int, default=1, help='Number of image channels of input')
     args = parser.parse_args()
 
     if args.pid.lower() == "none":
         args.pid = ''
     
-    main(args.size, args.modality, args.pid, args.image, args.output, args.model, args.view, args.mode, args.n_channel, args.im_folder_postfix)
+    main(args.size, args.modality, args.pid, args.image, args.output, args.model, args.view, args.n_channel)
