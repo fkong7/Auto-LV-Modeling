@@ -116,7 +116,7 @@ def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, 
     #write time steps and node numbers
     for face in np.unique(face_ids):
         fn = os.path.join(output_dir, '%d_motion.dat' % face)
-        face_poly = utils.thresholdPolyData(poly_template, 'ModelFaceID', (face,face))
+        face_poly = utils.threshold_polydata(poly_template, 'ModelFaceID', (face,face))
         f = open(fn, 'w')
         f.write('{} {} {}\n'.format(3, total_steps,face_poly.GetNumberOfPoints()))
         for t in np.linspace(0,num_cycle*duration, total_steps):

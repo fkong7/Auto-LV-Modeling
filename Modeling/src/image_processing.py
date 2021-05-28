@@ -11,12 +11,12 @@ class Images(object):
     def __init__(self, fn):
         self.label = io_utils.read_label_map(fn)
    
-    def convert2binary(self):
-        self.label = utils.convertVTK2binary(self.label)
+    def convert_to_binary(self):
+        self.label = utils.convert_vtk_im_to_binary(self.label)
         #self.label = utils.gaussianSmoothVTKImage(self.label, 0.01)
 
     def resample(self, resolution, mode):
-        self.label = utils.vtkImageResample(self.label, resolution, mode)
+        self.label = utils.vtk_image_resample(self.label, resolution, mode)
 
     def get_image(self):
         return self.label
@@ -36,36 +36,36 @@ class LVImage(Images):
         from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
         x, y, z = self.label.GetDimensions()
         pylabel = vtk_to_numpy(self.label.GetPointData().GetScalars()).reshape(z, y, x).transpose(2, 1, 0)
-        pylabel = utils.eraseBoundary(pylabel, 2, 0)
+        pylabel = utils.erase_boundary(pylabel, 2, 0)
         self.label.GetPointData().SetScalars(numpy_to_vtk(pylabel.transpose(2, 1, 0).flatten()))
 
     def process(self, remove_list):
-        self.label = utils.vtkImageResample(self.label, spacing=(1.2, 1.2, 1.2), opt='NN')
+        self.label = utils.vtk_image_resample(self.label, spacing=(1.2, 1.2, 1.2), opt='NN')
         from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
         pylabel = vtk_to_numpy(self.label.GetPointData().GetScalars())
         pylabel = utils.swap_labels(pylabel)
 
         #remove myocardium, RV, RA and PA
         for tissue in remove_list:
-            pylabel = utils.removeClass(pylabel, tissue, 0)
+            pylabel = utils.remove_class(pylabel, tissue, 0)
         self.label.GetPointData().SetScalars(numpy_to_vtk(pylabel))
         # remove small islands
-        self.label = utils.extractLargestConnectedRegion(self.label, 6)
-        self.label = utils.extractLargestConnectedRegion(self.label, 3)
-        self.label = utils.extractLargestConnectedRegion(self.label, 2)
+        self.label = utils.extract_largest_connected_region(self.label, 6)
+        self.label = utils.extract_largest_connected_region(self.label, 3)
+        self.label = utils.extract_largest_connected_region(self.label, 2)
         # remove connections between AA and LA
-        self.label = utils.labelDilateErode(self.label, 6, 3, 8) #6 - AO id, 3 - LV id
-        self.label = utils.labelOpenClose(self.label, 6, 0, size=7)
-        self.label = utils.labelOpenClose(self.label, 0, 6, size=7)
-        self.label = utils.labelDilateErode(self.label, 2, 3, 3) #6 - AO id, 3 - LV id
-        self.label = utils.labelOpenClose(self.label, 2, 0, size=7)
-        self.label = utils.labelOpenClose(self.label, 3, 0, size=7)
-        self.label = utils.labelOpenClose(self.label, 0, 3, size=7)
-        self.label = utils.labelOpenClose(self.label, 0, 2, size=7)
-        ids = utils.locateRegionBoundaryIDs(self.label, 2, 6, size=4.,bg_id=0)
-        self.ids = np.vstack((ids, utils.locateRegionBoundaryIDs(self.label, 6, 2, size=5., bg_id=0)))
-        self.label = utils.labelOpenClose(self.label, 2, 0, size=7)
-        self.label = utils.recolorVTKPixelsByIds(self.label, self.ids, 0)
+        self.label = utils.label_dilate_erode(self.label, 6, 3, 8) #6 - AO id, 3 - LV id
+        self.label = utils.label_open_close(self.label, 6, 0, size=7)
+        self.label = utils.label_open_close(self.label, 0, 6, size=7)
+        self.label = utils.label_dilate_erode(self.label, 2, 3, 3) #6 - AO id, 3 - LV id
+        self.label = utils.label_open_close(self.label, 2, 0, size=7)
+        self.label = utils.label_open_close(self.label, 3, 0, size=7)
+        self.label = utils.label_open_close(self.label, 0, 3, size=7)
+        self.label = utils.label_open_close(self.label, 0, 2, size=7)
+        ids = utils.locate_region_boundary_ids(self.label, 2, 6, size=4.,bg_id=0)
+        self.ids = np.vstack((ids, utils.locate_region_boundary_ids(self.label, 6, 2, size=5., bg_id=0)))
+        self.label = utils.label_open_close(self.label, 2, 0, size=7)
+        self.label = utils.recolor_vtk_pixels_by_ids(self.label, self.ids, 0)
     
     def build_cutter(self, region_id, avoid_id, adjacent_id, FACTOR, op='valve', smooth_iter=50):
         """
@@ -87,11 +87,11 @@ class LVImage(Images):
         vtkpts = vtk.vtkPoints()
         vtkpts.SetData(numpy_to_vtk(pts))
         #centroid of left atrium or aorta
-        ctr = utils.getCentroid(cut_Im, region_id)
+        ctr = utils.get_centroid(cut_Im, region_id)
         #center and nrm of the cutting plane
         length = np.linalg.norm(ctr-ctr_valve)
         nrm_tissue = (ctr - ctr_valve)/length
-        nrm_valve_plane = utils.fitPlaneNormal(pts)
+        nrm_valve_plane = utils.fit_plane_normal(pts)
         print(nrm_valve_plane)
         #check normal direction
         if op=='valve':
@@ -108,8 +108,8 @@ class LVImage(Images):
             raise ValueError("Incorrect option")
         ori = ctr_valve + FACTOR * nrm/np.linalg.norm(nrm)
         #dilate by a little bit
-        cut_Im = utils.labelDilateErode(utils.recolorVTKPixelsByPlane(cut_Im, ori, -1.*nrm, 10, avoid_id), region_id, 0, 8.)
-        cut_Im = utils.labelDilateErode(cut_Im, avoid_id, region_id, 2)
+        cut_Im = utils.label_dilate_erode(utils.recolor_vtk_pixels_by_plane(cut_Im, ori, -1.*nrm, 10, avoid_id), region_id, 0, 8.)
+        cut_Im = utils.label_dilate_erode(cut_Im, avoid_id, region_id, 2)
         
         # marching cube
         cutter = m_c.vtk_marching_cube(cut_Im, region_id, 20, 0.05)

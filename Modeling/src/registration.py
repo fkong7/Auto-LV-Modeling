@@ -57,14 +57,14 @@ class Registration:
         lv_image.process([1, 4, 5, 7])
         la_cutter, la_nrm = lv_image.build_cutter(2, 6, 3, FACTOR_LA, op='valve')
         aa_cutter, aa_nrm = lv_image.build_cutter(6, 2, 3, FACTOR_AA, op='tissue')
-        lv_label = utils.recolorVTKImageByPolyData(la_cutter, lv_image.label, 0)
-        lv_label = utils.recolorVTKImageByPolyData(aa_cutter, lv_label,0)
+        lv_label = utils.recolor_vtk_image_by_polydata(la_cutter, lv_image.label, 0)
+        lv_label = utils.recolor_vtk_image_by_polydata(aa_cutter, lv_label,0)
         sitk_image = io_utils.vtk_image_to_sitk_image(lv_label)
         #sitk_image = sitk.ReadImage(image)
         res = np.array(sitk_image.GetSpacing())
         res = np.min(res)/res * 0.8
         sitk_image = utils.resample(sitk_image, res, order=0)
-        sitk_image = utils.normalizeLabelMap(sitk_image, values=[100,110,120,130], keep=[1, 2, 3, 6])
+        sitk_image = utils.normalize_label_map(sitk_image, values=[100,110,120,130], keep=[1, 2, 3, 6])
         return sitk_image
     
     def load_images(self):

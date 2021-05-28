@@ -41,9 +41,9 @@ def vtk_marching_cube(vtkLabel, tol, smooth=None, band=None):
     
     if smooth is not None:
         if band is not None:
-            mesh = utils.windowedSincSmoothVTKPolyData(mesh, smooth, band)
+            mesh = utils.windowed_sinc_smooth_vtk_polydata(mesh, smooth, band)
         else:
-            mesh = utils.smoothVTKPolydata(mesh, smooth)
+            mesh = utils.smooth_vtk_polydata(mesh, smooth)
     return mesh
 
 def vtk_continuous_marching_cube(vtkLabel, tol, smooth=None, band=None):
@@ -66,9 +66,9 @@ def vtk_continuous_marching_cube(vtkLabel, tol, smooth=None, band=None):
 
     if smooth is not None:
         if band is not None:
-            mesh = utils.windowedSincSmoothVTKPolyData(mesh, smooth, band)
+            mesh = utils.windowed_sinc_smooth_vtk_polydata(mesh, smooth, band)
         else:
-            mesh = utils.smoothVTKPolydata(mesh, smooth)
+            mesh = utils.smooth_vtk_polydata(mesh, smooth)
     return mesh
 
 def vtk_marching_cube_multi(vtkLabel, bg_id, smooth=None, band=None):
@@ -99,9 +99,9 @@ def vtk_marching_cube_multi(vtkLabel, bg_id, smooth=None, band=None):
 
     if smooth is not None:
         if band is not None:
-            mesh = utils.windowedSincSmoothVTKPolyData(mesh, smooth, band)
+            mesh = utils.windowed_sinc_smooth_vtk_polydata(mesh, smooth, band)
         else:
-            mesh = utils.smoothVTKPolydata(mesh, smooth)
+            mesh = utils.smooth_vtk_polydata(mesh, smooth)
 
     return mesh
 
@@ -121,16 +121,16 @@ def vtk_marching_cube_union(vtkLabel, bg_id, smooth=True):
     ids = np.delete(ids, np.where(ids==bg_id))
     
     model = vtk.vtkPolyData()
-    from utils import booleanVTKPolyData
+    from utils import boolean_vtk_polydata
     for index, i in enumerate(ids):
         mesh = vtk_marching_cube(vtkLabel, i, False)
         if model.GetNumberOfCells()==0:
             model.ShallowCopy(mesh)
         print("Processing iso-contour value: ", i)
-        model = booleanVTKPolyData(model, mesh, 'union')
+        model = boolean_vtk_polydata(model, mesh, 'union')
         
     if smooth:
-        model = utils.smoothVTKPolydata(model)
+        model = utils.smooth_vtk_polydata(model)
 
     return model
     

@@ -24,7 +24,7 @@ def swap_labels(pyImage):
         pyImage[pyImage==v] = i
     return pyImage
 
-def fitPlaneNormal(points_input):
+def fit_plane_normal(points_input):
     """
     Fit a plane to a point set
     
@@ -39,68 +39,9 @@ def fitPlaneNormal(points_input):
     normal = vh[2, :]
     return normal
 
-def fitPlaneNormal2(points_input):
-    """
-    Fit a plane to a point set
-    
-    Args:
-        points_input: 3d coordinates of a point set
-    Returns:
-        normal: normal of the fitting plane
-    """
-    from scipy.optimize import minimize
-    import functools
-    def _cross(a, b):
-        """
-        Cross product of two vectors
-        """
-        return [a[1]*b[2] - a[2]*b[1],
-                a[2]*b[0] - a[0]*b[2],
-                a[0]*b[1] - a[1]*b[0]]
-
-    def _plane(x, y, params):
-        a = params[0]
-        b = params[1]
-        c = params[2]
-        z = a*x + b*y + c
-        return z
-    
-    def _error(params, points):
-        result = 0
-        for (x,y,z) in points:
-            plane_z = _plane(x, y, params)
-            diff = abs(plane_z - z)
-            result += diff**2
-        return result
-    fun = functools.partial(_error, points=points_input)
-    params0 = [0, 0, 0]
-    res = minimize(fun, params0)
-    a = res.x[0]
-    b = res.x[1]
-    c = res.x[2]
-    point  = np.array([0.0, 0.0, c])
-    normal = np.array(_cross([1,0,a], [0,1,b]))
-    D = -point.dot(normal)
-    return normal
-
 ########################
 ## Label Map functions
 #######################def closing(image, ids):
-def closing(im, ids):
-    import SimpleITK as sitk
-    spacing = im.GetSpacing()
-    kernel = [int(round(5./spacing[i])) for i in range(3)]
-    kernel = [8 if kernel[i]>8 else kernel[i] for i in range(3)]
-    ftr = sitk.BinaryMorphologicalClosingImageFilter()
-    ftr.SetKernelRadius(kernel)
-    ftr.SafeBorderOn()
-    for i in ids:
-        if i ==0:
-            continue
-        ftr.SetForegroundValue(int(i))
-        im = ftr.Execute(im)
-    return im
-
 def resample(image, resolution = (0.5, 0.5, 0.5), dim=3, order=0):
   """
   This function resamples a SimpleITK image to desired resolution
@@ -132,7 +73,7 @@ def resample(image, resolution = (0.5, 0.5, 0.5), dim=3, order=0):
   
   return newimage
 
-def convert2binary(labels):
+def convert_to_binary(labels):
     """
     This function converts a Simple ITK label to binary label
     
@@ -150,7 +91,7 @@ def convert2binary(labels):
 
     return pyLabel
 
-def normalizeLabelMap(labels, values=[], keep=[]):
+def normalize_label_map(labels, values=[], keep=[]):
     """
     Normalize the intensity value of segmentation to a specified range
     Args:
@@ -163,7 +104,7 @@ def normalizeLabelMap(labels, values=[], keep=[]):
     ids = np.unique(py_label)
     #values = np.linspace(rng[0], rng[1], len(keep), endpoint=True) #if keep is empty, convert to binary
     print("ids: ", ids)
-    print("normalizeLabelMap", values)
+    print("normalize_label_map", values)
     for index, i in enumerate(ids):
         if i in keep:
             py_label[py_label==i] = values[keep.index(i)]
@@ -176,7 +117,7 @@ def normalizeLabelMap(labels, values=[], keep=[]):
     labels_new.SetSpacing(labels.GetSpacing())
     return labels_new
 
-def eraseBoundary(labels, pixels, bg_id):
+def erase_boundary(labels, pixels, bg_id):
     """
     Erase anything on the boundary by a specified number of pixels
 
@@ -196,7 +137,7 @@ def eraseBoundary(labels, pixels, bg_id):
     labels[:,:,-pixels:] = bg_id
     return labels
 
-def removeClass(labels, class_id, bg_id):
+def remove_class(labels, class_id, bg_id):
     """
     Convert class label to background label
 
@@ -210,73 +151,10 @@ def removeClass(labels, class_id, bg_id):
     labels[np.where(labels==class_id)] = bg_id
     return labels
 
-def gaussianSmoothImage(im, stdev):
-    """
-    Smooths a python ndarray Image with Gaussian smoothing
-
-    Args:
-        im: Python nd array
-        stdev: standard deviation for Gaussian smoothing
-    Returns:
-        im: smoothed Image
-    """
-    from scipy.ndimage.filters import gaussian_filter
-    im = gaussian_filter(im, stdev)
-
-    return im
-
-def recolorPixelsByPlane(labels, ori, nrm, bg_id):
-    """
-    For every pixel above a plane in physcal coordinates, change the pixel value to background pixel value
-
-    Args:
-        labels: SimpleItk image
-        ori: plane origin
-        nrm: plane normal
-    Returns:
-        labels: editted SimpleItk image
-    """
-    def isAbovePlane(pt1, ori, nrm):
-        vec1 = np.array(pt1)-np.array(ori)
-        vec2 = np.array(nrm)
-        dot = np.dot(vec1, vec2)
-        if dot>0:
-            return True
-        else:
-            return False
-
-    X, Y, Z = labels.GetSize()
-    for x in range(X):
-        for y in range(Y):
-            for z in range(Z):
-                coords = labels.TransformIndexToPhysicalPoint((x,y,z))
-                if isAbovePlane(coords, ori, nrm):
-                    labels.SetPixel(x, y, z, bg_id)
-
-    return labels
-
-
-    
 ################################
 ## VTK PolyData functions
 ###############################
-def decimation(poly, rate):
-    """
-    Simplifies a VTK PolyData
-
-    Args: 
-        poly: vtk PolyData
-        rate: target rate reduction
-    """
-    decimate = vtk.vtkQuadricDecimation()
-    decimate.SetInputData(poly)
-    decimate.AttributeErrorMetricOn()
-    decimate.SetTargetReduction(rate)
-    decimate.VolumePreservationOn()
-    decimate.Update()
-    return decimate.GetOutput()
-
-def cleanPolyData(poly, tol):
+def clean_polydata(poly, tol):
     """
     Cleans a VTK PolyData
 
@@ -296,26 +174,7 @@ def cleanPolyData(poly, tol):
     poly = clean.GetOutput()
     return poly
 
-def appendVTKPolydata(poly1, poly2):
-    """ 
-    This function appends two polydata
-
-    Args:
-        poly1: first vtk polydata
-        poly2: second vtk polydata
-    Returns:
-        poly: appended polydata
-    """
-
-    appender = vtk.vtkAppendPolyData()
-    appender.AddInputData(poly1)
-    appender.AddInputData(poly2)
-    appender.Update()
-    
-    poly = cleanPolyData(appender, 0.)
-    return poly
-
-def smoothVTKPolydata(poly, iteration=10, boundary=False, feature=False):
+def smooth_vtk_polydata(poly, iteration=10, boundary=False, feature=False):
     """
     This function smooths a vtk polydata
 
@@ -340,30 +199,7 @@ def smoothVTKPolydata(poly, iteration=10, boundary=False, feature=False):
 
     return smoothed
 
-def laplacianSmoothVTKPolydata(poly, iteration=10, boundary=False, feature=False):
-    """
-    This function smooths a vtk polydata
-
-    Args:
-        poly: vtk polydata to smooth
-        boundary: boundary smooth bool
-
-    Returns:
-        smoothed: smoothed vtk polydata
-    """
-
-    smoother = vtk.vtkWindowedSincPolyDataFilter()
-    smoother.SetInputData(poly)
-    smoother.SetBoundarySmoothing(boundary)
-    smoother.SetFeatureEdgeSmoothing(feature)
-    smoother.SetNumberOfIterations(iteration)
-    smoother.Update()
-
-    smoothed = smoother.GetOutput()
-
-    return smoothed
-
-def windowedSincSmoothVTKPolyData(poly, iteration=15, band=0.1, boundary=False, feature=False):
+def windowed_sinc_smooth_vtk_polydata(poly, iteration=15, band=0.1, boundary=False, feature=False):
     """
     This function smooths a vtk polydata, using windowed sinc algorithm
 
@@ -384,7 +220,7 @@ def windowedSincSmoothVTKPolyData(poly, iteration=15, band=0.1, boundary=False, 
     ftr.NormalizeCoordinatesOn()
     ftr.Update()
     return ftr.GetOutput()
-def booleanVTKPolyData(poly1, poly2, keyword):
+def boolean_vtk_polydata(poly1, poly2, keyword):
     """
     Apply VTK boolean operation on two VTK PolyData
 
@@ -412,7 +248,7 @@ def booleanVTKPolyData(poly1, poly2, keyword):
 
     return boolean.GetOutput()
 
-def fillHole(poly, size=10000000.):
+def fill_hole(poly, size=10000000.):
     """
     Fill holes in VTK PolyData
     
@@ -429,42 +265,7 @@ def fillHole(poly, size=10000000.):
     
     return filler.GetOutput()
 
-def setCellScalar(poly, scalar):
-    """
-    Assign a scalar value to each cell of the polydata
-
-    Args:
-        poly; VTK PolyData to edit
-        scalar: scalar value float
-    Returns:
-        poly: edited VTK PolyData
-    """
-    num = poly.GetNumberOfCells()
-    cellData = vtk.vtkFloatArray()
-    cellData.SetNumberOfValues(num)
-    for i in range(num):
-        cellData.SetValue(i, scalar)
-    poly.GetCellData().SetScalars(cellData)
-    
-    return poly
-
-def gaussianSmoothVTKImage(im, stdev):
-    """
-    Smooths a vtk Image with Gaussian smoothing
-
-    Args:
-        im: vtkImage
-        stdev: standard deviation for Gaussian smoothing
-    Returns:
-        im: smoothed vtkImage
-    """
-    smoother = vtk.vtkImageGaussianSmooth()
-    smoother.SetInputData(im)
-    smoother.SetRadiusFactors(np.array(im.GetSpacing())*stdev)
-    smoother.Update()
-    return smoother.GetOutput()
-
-def labelOpenClose(im, label_id, bg_id, size):
+def label_open_close(im, label_id, bg_id, size):
     """
     Open or close 
 
@@ -484,7 +285,7 @@ def labelOpenClose(im, label_id, bg_id, size):
     filt.Update()
     return filt.GetOutput()
 
-def labelDilateErode(im, label_id, bg_id, size):
+def label_dilate_erode(im, label_id, bg_id, size):
     """
     Dilates a label
     
@@ -510,31 +311,6 @@ def labelDilateErode(im, label_id, bg_id, size):
     return newIm
     
 
-def createTissueThickness(im, label_id, bg_id,thickness,binary=True):
-    """
-    Dilates a label to create thickness 
-    
-    Args:
-        im: vtkImage of the label map
-        label_id: class id to erode
-        bg_id: class id of backgroud to dilate
-        thickness: thickness of the erosion in physical unit
-    Returns
-        newIm: vtkImage with thickened boundary of the tissue structure
-    """
-
-    newIm = labelDilateErode(im, label_id, bg_id,thickness)
-    
-    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
-    pyIm_new = vtk_to_numpy(newIm.GetPointData().GetScalars())
-    pyIm = vtk_to_numpy(im.GetPointData().GetScalars())
-    pyIm_new[np.where((pyIm_new-pyIm==0)&(pyIm==label_id))]=bg_id
-    if binary:
-        # convert to binary
-        pyIm_new[np.where(pyIm_new!=0)] = 1 
-    newIm.GetPointData().SetScalars(numpy_to_vtk(pyIm_new))
-    return newIm
-
 def constrained_local_smoothing(poly, ctr, radius, iteration, factor):
     for index in range(poly.GetNumberOfPoints()):
         pt = np.array(poly.GetPoints().GetPoint(index))
@@ -556,7 +332,7 @@ def constrained_local_smoothing(poly, ctr, radius, iteration, factor):
                 poly.GetPoints().SetPoint(index, pt+factor*disp_vec)
     return poly
 
-def getCentroid(im, label_id):
+def get_centroid(im, label_id):
     """
     Compute the centroid (mean coordinates) of one labelled region
     
@@ -579,7 +355,7 @@ def getCentroid(im, label_id):
     centroid = np.mean(spacing * ids + origin, axis=0)
     return centroid
 
-def locateRegionBoundaryIDs(im, label_id1, label_id2, size = 1., bg_id = None):
+def locate_region_boundary_ids(im, label_id1, label_id2, size = 1., bg_id = None):
     """
     Locate the boundary coordinates between two regions with different labels
     
@@ -634,7 +410,7 @@ def locateRegionBoundary(im, label_id1, label_id2, size=1.):
     Returns
         points: coordinates of the boundary points
     """
-    ids = locateRegionBoundaryIDs(im, label_id1, label_id2, size)
+    ids = locate_region_boundary_ids(im, label_id1, label_id2, size)
     
     total_num = len(ids)
     
@@ -643,55 +419,8 @@ def locateRegionBoundary(im, label_id1, label_id2, size=1.):
     points = ids * spacing + origin
     return points
 
-def clipVTKPolyData(poly, ori, nrm):
-    """
-    Clip a VTK PolyData with a plane by specifying the plane normal and origin
-    TO-DO: future improvements to close the cut: https://github.com/Kitware/VTK/blob/master/Examples/VisualizationAlgorithms/Python/ClipCow.py
 
-    Args:
-        poly: VTK PolyData
-        ori: plane origin, tuple
-        nrm: plane normal, tuple
-    Returns:
-        poly: clipped VTK PolyData
-    """
-    polyNormals = vtk.vtkPolyDataNormals()
-    polyNormals.SetInputData(poly)
-
-    plane = vtk.vtkPlane()
-    plane.SetOrigin(*ori)
-    plane.SetNormal(*nrm)
-
-    clipper = vtk.vtkClipPolyData()
-    clipper.SetInputData(poly)
-    clipper.SetClipFunction(plane)
-    clipper.GenerateClipScalarsOn()
-    clipper.GenerateClippedOutputOn()
-    clipper.SetValue(0.5)
-    clipper.Update()
-    
-    cutEdges = vtk.vtkCutter()
-    cutEdges.SetInputConnection(polyNormals.GetOutputPort())
-    cutEdges.SetCutFunction(plane)
-    cutEdges.GenerateCutScalarsOn()
-    cutEdges.SetValue(0, 0.5)
-    cutEdges.Update()
-
-    cutStrips = vtk.vtkStripper()
-    cutStrips.SetInputConnection(cutEdges.GetOutputPort())
-    cutStrips.Update()
-    cutPoly = vtk.vtkPolyData()
-    cutPoly.SetPoints(cutStrips.GetOutput().GetPoints())
-    cutPoly.SetPolys(cutStrips.GetOutput().GetLines())
-    
-    cutTriangles = vtk.vtkTriangleFilter()
-    cutTriangles.SetInputData(cutPoly)
-    cutTriangles.Update()
-    poly = appendVTKPolydata(clipper.GetOutput(), cutTriangles.GetOutput())
-
-    return poly
-
-def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id, label_id=None):
+def recolor_vtk_pixels_by_plane(labels, ori, nrm, bg_id, label_id=None):
     """
     For every pixel above a plane in physcal coordinates, change the pixel value to background pixel value
 
@@ -726,7 +455,7 @@ def recolorVTKPixelsByPlane(labels, ori, nrm, bg_id, label_id=None):
 
     return labels
 
-def recolorVTKPixelsByIds(labels, ids, bg_id):
+def recolor_vtk_pixels_by_ids(labels, ids, bg_id):
     """
     Change the pixel values of the specified ids to background pixel value
 
@@ -747,45 +476,7 @@ def recolorVTKPixelsByIds(labels, ids, bg_id):
     return labels
 
 
-def recolorVTKPixelsByPlaneByRegion(labels, ori, nrm, region_id, bg_id):
-    """
-    Within each region, for every pixel above a plane in physcal coordinates, change the pixel value to background pixel value
-
-    TO-DO: Mayber combine with the previous function
-    Args:
-        labels: VTK image
-        ori: plane origin
-        nrm: plane normal
-        region_id: class id of the labelled region
-        bg_id: class id of the new color
-    Returns:
-        labels: editted VTK image
-    """
-
-    from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
-    x, y, z = labels.GetDimensions()
-    pyLabel = vtk_to_numpy(labels.GetPointData().GetScalars()).reshape(z, y, x).transpose(2, 1, 0)
-    
-    indices = np.array(np.where(pyLabel==region_id)).transpose()
-    total_num = len(indices)
-
-    spacing = np.tile(labels.GetSpacing(), total_num).reshape(total_num,3)
-    origin = np.tile(labels.GetOrigin(), total_num).reshape(total_num,3)
-    physical = indices * spacing + origin
-   
-    vec1 = physical - np.tile(ori, total_num).reshape(total_num,3)
-    vec2 = np.tile(nrm, total_num).reshape(total_num,3)
-    above = np.sum(vec1*vec2, axis=1)>0
-
-    remove_indices = indices[above]
-    for i in remove_indices:
-        pyLabel[i[0],i[1],i[2]] = bg_id
-
-    labels.GetPointData().SetScalars(numpy_to_vtk(pyLabel.transpose(2,1,0).flatten()))
-
-    return labels
-
-def recolorVTKImageByPolyData(poly, vtk_image, new_id):
+def recolor_vtk_image_by_polydata(poly, vtk_image, new_id):
     """
     Change the id value of the pixels within the Polydata
 
@@ -797,14 +488,14 @@ def recolorVTKImageByPolyData(poly, vtk_image, new_id):
         new_image: modified vtk image
     """
     from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
-    poly_im = convertPolyDataToImageData(poly, vtk_image)
+    poly_im = convert_polydata_to_image_data(poly, vtk_image)
     poly_im_py = vtk_to_numpy(poly_im.GetPointData().GetScalars())
     vtk_im_py = vtk_to_numpy(vtk_image.GetPointData().GetScalars())
     vtk_im_py[poly_im_py>0] = new_id
     vtk_image.GetPointData().SetScalars(numpy_to_vtk(vtk_im_py))
     return vtk_image
 
-def vtkImageResample(image, spacing, opt):
+def vtk_image_resample(image, spacing, opt):
     """
     Resamples the vtk image to the given dimenstion
 
@@ -836,7 +527,7 @@ def vtkImageResample(image, spacing, opt):
     return reslicer.GetOutput()
 
 
-def convertVTK2binary(labels):
+def convert_vtk_im_to_binary(labels):
     """
     This function converts a vtk label to binary label
     
@@ -852,7 +543,7 @@ def convertVTK2binary(labels):
     return labels
 
 
-def extractLargestConnectedRegion(vtk_im, label_id):
+def extract_largest_connected_region(vtk_im, label_id):
     """
     Extrac the largest connected region of a vtk image
 
@@ -877,7 +568,7 @@ def extractLargestConnectedRegion(vtk_im, label_id):
     vtk_im.GetPointData().SetScalars(numpy_to_vtk(py_im))
     return vtk_im
 
-def cutPolyDataWithAnother(poly1, poly2, plane_info):
+def cut_polydata_with_another(poly1, poly2, plane_info):
     """
     Cuts the first VTK PolyData with another
     
@@ -921,7 +612,7 @@ def cutPolyDataWithAnother(poly1, poly2, plane_info):
     p2c.Update()
     poly1=p2c.GetOutput()
 
-    clipper = thresholdPolyData(poly1, 'SignedDistances', (0., np.inf))   
+    clipper = threshold_polydata(poly1, 'SignedDistances', (0., np.inf))   
     connectivity = vtk.vtkPolyDataConnectivityFilter()
     #connectivity.SetInputData(clipper.GetOutput())
     connectivity.SetInputData(clipper)
@@ -930,7 +621,7 @@ def cutPolyDataWithAnother(poly1, poly2, plane_info):
     poly = connectivity.GetOutput()
     return poly
 
-def boundaryEdges(mesh):
+def find_boundary_edges(mesh):
     """
     Finds boundary edges of a VTK PolyData
 
@@ -951,7 +642,7 @@ def boundaryEdges(mesh):
     extractor.Update()
     return extractor.GetOutput()
 
-def findPointCorrespondence(mesh,points):
+def find_point_correspondence(mesh,points):
     """
     Find the point IDs of the points on a VTK PolyData
 
@@ -975,7 +666,7 @@ def findPointCorrespondence(mesh,points):
     return IdList
 
 
-def separateDisconnectedPolyData(poly):
+def separate_disconnected_polydata(poly):
     """
     Separate disconnected PolyData into separate PolyData objects
 
@@ -995,7 +686,7 @@ def separateDisconnectedPolyData(poly):
         
         component = vtk.vtkPolyData()
         component.DeepCopy(cc_filter.GetOutput())
-        component = cleanPolyData(component, 0.)
+        component = clean_polydata(component, 0.)
         # Make sure we got something
         if component.GetNumberOfCells() <= 0:
             break
@@ -1004,7 +695,7 @@ def separateDisconnectedPolyData(poly):
         idx += 1
     return components
 
-def getPointIdsOnBoundaries(poly):
+def get_point_ids_on_boundaries(poly):
     """
     Get the point IDs on connected boundaries
     
@@ -1014,17 +705,17 @@ def getPointIdsOnBoundaries(poly):
         id_lists: a list of Python lists, each containing the point IDs of one connected boundary (e.g., mitral opening)
         pt_lists: a list of vtk Points, each containing the points of one connected boundary
     """
-    edges = boundaryEdges(poly)
-    components = separateDisconnectedPolyData(edges)
+    edges = find_boundary_edges(poly)
+    components = separate_disconnected_polydata(edges)
     id_lists = [None]*len(components)
     #pt_lists = [None]*len(components)
     for i in range(len(id_lists)):
-        id_lists[i] = findPointCorrespondence(poly,components[i].GetPoints())
+        id_lists[i] = find_point_correspondence(poly,components[i].GetPoints())
         #pt_lists[i] = components[i].GetPoints()
         print('Found %d points for boundary %d\n' % (len(id_lists[i]),i))
     return id_lists,components
 
-def changePolyDataPointsCoordinates(poly, pt_ids, pt_coords):
+def change_polydata_points_coordinates(poly, pt_ids, pt_coords):
     """
     For points with ids of a VTK PolyData, change their coordinates
 
@@ -1046,7 +737,7 @@ def changePolyDataPointsCoordinates(poly, pt_ids, pt_coords):
 
     return poly
 
-def projectPointsToFitPlane(points):
+def project_points_to_fit_plane(points):
     """
     Find the best fit plane of VTK points, project the points to the plane
 
@@ -1065,7 +756,7 @@ def projectPointsToFitPlane(points):
         pyPts = points
     else:
         pyPts = vtk_to_numpy(points.GetData())
-    nrm = fitPlaneNormal(pyPts)
+    nrm = fit_plane_normal(pyPts)
     nrm /= np.linalg.norm(nrm)
     ori = np.mean(pyPts, axis=0)
 
@@ -1089,7 +780,7 @@ def projectPointsToFitPlane(points):
     
     return proj_Pts
 
-def smoothVTKPolyline(polyline, smooth_iter):
+def smooth_vtk_polyline(polyline, smooth_iter):
     """
     smooth the points on rings, works for mitral or aorta opening like geometry
 
@@ -1119,7 +810,7 @@ def smoothVTKPolyline(polyline, smooth_iter):
             polyline.GetPoints().SetPoint(i, pt)
     return polyline
 
-class pointLocator:
+class PointLocator:
     # Class to find closest points
     def __init__(self,pts):
         ds = vtk.vtkPolyData()
@@ -1132,7 +823,7 @@ class pointLocator:
         self.locator.FindClosestNPoints(N, pt, ids)
         return ids
 
-def projectOpeningToFitPlane(poly, boundary_ids, points, MESH_SIZE):
+def project_opening_to_fit_plane(poly, boundary_ids, points, MESH_SIZE):
     """
     This function projects the opening geometry to a best fit plane defined by the points on opennings. Differenet from the previous function, not only the points on openings were moved but the neighbouring nodes to maintain mesh connectivity.
     Args:
@@ -1153,8 +844,8 @@ def projectOpeningToFitPlane(poly, boundary_ids, points, MESH_SIZE):
         pts = points
 
         
-    def _moveConnectedPoints(ids, pts, proj_pts, factor):
-        locator = pointLocator(pts)
+    def _move_connected_points(ids, pts, proj_pts, factor):
+        locator = PointLocator(pts)
         displacement = proj_pts - vtk_to_numpy(pts.GetData())
         for i in range(pts.GetNumberOfPoints()):
             cell_ids = vtk.vtkIdList()
@@ -1176,15 +867,15 @@ def projectOpeningToFitPlane(poly, boundary_ids, points, MESH_SIZE):
     
     #make a copy of the pt ids
     ids = boundary_ids.copy()
-    proj_pts = projectPointsToFitPlane(pts)
+    proj_pts = project_points_to_fit_plane(pts)
     dist = np.max(np.linalg.norm(proj_pts - vtk_to_numpy(pts.GetData()), axis=1))
     ITER = int(np.ceil(dist/MESH_SIZE)*3)
     for factor in np.linspace(0.8, 0., ITER, endpoint=False):
-        ids, pts,  proj_pts = _moveConnectedPoints(ids, pts, proj_pts, factor)
-    poly = changePolyDataPointsCoordinates(poly, ids, proj_pts)
+        ids, pts,  proj_pts = _move_connected_points(ids, pts, proj_pts, factor)
+    poly = change_polydata_points_coordinates(poly, ids, proj_pts)
     return poly 
 
-def getPolyDataPointCoordinatesFromIDs(poly, pt_ids):
+def get_polydata_point_coordinates_from_ids(poly, pt_ids):
     """
     Return the coordinates of points of the PolyData with ids
 
@@ -1202,7 +893,7 @@ def getPolyDataPointCoordinatesFromIDs(poly, pt_ids):
     return pts
 
 
-def deleteCellsFromPolyData(poly,id_list):
+def delete_cells_from_polydata(poly,id_list):
     """
     Removes cells from VTK PolyData with their id numbers
 
@@ -1219,7 +910,7 @@ def deleteCellsFromPolyData(poly,id_list):
     poly.DeleteLinks()
     return poly
 
-def removeFreeCells(poly, pt_ids):
+def remove_free_cells(poly, pt_ids):
     """
     Removes cells that only have one edge attached to the mesh connected to a point cell
     For each point (identified by id numebr) on mesh, find the number of connected triangles
@@ -1239,10 +930,10 @@ def removeFreeCells(poly, pt_ids):
         if id_list.GetNumberOfIds()==1:
             cell_list.append(id_list.GetId(0))
             pt_ids.remove(idx)
-    poly = deleteCellsFromPolyData(poly, cell_list)
+    poly = delete_cells_from_polydata(poly, cell_list)
     return poly, pt_ids
 
-def extractPolyDataFaces(poly, angle, expect_num=None):
+def extract_polydata_faces(poly, angle, expect_num=None):
     """
     Extract faces of a VTK PolyData based on feature angle
     
@@ -1275,7 +966,7 @@ def extractPolyDataFaces(poly, angle, expect_num=None):
     counts  = []
     face_list = []
     for i in range(num_surf):
-        face = thresholdPolyData(extracted_regions, 'RegionId', (i,i))
+        face = threshold_polydata(extracted_regions, 'RegionId', (i,i))
         face_list.append(face)
         counts.append(face.GetNumberOfCells())
     orders = np.argsort(counts)[::-1].astype(int)
@@ -1285,7 +976,7 @@ def extractPolyDataFaces(poly, angle, expect_num=None):
     face_list = [face_list[i] for i in orders[:expect_num]]
     corr_list = []
     for i in range(expect_num):
-        corr_list.append(findPointCorrespondence(copy, face_list[i]))
+        corr_list.append(find_point_correspondence(copy, face_list[i]))
     tags = vtk.vtkIntArray()
     tags.SetNumberOfComponents(1)
     tags.SetName('ModelFaceID')
@@ -1305,63 +996,7 @@ def extractPolyDataFaces(poly, angle, expect_num=None):
         
     return copy 
 
-def cutSurfaceWithPolygon(poly, boundary):
-    """
-    UNDER-DEVELOPMENT... ONLY WORKS FOR 2D DELAUNAY RESULTS
-    Cuts a surface with a polygon and removes cells outside the polygon
-    Only tested for 2D surface and 2D polygon
-
-    Args:
-        poly: flat surface, VTK PolyData
-        boundary: boundary edge to trim the polydaya, VTK PolyData
-    Returns:
-        poly: trimed VTK PolyData
-    """
-    #from vtk.util.numpy_support import vtk_to_numpy
-    delete_list = list()
-    #bound_pts = vtk_to_numpy(boundary.GetPoints().GetData())
-    bound_ids = findPointCorrespondence(poly,boundary.GetPoints())
-    #poly_pts = vtk_to_numpy(poly.GetPoints().GetData())
-    #ctr = np.mean(bound_pts, axis=0)
-    for idx in range(poly.GetNumberOfCells()):
-        pt_ids = vtk.vtkIdList()
-        poly.GetCellPoints(idx, pt_ids)
-
-        num = 0
-        #py_id = list()
-        for i in range(pt_ids.GetNumberOfIds()):
-            if pt_ids.GetId(i) in bound_ids:
-                num+=1
-                #py_id.append(pt_ids.GetId(i))
-        if num == 3:
-            delete_list.append(idx)
-    poly = deleteCellsFromPolyData(poly, delete_list)
-
-    return poly
-
-def deleteBadQualityCells(poly, tol):
-    """
-    Deletes cells with bad mesh quality (minimum angle)
-
-    Args:
-        poly: VTK PolyData to process
-        tol: minimum angles to threshold to delete
-    Returns:
-        poly: VTK PolyData with deleted cells
-    """
-    qfilter = vtk.vtkMeshQuality()
-    qfilter.SetInputData(poly)
-    qfilter.SetTriangleQualityMeasureToMinAngle()
-    qfilter.Update()
-    angle = qfilter.GetOutput().GetCellData().GetArray("Quality")
-    from vtk.util.numpy_support import vtk_to_numpy
-    pyangle = vtk_to_numpy(angle)
-    ids = [i for i in range(len(pyangle)) if pyangle[i]<tol]
-    print("Bad element, deleting...", ids)
-    poly = deleteCellsFromPolyData(poly,ids)
-    return poly
-
-def appendPolyData(poly1, poly2):
+def append_polydata(poly1, poly2):
     """
     Combine two VTK PolyData objects together
     Args:
@@ -1382,7 +1017,7 @@ def appendPolyData(poly1, poly2):
     poly = cleanFilter.GetOutput()
     return poly
 
-def tagPolyData(poly, tag):
+def tag_polydata(poly, tag):
     """
     Tag polydata with a tag id
 
@@ -1401,7 +1036,7 @@ def tagPolyData(poly, tag):
     poly.GetCellData().SetScalars(tags)
     return poly
 
-def fixPolydataNormals(poly):
+def fix_polydata_normals(poly):
     """
     Adjust the normals of PolyData
 
@@ -1418,7 +1053,7 @@ def fixPolydataNormals(poly):
     normAdj.Update()
     poly = normAdj.GetOutput()
     return poly
-def subdivisionWithCaps(poly,mode,num,cap_id=[2,3], wall_id=1, clean=True):
+def subdivision_with_caps(poly,mode,num,cap_id=[2,3], wall_id=1, clean=True):
     """
     Subvidie the polydata while perserving the sharp edges between the cap and the wall
 
@@ -1429,17 +1064,17 @@ def subdivisionWithCaps(poly,mode,num,cap_id=[2,3], wall_id=1, clean=True):
         wall_id: id of wall --TO-DO possible to have >1 wall, combine first?
     """
     #cap_bounds = [None]*len(cap_id)
-    wall = thresholdPolyData(poly, 'ModelFaceID', (wall_id, wall_id))
+    wall = threshold_polydata(poly, 'ModelFaceID', (wall_id, wall_id))
     wall = subdivision(wall, num, mode)
     for i, c_id in enumerate(cap_id):
-        cap = thresholdPolyData(poly, 'ModelFaceID', (c_id, c_id))
-        #cap_bounds[i] = boundaryEdges(cap)
+        cap = threshold_polydata(poly, 'ModelFaceID', (c_id, c_id))
+        #cap_bounds[i] = find_boundary_edges(cap)
         cap = subdivision(cap, num, mode)
-        wall = appendPolyData(wall,cap)
+        wall = append_polydata(wall,cap)
         if clean:
-            wall = cleanPolyData(wall, 0.) 
+            wall = clean_polydata(wall, 0.) 
     if clean:
-        wall = cleanPolyData(wall, 1e-5) 
+        wall = clean_polydata(wall, 1e-5) 
     return wall
 
 def subdivision(poly,num,option='linear'):
@@ -1458,7 +1093,7 @@ def subdivision(poly,num,option='linear'):
     divide.Update()
     return divide.GetOutput()
 
-def orientedPointsetFromBoundary(boundary):
+def oriented_pointset_on_boundary(boundary):
     """
     Create list of oriented ids on a closed boundary curve (polyline)
 
@@ -1496,7 +1131,7 @@ def orientedPointsetFromBoundary(boundary):
                     pt_list.SetPoint(i, bound_pts.GetPoint(k))
     return id_list, pt_list
 
-def capPolyDataOpenings(poly,  size):
+def cap_polydata_openings(poly,  size):
     """
     Cap the PolyData openings  with acceptable mesh quality
 
@@ -1510,18 +1145,18 @@ def capPolyDataOpenings(poly,  size):
     #import matplotlib.pyplot as plt
     from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
     import os
-    def _plotPoints(points):
+    def _plot_points(points):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(points[:,0], points[:,1], points[:,2])
         plt.show()
-    def _addNodesToCap(vtkPts, size):
+    def _add_nodes_to_cap(vtkPts, size):
         """
         Add uniformed points to cap
         """
         points = vtk_to_numpy(vtkPts.GetData())
         num = points.shape[0]
-        #_plotPoints(points)
+        #_plot_points(points)
         ctr = np.mean(points, axis=0)
         length = np.mean(np.linalg.norm(points-ctr, axis = 1))
         r = np.linspace(0.5*size/length, (length-size*0.8)/length,int(np.floor(length/size)))
@@ -1538,24 +1173,24 @@ def capPolyDataOpenings(poly,  size):
         vertexFilter.SetInputData(ptsPly)
         vertexFilter.Update()
         ptsPly = vertexFilter.GetOutput()
-        cleanedPts = cleanPolyData(ptsPly, size*0.01)
+        cleanedPts = clean_polydata(ptsPly, size*0.01)
 
         vtkPts.InsertPoints(vtkPts.GetNumberOfPoints()
                             ,cleanedPts.GetNumberOfPoints()
                             ,0
                             ,cleanedPts.GetPoints())
             
-        #_plotPoints(vtk_to_numpy(vtkPts.GetData()))
+        #_plot_points(vtk_to_numpy(vtkPts.GetData()))
         return vtkPts
 
-    def _delaunay2D(vtkPts, boundary):
+    def _delaunay_2d(vtkPts, boundary):
         """
         Delaunay 2D on input points
         """
         vtkPtsPly = vtk.vtkPolyData()
         vtkPtsPly.SetPoints(vtkPts)
         
-        ids, pt_list = orientedPointsetFromBoundary(boundary)   
+        ids, pt_list = oriented_pointset_on_boundary(boundary)   
 
         polygon = vtk.vtkCellArray()
         polygon.InsertNextCell(len(ids))
@@ -1570,36 +1205,36 @@ def capPolyDataOpenings(poly,  size):
         return delaunay.GetOutput()
     #tag polydata 
     tag_id = 1
-    poly = tagPolyData(poly, tag_id)
+    poly = tag_polydata(poly, tag_id)
 
-    edges = boundaryEdges(poly)
-    components = separateDisconnectedPolyData(edges)
+    edges = find_boundary_edges(poly)
+    components = separate_disconnected_polydata(edges)
     id_lists = [None]*len(components)
     pt_lists = [None]*len(components)
     for i in range(len(id_lists)):
-        id_lists[i] = findPointCorrespondence(poly,components[i].GetPoints())
+        id_lists[i] = find_point_correspondence(poly,components[i].GetPoints())
         pt_lists[i] = vtk.vtkPoints()
         pt_lists[i].DeepCopy(components[i].GetPoints())
         print('Found %d points for boundary %d\n' % (len(id_lists[i]),i))
    
     cap_pts_list = list()
     for boundary, ids, pts in zip(components, id_lists, pt_lists):
-        cap_pts = _addNodesToCap(pts, size)
+        cap_pts = _add_nodes_to_cap(pts, size)
         cap_pts_list.append(cap_pts)
-        cap = _delaunay2D(cap_pts, boundary)
+        cap = _delaunay_2d(cap_pts, boundary)
         #cap = cutSurfaceWithPolygon(cap, boundary)
         #tag the caps
         tag_id +=1
-        cap = tagPolyData(cap, tag_id)
-        poly = appendPolyData(poly, cap)
+        cap = tag_polydata(cap, tag_id)
+        poly = append_polydata(poly, cap)
     
     #cap_pts_ids = list()
     #for cap_pts in cap_pts_list:
-    #    cap_pts_ids.append(findPointCorrespondence(poly,cap_pts))
-    poly = fixPolydataNormals(poly)
+    #    cap_pts_ids.append(find_point_correspondence(poly,cap_pts))
+    poly = fix_polydata_normals(poly)
     return poly
 
-def getPolydataVolume(poly):
+def get_polydata_volume(poly):
     """
     Compute volume of a enclosed vtk polydata
 
@@ -1614,7 +1249,7 @@ def getPolydataVolume(poly):
     volume = mass.GetVolume()
     return volume
 
-def thresholdPolyData(poly, attr, threshold):
+def threshold_polydata(poly, attr, threshold):
     """
     Get the polydata after thresholding based on the input attribute
 
@@ -1635,7 +1270,7 @@ def thresholdPolyData(poly, attr, threshold):
     surf_filter.SetInputData(surface_thresh.GetOutput())
     surf_filter.Update()
     return surf_filter.GetOutput()
-def convertPolyDataToImageData(poly, ref_im, reverse=True):
+def convert_polydata_to_image_data(poly, ref_im, reverse=True):
     """
     Convert the vtk polydata to imagedata 
 

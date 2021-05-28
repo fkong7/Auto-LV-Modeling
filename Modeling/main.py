@@ -43,7 +43,7 @@ def buildLVModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=
         la_cutter = image.build_cutter(la_id, aa_id, 3, FACTOR_LA, op='valve')
         aa_cutter = image.build_cutter(aa_id, la_id, 3, FACTOR_AA, op='tissue')
         image.resample(MESH_RESOLUTION, 'linear')
-        image.convert2binary()
+        image.convert_to_binary()
 
         if timming:
             im_time = time.time() - start
@@ -83,7 +83,7 @@ def buildLeftHeartModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7]
 
         aa_cutter = image.build_cutter(aa_id, la_id, 3, FACTOR_AA, op='tissue')
         image.resample(MESH_RESOLUTION, 'linear')
-        image.convert2binary()
+        image.convert_to_binary()
         image.erase_boundary()
 
         if timming:

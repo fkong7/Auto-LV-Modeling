@@ -136,7 +136,7 @@ def getAllMaxVelocity(fns, face_poly_fn):
     face_poly = io_utils.read_vtk_mesh(face_poly_fn)
     face_pts = face_poly.GetPoints()
     
-    pt_ids = utils.findPointCorrespondence(polyCD, face_pts)
+    pt_ids = utils.find_point_correspondence(polyCD, face_pts)
     
     Vlist = []
     for fn in fns:
@@ -167,7 +167,7 @@ def getAllFlowRate(fns, face_poly_fn):
     face_poly = io_utils.read_vtk_mesh(face_poly_fn)
     face_pts = face_poly.GetPoints()
     
-    pt_ids = utils.findPointCorrespondence(polyCD, face_pts)
+    pt_ids = utils.find_point_correspondence(polyCD, face_pts)
     IdList = findCellsByPoints(polyCD, pt_ids)
     tags = vtk.vtkIntArray()
     tags.SetNumberOfComponents(1)
