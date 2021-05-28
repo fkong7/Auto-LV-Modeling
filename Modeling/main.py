@@ -5,9 +5,9 @@ __file__), "src"))
 
 import glob
 import numpy as np
-import label_io
-from image_processing import lvImage
-from models import leftVentricle, leftHeart
+import io_utils
+from image_processing import LVImage
+from models import LeftVentricle, LeftHeart
 from marching_cube import marching_cube, vtk_marching_cube
 import utils
 import vtk
@@ -37,11 +37,11 @@ def buildLVModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=
         start = time.time()
     for fn, poly_fn in zip(fns,poly_fns): 
 
-        image = lvImage(fn)
+        image = LVImage(fn)
         image.process(remove_ids)
 
-        la_cutter = image.buildCutter(la_id, aa_id, 3, FACTOR_LA, op='valve')
-        aa_cutter = image.buildCutter(aa_id, la_id, 3, FACTOR_AA, op='tissue')
+        la_cutter = image.build_cutter(la_id, aa_id, 3, FACTOR_LA, op='valve')
+        aa_cutter = image.build_cutter(aa_id, la_id, 3, FACTOR_AA, op='tissue')
         image.resample(MESH_RESOLUTION, 'linear')
         image.convert2binary()
 
@@ -49,10 +49,10 @@ def buildLVModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=
             im_time = time.time() - start
             time_now = time.time()
         
-        model = leftVentricle(image.generate_surface(0, smooth_iter=20, band=0.02))
+        model = LeftVentricle(image.generate_surface(0, smooth_iter=20, band=0.02))
         #process models
-        model.processWall(*la_cutter, *aa_cutter)
-        model.processCap(5.) 
+        model.process_wall(*la_cutter, *aa_cutter)
+        model.process_cap(5.) 
         if timming:
             surf_time = time.time() - time_now
             time_now = time.time()
@@ -62,7 +62,7 @@ def buildLVModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=
         fn = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(poly_fn))
         if use_SV:
             model.remesh(edge_size, fn, poly_fn, ug_fn)
-        model.writeSurfaceMesh(poly_fn)
+        model.write_surface_mesh(poly_fn)
         if timming:
             mesh_time = time.time() - time_now
             time_list.append([im_time, surf_time, mesh_time])
@@ -78,10 +78,10 @@ def buildLeftHeartModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7]
         start = time.time()
     for fn, poly_fn in zip(fns,poly_fns): 
 
-        image = lvImage(fn)
+        image = LVImage(fn)
         image.process(remove_ids)
 
-        aa_cutter = image.buildCutter(aa_id, la_id, 3, FACTOR_AA, op='tissue')
+        aa_cutter = image.build_cutter(aa_id, la_id, 3, FACTOR_AA, op='tissue')
         image.resample(MESH_RESOLUTION, 'linear')
         image.convert2binary()
         image.erase_boundary()
@@ -90,16 +90,16 @@ def buildLeftHeartModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7]
             im_time = time.time() - start
             time_now = time.time()
         
-        model = leftHeart(image.generate_surface(0, smooth_iter=20, band=0.02))
-        model.processWall(*aa_cutter)
-        model.processCap(5.) 
+        model = LeftHeart(image.generate_surface(0, smooth_iter=20, band=0.02))
+        model.process_wall(*aa_cutter)
+        model.process_cap(5.) 
         if timming:
             surf_time = time.time() - time_now
             time_now = time.time()
         fn = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(poly_fn))
         if use_SV:
             model.remesh(edge_size, fn, poly_fn, ug_fn)
-        model.writeSurfaceMesh(poly_fn)
+        model.write_surface_mesh(poly_fn)
         if timming:
             mesh_time = time.time() - time_now
             time_list.append([im_time, surf_time, mesh_time])

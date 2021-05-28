@@ -5,7 +5,7 @@ import argparse
 import numpy as np
 import meshing
 import models
-import label_io
+import io_utils
 import time
 
 if __name__ == '__main__':
@@ -32,11 +32,11 @@ if __name__ == '__main__':
         phase = args.phase
     poly_fn = os.path.join(input_dir, args.model_out % phase)
 
-    lvmodel = models.leftVentricle(label_io.loadVTKMesh(poly_fn))
+    lvmodel = models.LeftVentricle(io_utils.read_vtk_mesh(poly_fn))
     
     output_vol = os.path.join(args.output_dir, 'mesh-complete')
     lvmodel.remesh(args.edge_size, poly_fn, poly_fn=None, ug_fn=output_vol, mmg=False)
-    lvmodel.writeMeshComplete(output_vol)
+    lvmodel.write_mesh_complete(output_vol)
     end = time.time()
     print("Time spent in volume_mesh_main.py: ", end-start)
     print("Mesh generated for ", poly_fn)

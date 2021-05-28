@@ -4,9 +4,9 @@ import numpy as np
 import glob
 import SimpleITK as sitk
 import vtk
-import label_io
+import io_utils
 import utils
-from image_processing import lvImage
+from image_processing import LVImage
 import models
 class Registration:
     """
@@ -30,12 +30,12 @@ class Registration:
         self.parameter_map = None
         self.smooth = smooth
 
-    def updateMovingImage(self, moving_im_fn):
+    def update_moving_image(self, moving_im_fn):
         self.moving_fn = moving_im_fn
         self.moving = None
         self.parameter_map = None
 
-    def updateFixedImage(self, fixed_im_fn):
+    def update_fixed_image(self, fixed_im_fn):
         self.fixed_fn = fixed_im_fn
         self.fixed = None
         self.parameter_map = None
@@ -45,21 +45,21 @@ class Registration:
     #    self.moving_mask = None
     #    self.parameter_map = None
 
-    def updateFixedMask(self, fixed_mask_fn):
+    def update_fixed_mask(self, fixed_mask_fn):
         self.fixed_mask_fn = fixed_mask_fn
         self.fixed_mask = None
         self.parameter_map = None
     @staticmethod
-    def processImages(image):
+    def process_images(image):
         FACTOR_LA = 18 # TO-DO: change to global variables
         FACTOR_AA = 38
-        lv_image = lvImage(image)
+        lv_image = LVImage(image)
         lv_image.process([1, 4, 5, 7])
-        la_cutter, la_nrm = lv_image.buildCutter(2, 6, 3, FACTOR_LA, op='valve')
-        aa_cutter, aa_nrm = lv_image.buildCutter(6, 2, 3, FACTOR_AA, op='tissue')
+        la_cutter, la_nrm = lv_image.build_cutter(2, 6, 3, FACTOR_LA, op='valve')
+        aa_cutter, aa_nrm = lv_image.build_cutter(6, 2, 3, FACTOR_AA, op='tissue')
         lv_label = utils.recolorVTKImageByPolyData(la_cutter, lv_image.label, 0)
         lv_label = utils.recolorVTKImageByPolyData(aa_cutter, lv_label,0)
-        sitk_image = label_io.exportVTK2Sitk(lv_label)
+        sitk_image = io_utils.vtk_image_to_sitk_image(lv_label)
         #sitk_image = sitk.ReadImage(image)
         res = np.array(sitk_image.GetSpacing())
         res = np.min(res)/res * 0.8
@@ -67,15 +67,15 @@ class Registration:
         sitk_image = utils.normalizeLabelMap(sitk_image, values=[100,110,120,130], keep=[1, 2, 3, 6])
         return sitk_image
     
-    def loadImages(self):
-        self.moving = self.processImages(self.moving_fn)
+    def load_images(self):
+        self.moving = self.process_images(self.moving_fn)
         if self.fixed is None:
-            self.fixed = self.processImages(self.fixed_fn)
+            self.fixed = self.process_images(self.fixed_fn)
     
-    def computeTransform(self):
+    def compute_transform(self):
 
         if (self.fixed is None) or (self.moving is None):
-            self.loadImages()
+            self.load_images()
         elastixImageFilter = sitk.ElastixImageFilter()
         elastixImageFilter.SetFixedImage(self.fixed)
         #elastixImageFilter.SetFixedMask(self.fixed_mask)
@@ -99,14 +99,14 @@ class Registration:
 
         self.parameter_map = elastixImageFilter.GetTransformParameterMap()
 
-    def writeParameterMap(self, fn):
+    def write_parameter_map(self, fn):
         if self.parameter_map is None:
             return
         for i, para_map in enumerate(self.parameter_map):
             para_map_fn = os.path.splitext(fn)[0]+'_%d.txt' % i
             sitk.WriteParameterFile(para_map, para_map_fn)
 
-    def readParameterMap(self, fn):
+    def read_parameter_map(self, fn):
         fns = sorted(glob.glob(os.path.splitext(fn)[0]+"*"))
         if len(fns)==0:
             raise IOError("No Transformation file found")
@@ -126,14 +126,14 @@ class Registration:
             new_poly: transformed surface mesh (vtk PolyData)
         """
 
-        label_io.writeVTKPolyDataVerts(model.poly, fn)
+        io_utils.write_vtk_polydataVerts(model.poly, fn)
         if self.parameter_map is None:
             try:
-                self.readParameterMap(fn_paras)
+                self.read_parameter_map(fn_paras)
             except Exception as e:
-                self.computeTransform()
+                self.compute_transform()
         if (self.fixed is None) or (self.moving is None):
-            self.loadImages()
+            self.load_images()
 
         # wrap point set
         transformixImageFilter = sitk.TransformixImageFilter()
@@ -145,12 +145,12 @@ class Registration:
         result_im = transformixImageFilter.GetResultImage()
         sitk.WriteImage(result_im, im_out_fn)
         # build VTK PolyData
-        pts = label_io.readElastixPointOuptut(os.path.join(os.path.dirname(fn),'outputpoints.txt'))
+        pts = io_utils.read_elastix_point_ouptut(os.path.join(os.path.dirname(fn),'outputpoints.txt'))
 
         new_poly = vtk.vtkPolyData()
         new_poly.DeepCopy(model.poly)
         new_poly.SetPoints(pts)
-        return models.leftVentricle(model.update(new_poly), model.edge_size)
+        return models.LeftVentricle(model.update(new_poly), model.edge_size)
 
 
         

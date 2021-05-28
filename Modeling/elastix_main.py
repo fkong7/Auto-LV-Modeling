@@ -5,8 +5,8 @@ sys.path.append(os.path.join(os.path.dirname(
 __file__), "src"))
 
 import numpy as np
-import label_io
-from models import leftVentricle
+import io_utils
+from models import LeftVentricle
 from registration import Registration
 from utils import natural_sort
 import time
@@ -31,9 +31,9 @@ def registration(lvmodel, START_PHASE, IMAGE_NAME, image_fns, output_dir, mask_f
     fixed_im_fn = image_fns[START_PHASE]
     fixed_mask_fn = mask_fns[START_PHASE]
     fn_poly = os.path.join(output_dir, os.path.basename(fixed_im_fn)+'.vtp')
-    lvmodel.writeSurfaceMesh(fn_poly)
+    lvmodel.write_surface_mesh(fn_poly)
     volume = list()
-    volume.append([START_PHASE,lvmodel.getVolume()])
+    volume.append([START_PHASE,lvmodel.get_volume()])
     image_output_dir = os.path.join(reg_output_dir, "images")
     for index in ids[:-1]:
         print("REGISTERING FROM %d TO %d " % (START_PHASE, (index+1)%TOTAL_PHASE))
@@ -41,9 +41,9 @@ def registration(lvmodel, START_PHASE, IMAGE_NAME, image_fns, output_dir, mask_f
         #ASSUMING increment is 1
         moving_im_fn = image_fns[(index+1)%TOTAL_PHASE]
         
-        register.updateMovingImage(moving_im_fn)
-        register.updateFixedImage(fixed_im_fn)
-        register.updateFixedMask(fixed_mask_fn)
+        register.update_moving_image(moving_im_fn)
+        register.update_fixed_image(fixed_im_fn)
+        register.update_fixed_mask(fixed_mask_fn)
 
         try:
             os.makedirs(os.path.join(image_output_dir))
@@ -53,12 +53,12 @@ def registration(lvmodel, START_PHASE, IMAGE_NAME, image_fns, output_dir, mask_f
         fn_paras = os.path.join(reg_output_dir, str(START_PHASE)+"to"+str((index+1)%TOTAL_PHASE)+'.txt')
         new_lvmodel = register.polydata_image_transform(lvmodel, fn_out, os.path.join(image_output_dir, IMAGE_NAME % ((index+1)%TOTAL_PHASE)) , fn_paras)
         if write:
-            register.writeParameterMap(fn_paras)
+            register.write_parameter_map(fn_paras)
 
         #ASSUMING increment is 1
         fn_poly = os.path.join(output_dir, os.path.basename(moving_im_fn)+'.vtp')
-        new_lvmodel.writeSurfaceMesh(fn_poly)
-        volume.append([(index+1)%TOTAL_PHASE,new_lvmodel.getVolume()])
+        new_lvmodel.write_surface_mesh(fn_poly)
+        volume.append([(index+1)%TOTAL_PHASE,new_lvmodel.get_volume()])
 
     np.save(os.path.join(output_dir, "volume.npy"), volume)
     return
@@ -83,7 +83,7 @@ if __name__=='__main__':
     fn_poly = args.surface_fn 
 
     #
-    lvmodel = leftVentricle(label_io.loadVTKMesh(fn_poly), edge_size=args.edge_size )
+    lvmodel = LeftVentricle(io_utils.read_vtk_mesh(fn_poly), edge_size=args.edge_size )
 
     image_fns = natural_sort(glob.glob(os.path.join(args.image_dir, '*.nii.gz')))
     mask_fns = natural_sort(glob.glob(os.path.join(args.mask_dir, '*.nii.gz')))

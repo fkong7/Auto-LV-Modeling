@@ -3,30 +3,30 @@ import numpy as np
 import sys
 import vtk
 import utils
-import label_io
+import io_utils
 
 class Geometry(object):
     def __init__(self, vtk_poly, edge_size=1.):
         self.poly = vtk_poly
         self.edge_size = edge_size
-    def getVolume(self):
+    def get_volume(self):
         return utils.getPolydataVolume(self.poly)
 
-    def writeSurfaceMesh(self, fn):
-        label_io.writeVTKPolyData(self.poly, fn)
+    def write_surface_mesh(self, fn):
+        io_utils.write_vtk_polydata(self.poly, fn)
     
-    def writeVolumeMesh(self, fn):
-        label_io.writeVTUFile(self.ug, fn)
+    def write_volume_mesh(self, fn):
+        io_utils.write_vtu_file(self.ug, fn)
 
-    def splitRegion(self, region_id, attr='ModelFaceID'):
+    def split_region(self, region_id, attr='ModelFaceID'):
         return utils.thresholdPolyData(self.poly, attr, (region_id, region_id))
     
     def remesh(self, edge_size, fn, poly_fn=None, ug_fn=None, mmg=True):
         import meshing
         self.edge_size = edge_size
         if mmg:
-            meshing.remeshPolyData(self.poly, 1., 1.5)
-        self.writeSurfaceMesh(fn)
+            meshing.remesh_polydata(self.poly, 1., 1.5)
+        self.write_surface_mesh(fn)
         # generate volumetric mesh:
         mesh_ops = {
                 'surface_mesh_flag': True,
@@ -37,26 +37,26 @@ class Geometry(object):
             mesh_ops['surface_mesh_flag']=False
         if ug_fn is None:
             mesh_ops['surface_mesh_flag']=False
-        surface, volume = meshing.meshPolyData(fn, mesh_ops, (poly_fn, ug_fn))
+        surface, volume = meshing.mesh_polydata(fn, mesh_ops, (poly_fn, ug_fn))
         if surface is not None:
             self.poly = surface
         if volume is not None:
             self.ug = volume
         return 
-    def writeMeshComplete(self, path):
+    def write_mesh_complete(self, path):
 
         pass
 
 
-class leftHeart(Geometry):
+class LeftHeart(Geometry):
     
     def __init__(self, vtk_poly, edge_size=1.):
-        super(leftHeart, self).__init__(vtk_poly, edge_size)
+        super(LeftHeart, self).__init__(vtk_poly, edge_size)
         self.wall_processed = False
         self.cap_processed = False
         self.cap_pts_ids = None
 
-    def processWall(self, aa_cutter, aa_plane):
+    def process_wall(self, aa_cutter, aa_plane):
         if self.wall_processed:
             print("Left heart  wall has been processed!")
             return
@@ -71,7 +71,7 @@ class leftHeart(Geometry):
         self.poly = utils.smoothVTKPolydata(utils.cleanPolyData(self.poly, 0.), iteration=50)
         self.wall_processed = True
         return
-    def processCap(self, edge_size):
+    def process_cap(self, edge_size):
         if self.cap_processed:
             print("Caps have been processed!")
             return
@@ -79,15 +79,15 @@ class leftHeart(Geometry):
         self.cap_processed = True
         return
     
-class leftVentricle(Geometry):
+class LeftVentricle(Geometry):
     
     def __init__(self, vtk_poly, edge_size=1.):
-        super(leftVentricle, self).__init__(vtk_poly, edge_size)
+        super(LeftVentricle, self).__init__(vtk_poly, edge_size)
         self.wall_processed = False
         self.cap_processed = False
         self.cap_pts_ids = None
 
-    def processWall(self, la_cutter, la_plane, aa_cutter, aa_plane):
+    def process_wall(self, la_cutter, la_plane, aa_cutter, aa_plane):
         if self.wall_processed:
             print("Left ventricle wall has been processed!")
             return
@@ -108,7 +108,7 @@ class leftVentricle(Geometry):
         self.wall_processed = True
         return
 
-    def processCap(self, edge_size):
+    def process_cap(self, edge_size):
         if self.cap_processed:
             print("Caps have been processed!")
             return
@@ -117,23 +117,23 @@ class leftVentricle(Geometry):
         return
 
 
-    def getCapIds(self):
+    def get_cap_ids(self):
         self.cap_pts_ids = list()
         # good to assume region id mitral=2, aortic=3
         for cap_id in (2,3):
-            self.cap_pts_ids.append(utils.findPointCorrespondence(self.poly, self.splitRegion(cap_id).GetPoints()))
+            self.cap_pts_ids.append(utils.findPointCorrespondence(self.poly, self.split_region(cap_id).GetPoints()))
    
    
     def update(self, new_model):
         if self.cap_pts_ids is None:
-            self.getCapIds()
+            self.get_cap_ids()
         # Project the cap points so that they are co-planar
         for pt_ids in self.cap_pts_ids:
             pts = utils.getPolyDataPointCoordinatesFromIDs(new_model, pt_ids)
             new_model = utils.projectOpeningToFitPlane(new_model, pt_ids, pts, self.edge_size)
         return new_model
 
-    def writeMeshComplete(self, path):
+    def write_mesh_complete(self, path):
         """
         Args: 
             path: path to the output folder
@@ -148,19 +148,19 @@ class leftVentricle(Geometry):
         
         fn_poly = os.path.join(path, 'mesh-complete.exterior.vtp')
         fn_vol = os.path.join(path, 'mesh-complete.mesh.vtu')
-        self.writeVolumeMesh(fn_vol)
-        self.writeSurfaceMesh(fn_poly)
+        self.write_volume_mesh(fn_vol)
+        self.write_surface_mesh(fn_poly)
 
         fn_wall = os.path.join(path, 'walls_combined.vtp')
-        label_io.writeVTKPolyData(self.splitRegion(1),fn_wall)
+        io_utils.write_vtk_polydata(self.split_region(1),fn_wall)
         try:
             os.makedirs(os.path.join(path, 'mesh-surfaces'))
         except Exception as e: print(e)
 
         for i in range(3):
-            face = self.splitRegion(i+1)
+            face = self.split_region(i+1)
             face_fn = os.path.join(path,'mesh-surfaces','noname_%d.vtp' % (i+1))
-            label_io.writeVTKPolyData(face, face_fn)
+            io_utils.write_vtk_polydata(face, face_fn)
         return
 
         

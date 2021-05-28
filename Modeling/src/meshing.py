@@ -2,7 +2,7 @@ import os
 import vtk
 import sv
 
-def meshPolyData(fn, args, fns_out=None):
+def mesh_polydata(fn, args, fns_out=None):
     """
     Use SimVascular to mesh a file containing a VTK PolyData and write the volumetric mesh to disk
     Args:
@@ -27,7 +27,7 @@ def meshPolyData(fn, args, fns_out=None):
     surface = mesher.get_surface()
     return (surface, volumetric)
 
-def remeshPolyData(poly, hmin, hmax,write_fn=None):
+def remesh_polydata(poly, hmin, hmax,write_fn=None):
     """
     Use SimVascular MMG remesh to remesh a surfac mesh
     
@@ -41,6 +41,6 @@ def remeshPolyData(poly, hmin, hmax,write_fn=None):
     """
     remeshed = sv.mesh_utils.remesh(poly, hmin=hmin, hmax=hmax)
     if write_fn is not None:
-        writeVTKPolyData(remeshed, write_fn)
+        write_vtk_polydata(remeshed, write_fn)
     return remeshed
 

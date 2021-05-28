@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '../src'))
-import label_io
+import io_utils
 import utils
 def convertPointDataToCellData(mesh):
     p2c = vtk.vtkPointDataToCellData()
@@ -84,7 +84,7 @@ def findCellsByPoints(poly, ptIds):
     return List
 
 def setupSurfaceMesh(fileName):
-    volMesh = label_io.loadVTKMesh(fileName)
+    volMesh = io_utils.read_vtk_mesh(fileName)
     poly = extracSurface(volMesh)
     #polyCD = computeNormals(polyCD,40)
 
@@ -133,7 +133,7 @@ def getMaxVelocity(mesh, IdList):
 def getAllMaxVelocity(fns, face_poly_fn):
     polyCD = setupSurfaceMesh(fns[0])
 
-    face_poly = label_io.loadVTKMesh(face_poly_fn)
+    face_poly = io_utils.read_vtk_mesh(face_poly_fn)
     face_pts = face_poly.GetPoints()
     
     pt_ids = utils.findPointCorrespondence(polyCD, face_pts)
@@ -164,7 +164,7 @@ def getAllVolume(fns):
 def getAllFlowRate(fns, face_poly_fn):
     polyCD = setupSurfaceMesh(fns[0])
 
-    face_poly = label_io.loadVTKMesh(face_poly_fn)
+    face_poly = io_utils.read_vtk_mesh(face_poly_fn)
     face_pts = face_poly.GetPoints()
     
     pt_ids = utils.findPointCorrespondence(polyCD, face_pts)
@@ -179,7 +179,7 @@ def getAllFlowRate(fns, face_poly_fn):
         else:
             tags.InsertValue(i, 1)
     polyCD.GetCellData().SetScalars(tags)
-    label_io.writeVTKPolyData(polyCD, '/Users/fanweikong/Downloads/'+str(np.random.randint(100))+'.vtp')
+    io_utils.write_vtk_polydata(polyCD, '/Users/fanweikong/Downloads/'+str(np.random.randint(100))+'.vtp')
     #polyCD = extractRegions(polyCD)
     #avList = findCellsByRegion(polyCD,2)
     #mvList = findCellsByRegion(polyCD,1)

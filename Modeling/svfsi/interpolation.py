@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from scipy import interpolate
 import collections
 from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
-import label_io
+import io_utils
 import utils
 """
 Functions to write interpolated surface meshes for perscribed wall motion
@@ -60,7 +60,7 @@ def move_mesh(fns, start_point, intpl_num, num_cycle):
     total_num_phase = len(fns)
     total_steps = total_num_phase * (intpl_num+1)*num_cycle
     initialized = False
-    poly_template = label_io.loadVTKMesh(fns[start_point])
+    poly_template = io_utils.read_vtk_mesh(fns[start_point])
     ref_coords = vtk_to_numpy(poly_template.GetPoints().GetData())
     store = np.zeros((poly_template.GetNumberOfPoints(), 3, total_steps+1)) 
     count = 0
@@ -68,13 +68,13 @@ def move_mesh(fns, start_point, intpl_num, num_cycle):
     for msh_idx in list(range(start_point, total_num_phase))+ list(range(0, start_point)):
         if not initialized:
             boundary_queue = collections.deque(4*[None], 4)
-            boundary_queue.append(label_io.loadVTKMesh(fns[(msh_idx+total_num_phase-1)%total_num_phase]))
-            boundary_queue.append(label_io.loadVTKMesh(fns[msh_idx]))
-            boundary_queue.append(label_io.loadVTKMesh(fns[(msh_idx+1)%total_num_phase]))
-            boundary_queue.append(label_io.loadVTKMesh(fns[(msh_idx+2)%total_num_phase]))
+            boundary_queue.append(io_utils.read_vtk_mesh(fns[(msh_idx+total_num_phase-1)%total_num_phase]))
+            boundary_queue.append(io_utils.read_vtk_mesh(fns[msh_idx]))
+            boundary_queue.append(io_utils.read_vtk_mesh(fns[(msh_idx+1)%total_num_phase]))
+            boundary_queue.append(io_utils.read_vtk_mesh(fns[(msh_idx+2)%total_num_phase]))
             initialized = True
         else:
-            boundary_queue.append(label_io.loadVTKMesh(fns[(msh_idx+2)%total_num_phase]))
+            boundary_queue.append(io_utils.read_vtk_mesh(fns[(msh_idx+2)%total_num_phase]))
 
         for i_idx in range(intpl_num+1):
             new_coords = cubic_spline_ipl(i_idx, 0, intpl_num+1, boundary_queue)
@@ -94,7 +94,7 @@ def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, 
     total_steps = num_cycle* total_num_phase * (intpl_num+1)+1
     initialized = False
     
-    poly_template = label_io.loadVTKMesh(fns[start_point])
+    poly_template = io_utils.read_vtk_mesh(fns[start_point])
     
     displacements = move_mesh(fns, start_point, intpl_num, num_cycle)
     if debug:
@@ -109,7 +109,7 @@ def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, 
         for ii in range(displacements.shape[-1]):
             poly.GetPoints().SetData(numpy_to_vtk(displacements[:,:,ii]+coords))
             fn_debug = os.path.join(debug_dir, "debug%05d.vtp" %ii)
-            label_io.writeVTKPolyData(poly, fn_debug)
+            io_utils.write_vtk_polydata(poly, fn_debug)
 
     node_ids = vtk_to_numpy(poly_template.GetPointData().GetArray('GlobalNodeID'))
     face_ids = vtk_to_numpy(poly_template.GetCellData().GetArray('ModelFaceID'))

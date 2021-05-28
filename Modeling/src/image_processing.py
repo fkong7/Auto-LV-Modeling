@@ -3,13 +3,13 @@ import numpy as np
 import sys
 import vtk
 import utils
-import label_io
+import io_utils
 import marching_cube as m_c
 
 #TO-DO improve compatibility with label ids, line 32
 class Images(object):
     def __init__(self, fn):
-        self.label = label_io.loadLabelMap(fn)
+        self.label = io_utils.read_label_map(fn)
    
     def convert2binary(self):
         self.label = utils.convertVTK2binary(self.label)
@@ -22,13 +22,14 @@ class Images(object):
         return self.label
     
     def write_image(self,fn):
-        label_io.write_vtk_image(self.label, fn)
+        io_utils.write_vtk_image(self.label, fn)
 
     def generate_surface(self, region_id, smooth_iter, band):
         poly = m_c.vtk_marching_cube(self.label, region_id, smooth_iter, band)
         #return m_c.vtk_continuous_marching_cube(self.label, region_id, smooth_iter)
         return poly
-class lvImage(Images):
+
+class LVImage(Images):
     
     def erase_boundary(self):
         ### this is only needed for a more general left heart model
@@ -66,7 +67,7 @@ class lvImage(Images):
         self.label = utils.labelOpenClose(self.label, 2, 0, size=7)
         self.label = utils.recolorVTKPixelsByIds(self.label, self.ids, 0)
     
-    def buildCutter(self, region_id, avoid_id, adjacent_id, FACTOR, op='valve', smooth_iter=50):
+    def build_cutter(self, region_id, avoid_id, adjacent_id, FACTOR, op='valve', smooth_iter=50):
         """
         Build cutter for aorta and la
 
