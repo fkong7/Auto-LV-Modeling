@@ -12,7 +12,7 @@ class Registration:
     """
     Class to perform 3D image registration
     """
-    def __init__(self, fixed_im_fn=None, moving_im_fn=None, fixed_mask_fn=None, smooth=False):
+    def __init__(self, fixed_im_fn=None, moving_im_fn=None, fixed_mask_fn=None):
         """
 
         Args:
@@ -28,7 +28,6 @@ class Registration:
         self.fixed_mask = None
     #    self.moving_mask = None
         self.parameter_map = None
-        self.smooth = smooth
 
     def update_moving_image(self, moving_im_fn):
         self.moving_fn = moving_im_fn
@@ -142,8 +141,8 @@ class Registration:
         transformixImageFilter.SetFixedPointSetFileName(fn)
         transformixImageFilter.SetOutputDirectory(os.path.dirname(fn))
         transformixImageFilter.Execute()
-        result_im = transformixImageFilter.GetResultImage()
-        sitk.WriteImage(result_im, im_out_fn)
+        #result_im = transformixImageFilter.GetResultImage()
+        #sitk.WriteImage(result_im, im_out_fn)
         # build VTK PolyData
         pts = io_utils.read_elastix_point_ouptut(os.path.join(os.path.dirname(fn),'outputpoints.txt'))
 

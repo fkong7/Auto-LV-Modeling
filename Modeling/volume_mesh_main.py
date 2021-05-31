@@ -3,10 +3,12 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__),"src"))
 import argparse
 import numpy as np
+import glob
 import meshing
 import models
 import io_utils
 import time
+from utils import natural_sort
 
 if __name__ == '__main__':
     start = time.time()
@@ -15,7 +17,7 @@ if __name__ == '__main__':
     parser.add_argument('--input_dir', help="Path to the surface meshes")
     parser.add_argument('--output_dir', help="Path to the volume meshes")
     parser.add_argument('--model_out', help="Name format of surface")
-    parser.add_argument('--edge_size', type=float, help="Name format of surface")
+    parser.add_argument('--edge_size', type=float, help="Maximum edge size of the volumetric mesh.")
     parser.add_argument('--phase', default=-1, type=int, help="Id of the phase to generate volume mesh")
     args = parser.parse_args()
     
@@ -30,8 +32,9 @@ if __name__ == '__main__':
             phase = 0
     else:
         phase = args.phase
-    poly_fn = os.path.join(input_dir, args.model_out % phase)
-
+    surface_fns = natural_sort(glob.glob(os.path.join(args.input_dir, '*.vtp')))
+    poly_fn = surface_fns[int(phase)]
+    
     lvmodel = models.LeftVentricle(io_utils.read_vtk_mesh(poly_fn))
     
     output_vol = os.path.join(args.output_dir, 'mesh-complete')

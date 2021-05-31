@@ -13,7 +13,7 @@ import utils
 import vtk
 import time
 
-def buildLVModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=2,aa_id=6, edge_size = 1., timming=False, use_SV=True):
+def build_lv_model_from_image(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=2,aa_id=6, edge_size = 1., timming=False, use_SV=True):
     """
     Modified test6 to cut on the PolyData directly to create better defined inlet/outlet geometry
     The left atrium is cut normal to the direction defined by the normal of the mitral plane
@@ -68,7 +68,7 @@ def buildLVModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la_id=
             time_list.append([im_time, surf_time, mesh_time])
     return time_list
 
-def buildLeftHeartModelFromImage(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7], la_id=2, aa_id=6, edge_size = 1., timming=False, use_SV=True):
+def build_left_heart_model_from_image(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7], la_id=2, aa_id=6, edge_size = 1., timming=False, use_SV=True):
     
     MESH_RESOLUTION = (0.5,0.5,0.5)
     FACTOR_AA = 38
@@ -134,7 +134,7 @@ if __name__=="__main__":
     #run volume mesh to generate ids but do not use it
     fn_ug = 'temp'
     timming = True
-    time_list = buildLVModelFromImage([seg_fn], [fn_poly], fn_ug, edge_size=args.edge_size, timming=timming, use_SV=args.disable_SV)
+    time_list = build_lv_model_from_image([seg_fn], [fn_poly], fn_ug, edge_size=args.edge_size, timming=timming, use_SV=args.disable_SV)
     if timming:
         import csv
         with open(os.path.join(args.output_dir, 'time_results.csv'), 'a' , newline="") as f:
