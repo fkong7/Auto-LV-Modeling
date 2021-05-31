@@ -11,37 +11,29 @@ The code repository consists of two parts
 
 ## Dependencies
 
-* Segmentation 
-    * Tensorflow (V 1.14)
-    * Python
-    * SimpleITK<sup>1</sup>
-    * h5py (V 2.10.0)
-* Model Generation
-    * Python
-    * VTK
-    * [SimVascular](https://github.com/SimVascular/SimVascular) (Meshing)
+* Segmentation and Model Generation
+    * SimVascular
+       * Tensorflow (V 1.14)
+       * VTK
+       * Numpy
+* Model Registration
     * [SimpleElastix](https://github.com/SuperElastix/SimpleElastix) (Registration)<sup>1</sup>
-    
-
-<sup>1</sup>  Install SimpleElastix commit 8244e0001f4137514b0f545f1e846910b3dd7769. This will automatically install a proper version of SimpleITK. Generally speaking, SimpleITK version higher than 2.0 will not work due to syntax changes.
-    
-      
+       * SimpleITK 
+<sup>1</sup>  Install SimpleElastix commit 8244e0001f4137514b0f545f1e846910b3dd7769.
 
 ## Segmentation Usage 
 
 The segmentation models can generate segmentations for LV blood pool, LV myocardium, LA, RA, RV blood pool, aorta and pulmonary artery.
 ### Input Requirements
-The preferred input format of the image volumes is **.nii.gz or nii**. VTK image volumes (.vti) are also accepted; however they should be reoriented to have an orientation matrix of identity. This is because the segmnetation method requires identity-oriented image volumes while the version of VTK within SimVascular does not include orientation matrix with VTI images. **It is recommended to number the files starting from 0.**
+The preferred input format of the image volumes is **.nii.gz or nii**. VTK image volumes (.vti) are also accepted; however they should be reoriented to have an orientation matrix of identity. This is because the segmnetation method requires identity-oriented image volumes while the version of VTK within SimVascular does not include orientation matrix with VTI images.
 The directory containing the input image data should be organized as follows:
-
 ```
 image_dir
-    |__ ct_test
-        |__ patient_id (optional)
-          	|__ image_volume0.nii.gz
-          	|__ image_volume1.nii.gz
-          	|__ image_volume2.nii.gz
-          	|__ ...
+     |__ patient_id (optional)
+         |__ image_volume0.nii.gz
+         |__ image_volume1.nii.gz
+         |__ image_volume2.nii.gz
+         |__ ...
 ```
 ### Trained Models
 We used the image and ground truth data provided by [MMWHS](http://www.sdspeople.fudan.edu.cn/zhuangxiahai/0/mmwhs/) to train our models. 
@@ -52,24 +44,20 @@ To generate segmentations for 3D CT or MR image volumes:
 ```
 python Segmentation/prediction.py \
     --pid patient_id \ # Patient ID.
-    --image image_dir \ # the images should be saved in proper format in a folder named [modality]_test/patient_id within image_dir. 
+    --image image_dir \ # the images should be saved in proper format in a folder named as patient_id within image_dir. 
     --output output_dir \
     --model weight_dir \
     --view 0 1 2 \ # Use models trained on axial (0), coronal (1) and/or sagittal (2) view[s].
-    --modality ct \ # Image modality, ct or mr.
-    --mode test
+    --modality ct # Image modality, ct or mr.
 ```
-
-A shell script (`run_seg.sh`) is provided for ease of use. Patient ID is optional, and should supply `None` in the shell script if not used.
-
-
+A shell script (`segmentation.sh`) is provided for ease of use. Patient ID is optional.
 
 ## LV Modeling Usage
 
 The model construction pipeline takes in the generated segmentation and output reconstructed LV surface meshes for CFD simulations. The pipeline consists of the following four steps: 1) Construct LV surface meshes from segmentation results; 2) Register the surface meshes to get consistent mesh topology; 3) Obtain volumetric mesh using SimVascular; 4) Interpolate the registered surface meshes to obtain sufficient temporal resolution.
 
 ### 1.  Construct LV Surface Meshes with Tagged Boundary Faces
-* Update `run_svsurfaces.sh` with correct file and folder names.
+* Update `surfaces.sh` with correct file and folder names.
 * Run the shell script to generate a LV surface mesh for each segmentation file in a folder.   
     ```
     sv_python_dir=/usr/local/bin
@@ -84,21 +72,19 @@ The model construction pipeline takes in the generated segmentation and output r
 
 ### 2.  Construct Point Corresponded LV Meshes from 4D Images
 Building point-corresponded LV meshes require segmentations from all time frames. One surface mesh will be created at one time frame and propagated to the others by registering the corresponding segmentations. 
-* Update `run_surfregist.sh` with correct file and folder names. Specify the time phase id to construct LV surface mesh.
+* Update `surface_registration.sh` with correct file and folder names. Specify the time phase id to construct LV surface mesh.
 * Run `elastix_main.py` through the shell script.
 
 ### 3.  Volumetric Meshing using SimVascular 
-* Update `run_volmesh.sh` with correct file/folder names and mesh edge size.
+* Update `volume_mesh.sh` with correct file/folder names and mesh edge size.
 
 *  Run `volume_mesh_main.py` through the shell script.
    
 
 ### 4.  Generate Mesh Motion File for [svFSI](https://github.com/SimVascular/svFSI)
-* Run `run_simulation.sh` to generate mesh motion file.
+* Run `simulation.sh` to generate mesh motion file.
   Input: Surface mesh from segmented geometry with the same connectivity.
   Output: Displacement files for all the surfaces in this [format](https://simvascular.github.io/docssvFSI.html#app_app_prescribed_wall_motion).
-  
-  
 
 ## Acknowledgement
 This work was supported by the NSF, Award #1663747. 
