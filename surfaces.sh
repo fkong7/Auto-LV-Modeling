@@ -2,7 +2,7 @@
 
 # Path to SimVascular exectuable
 sv_python_dir=/usr/local/bin
-model_script=Modeling/surface_main.py
+model_script=modeling/surface_main.py
 # Path to the segmentation results
 input_dir=./02-Segmnts/WS01
 # Path to the outputed surface meshes

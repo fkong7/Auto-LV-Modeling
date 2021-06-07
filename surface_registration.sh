@@ -14,7 +14,7 @@ output_dir=./04-SurfReg/$p_id
 start_phase=8
 
 # Registration with SimpleElastix
-python Modeling/elastix_main.py \
+python modeling/elastix_main.py \
     --image_dir $mask_dir \
     --mask_dir $mask_dir \
     --output_dir $output_dir \

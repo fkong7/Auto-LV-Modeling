@@ -1,14 +1,13 @@
 import os
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), "Modeling"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "Segmentation"))
+from typing import List
 
 class Segmentation:
 
     def __init__(self):
         self.size = 256
         self.n_chanel = 1
-        from Segmentation.prediction import seg_main
+        from segmentation.prediction import seg_main
 
     def set_modality(self, modality='ct'):
         if modality not in ['ct', 'mr']:
@@ -51,7 +50,7 @@ class Segmentation:
 class Modeling:
 
     def __init__(self):
-        from Modeling.surface_main import build_lv_model_from_image
+        from modeling.surface_main import build_lv_model_from_image
 
     def set_segmentation_directory(self, seg_dir: str):
         ims = glob.glob(os.path.join(seg_dir, '*.nii.gz')) + \
@@ -84,7 +83,7 @@ class Modeling:
 class VolumeMesh:
 
     def __init__(self):
-        from Modeling.volume_mesh_main import create_volume_mesh
+        from modeling.volume_mesh_main import create_volume_mesh
 
     def set_output_directory(self, output_dir: str):
         self.output_dir = output_dir
@@ -105,4 +104,7 @@ class VolumeMesh:
         create_volume_mesh(self.poly_fn, self.edge_size, self.output_dir)
 
 
-
+if __name__ == '__main__':
+    from segmentation.prediction import seg_main
+    from modeling.surface_main import build_lv_model_from_image
+    from modeling.volume_mesh_main import create_volume_mesh
