@@ -113,7 +113,7 @@ class Registration:
         for para_map_fn in fns:
             map_list.append(sitk.ReadParameterFile(para_map_fn))
         self.parameter_map=tuple(map_list)
-    def polydata_image_transform(self, model, fn, im_out_fn, fn_paras=None):
+    def polydata_image_transform(self, model, fn, fn_paras=None):
         """
         Transform the points of a geometry using the computed transformation
         
@@ -141,8 +141,6 @@ class Registration:
         transformixImageFilter.SetFixedPointSetFileName(fn)
         transformixImageFilter.SetOutputDirectory(os.path.dirname(fn))
         transformixImageFilter.Execute()
-        #result_im = transformixImageFilter.GetResultImage()
-        #sitk.WriteImage(result_im, im_out_fn)
         # build VTK PolyData
         pts = io_utils.read_elastix_point_ouptut(os.path.join(os.path.dirname(fn),'outputpoints.txt'))
 

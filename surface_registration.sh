@@ -20,4 +20,4 @@ python Modeling/elastix_main.py \
     --output_dir $output_dir \
     --start_phase $start_phase \
     --surface_dir $surface_dir \
-    --edge_size 2.5
+    --edge_size 3.5

@@ -1,7 +1,7 @@
 # Use SimVascular to construct LV volme mesh
 p_id=WS01
 # Path to SimVascular exectuable
-sv_python_dir=/Applications/SimVascular.app/Contents/Resources
+sv_python_dir=/usr/local/bin
 
 volume_mesh_script=Modeling/volume_mesh_main.py
 

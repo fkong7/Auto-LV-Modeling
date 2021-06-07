@@ -17,5 +17,5 @@ do
         --input_dir ${input_dir} \
         --output_dir ${output_dir} \
         --seg_name ${file##*/} \
-        --edge_size 2.5
+        --edge_size 3.5
 done

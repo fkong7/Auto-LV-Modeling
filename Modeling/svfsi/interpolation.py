@@ -4,7 +4,6 @@ sys.path.append(os.path.join(os.path.dirname(
 __file__), "../src"))
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import interpolate
 import collections
 from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
 import io_utils
@@ -89,10 +88,11 @@ def move_mesh(fns, start_point, intpl_num, num_cycle):
 
     return store
 
-def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, debug=False):
+def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, debug=False, mode='displacement'):
     total_num_phase = len(fns)
     total_steps = num_cycle* total_num_phase * (intpl_num+1)+1
     initialized = False
+    time_pts = np.linspace(0,num_cycle*duration, total_steps)
     
     poly_template = io_utils.read_vtk_mesh(fns[start_point])
     
@@ -115,11 +115,16 @@ def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, 
     face_ids = vtk_to_numpy(poly_template.GetCellData().GetArray('ModelFaceID'))
     #write time steps and node numbers
     for face in np.unique(face_ids):
-        fn = os.path.join(output_dir, '%d_motion.dat' % face)
+        if mode=='displacement':
+            fn = os.path.join(output_dir, '%d_displacement.dat' % face)
+        elif mode=='velocity':
+            fn = os.path.join(output_dir, '%d_velocity.dat' % face)
+        else:
+            raise ValueError('Unsupported boundary type {}; should be displacement or velocity.'.format(mode))
         face_poly = utils.threshold_polydata(poly_template, 'ModelFaceID', (face,face))
         f = open(fn, 'w')
         f.write('{} {} {}\n'.format(3, total_steps,face_poly.GetNumberOfPoints()))
-        for t in np.linspace(0,num_cycle*duration, total_steps):
+        for t in time_pts:
             f.write('{}\n'.format(t))
         #f.write('{}\n'.format(face_poly.GetNumberOfPoints()))
         face_ids = vtk_to_numpy(face_poly.GetPointData().GetArray('GlobalNodeID'))
@@ -128,8 +133,10 @@ def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, 
             disp = displacements[i, :, :]
             f.write('{}\n'.format(node_ids[i]))
             for j in range(total_steps):
-                f.write('{} {} {}\n'.format(disp[0,j], disp[1,j],disp[2,j]))
-
+                if mode=='displacement':
+                    f.write('{} {} {}\n'.format(disp[0,j], disp[1,j],disp[2,j]))
+                elif mode=='velocity':
+                    f.write('{} {} {}\n'.format(disp[0,j]/(time_pts[1]-time_pts[0]), disp[1,j]/(time_pts[1]-time_pts[0]),disp[2,j]/(time_pts[1]-time_pts[0])))
         f.close()
 
 
@@ -147,6 +154,7 @@ if __name__=='__main__':
     parser.add_argument('--num_cycle', type=int, help="Number of cardiac cycles")
     parser.add_argument('--duration', type=float, help="Cycle duration in seconds")
     parser.add_argument('--phase', default=-1, type=int, help="Id of the phase to generate volume mesh")
+    parser.add_argument('--boundary_type', default='displacement', help='Type of the boundary condition, displacement or velocity')
     args = parser.parse_args()
     
     mesh_dir = args.input_dir
@@ -157,6 +165,6 @@ if __name__=='__main__':
     except Exception as e: print(e)
     import glob
     fns = sorted(glob.glob(os.path.join(mesh_dir, "*.vtp")))
-    write_motion(fns,  args.phase ,args.num_interpolation, output_dir, args.num_cycle, args.duration, debug=False)
+    write_motion(fns,  args.phase ,args.num_interpolation, output_dir, args.num_cycle, args.duration, debug=False, mode=args.boundary_type)
     end = time.time()
     print("Time spent: ", end-start)
