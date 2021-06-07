@@ -131,7 +131,7 @@ class Prediction:
         return 
 
 
-def main(size, modality, patient_id, data_folder, data_out_folder, model_folder, view_attributes, channel):
+def seg_main(size, modality, patient_id, data_folder, data_out_folder, model_folder, view_attributes, channel):
 
     model_postfix = "small2"
     model_folders = sorted(model_folder * len(view_attributes))
@@ -181,4 +181,4 @@ if __name__ == '__main__':
     if args.pid.lower() == "none":
         args.pid = ''
     
-    main(args.size, args.modality, args.pid, args.image, args.output, args.model, args.view, args.n_channel)
+    seg_main(args.size, args.modality, args.pid, args.image, args.output, args.model, args.view, args.n_channel)

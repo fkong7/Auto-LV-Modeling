@@ -36,7 +36,7 @@ class Geometry(object):
         if poly_fn is None:
             mesh_ops['surface_mesh_flag']=False
         if ug_fn is None:
-            mesh_ops['surface_mesh_flag']=False
+            mesh_ops['volume_mesh_flag']=False
         surface, volume = meshing.mesh_polydata(fn, mesh_ops, (poly_fn, ug_fn))
         if surface is not None:
             self.poly = surface

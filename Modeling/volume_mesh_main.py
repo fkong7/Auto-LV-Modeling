@@ -10,6 +10,12 @@ import io_utils
 import time
 from utils import natural_sort
 
+def create_volume_mesh(poly_fn, edge_size, output_dir):
+    lvmodel = models.LeftVentricle(io_utils.read_vtk_mesh(poly_fn))
+    output_vol = os.path.join(output_dir, 'mesh-complete')
+    lvmodel.remesh(edge_size, poly_fn, poly_fn=None, ug_fn=output_vol, mmg=False)
+    lvmodel.write_mesh_complete(output_vol)
+
 if __name__ == '__main__':
     start = time.time()
     parser = argparse.ArgumentParser()
@@ -35,11 +41,7 @@ if __name__ == '__main__':
     surface_fns = natural_sort(glob.glob(os.path.join(args.input_dir, '*.vtp')))
     poly_fn = surface_fns[int(phase)]
     
-    lvmodel = models.LeftVentricle(io_utils.read_vtk_mesh(poly_fn))
-    
-    output_vol = os.path.join(args.output_dir, 'mesh-complete')
-    lvmodel.remesh(args.edge_size, poly_fn, poly_fn=None, ug_fn=output_vol, mmg=False)
-    lvmodel.write_mesh_complete(output_vol)
+    create_volume_mesh(poly_fn, args.edge_size, args.output_dir)
     end = time.time()
     print("Time spent in volume_mesh_main.py: ", end-start)
     print("Mesh generated for ", poly_fn)
