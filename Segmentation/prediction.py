@@ -10,7 +10,7 @@ from tensorflow.python.keras import backend as K
 
 import vtk
 from pre_process import swap_labels_back, rescale_intensity, vtk_resample_to_size, vtk_resample_with_info_dict
-from utils import load_vtk_image, write_vtk_image, get_array_from_vtkImage,get_vtkImage_from_array,vtk_write_mask_as_nifty
+from im_utils import load_vtk_image, write_vtk_image, get_array_from_vtkImage,get_vtkImage_from_array,vtk_write_mask_as_nifty
 from model import UNet2D
 import argparse
 import time
@@ -119,9 +119,10 @@ class Prediction:
         return 
 
     def write_prediction(self, out_fn):
-        try:
-            os.makedirs(os.path.dirname(out_fn))
-        except Exception as e: print(e)
+        if not os.path.isdir(out_fn):
+            try:
+                os.makedirs(os.path.dirname(out_fn))
+            except Exception as e: print(e)
         if out_fn[-4:] == '.vti' or out_fn[-4:] == '.mhd':
             write_vtk_image(self.pred, out_fn)
         elif out_fn[-4:] == '.nii' or out_fn[-7:] == '.nii.gz':
@@ -139,9 +140,10 @@ def seg_main(size, modality, patient_id, data_folder, data_out_folder, model_fol
 
     names = ['axial', 'coronal', 'sagittal']
     view_names = [names[i] for i in view_attributes]
-    try:
-      os.mkdir(data_out_folder)
-    except Exception as e: print(e)
+    if not os.path.isdir(data_out_folder):
+        try:
+            os.mkdir(data_out_folder)
+        except Exception as e: print(e)
     
     #set up models
     img_shape = (size, size, channel)
@@ -159,7 +161,7 @@ def seg_main(size, modality, patient_id, data_folder, data_out_folder, model_fol
             x_filenames += sorted(glob.glob(os.path.join(data_folder, patient_id, '*'+ext)))
         for i in range(len(x_filenames)):
             print("Processing "+x_filenames[i])            
-            models = [os.path.realpath(i) + '/weights_multi-all-%s_%s.hdf5' % (j, model_postfix) for i, j in zip(model_folders, view_names)]
+            models = [os.path.join(mdl, 'weights_multi-all-%s_%s.hdf5' % (j, model_postfix)) for mdl, j in zip(model_folders, view_names)]
             predict = Prediction(unet, models,m,view_attributes,x_filenames[i], None, channel)
             predict.volume_prediction_average(size)
             predict.resample_prediction_vtk()

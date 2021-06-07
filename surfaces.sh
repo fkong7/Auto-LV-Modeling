@@ -4,9 +4,9 @@
 sv_python_dir=/usr/local/bin
 model_script=modeling/surface_main.py
 # Path to the segmentation results
-input_dir=./02-Segmnts/WS01
+input_dir=./SB3C_test_sa/WS01
 # Path to the outputed surface meshes
-output_dir=./03-Surfaces/WS01
+output_dir=./SB3C_test_sa_surf/WS01
 
 # Construct LV surface meshes with tagged boundary faces
 for file in ${input_dir}/*.nii.gz

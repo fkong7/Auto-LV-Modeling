@@ -92,7 +92,6 @@ class LVImage(Images):
         length = np.linalg.norm(ctr-ctr_valve)
         nrm_tissue = (ctr - ctr_valve)/length
         nrm_valve_plane = utils.fit_plane_normal(pts)
-        print(nrm_valve_plane)
         #check normal direction
         if op=='valve':
             #nrm = nrm_valve_plane

@@ -103,14 +103,11 @@ def normalize_label_map(labels, values=[], keep=[]):
 
     ids = np.unique(py_label)
     #values = np.linspace(rng[0], rng[1], len(keep), endpoint=True) #if keep is empty, convert to binary
-    print("ids: ", ids)
-    print("normalize_label_map", values)
     for index, i in enumerate(ids):
         if i in keep:
             py_label[py_label==i] = values[keep.index(i)]
         else:
             py_label[py_label==i] = 0.
-    print("ids new: ", np.unique(py_label))
     labels_new = sitk.GetImageFromArray(py_label)
     labels_new.SetOrigin(labels.GetOrigin())
     labels_new.SetDirection(labels.GetDirection())
@@ -712,7 +709,7 @@ def get_point_ids_on_boundaries(poly):
     for i in range(len(id_lists)):
         id_lists[i] = find_point_correspondence(poly,components[i].GetPoints())
         #pt_lists[i] = components[i].GetPoints()
-        print('Found %d points for boundary %d\n' % (len(id_lists[i]),i))
+        print('Found %d points for cap %d\n' % (len(id_lists[i]),i))
     return id_lists,components
 
 def change_polydata_points_coordinates(poly, pt_ids, pt_coords):

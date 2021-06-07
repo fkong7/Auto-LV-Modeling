@@ -8,7 +8,6 @@ import meshing
 import models
 import io_utils
 import time
-from utils import natural_sort
 
 def create_volume_mesh(poly_fn, edge_size, output_dir):
     lvmodel = models.LeftVentricle(io_utils.read_vtk_mesh(poly_fn))
@@ -17,6 +16,7 @@ def create_volume_mesh(poly_fn, edge_size, output_dir):
     lvmodel.write_mesh_complete(output_vol)
 
 if __name__ == '__main__':
+    from utils import natural_sort
     start = time.time()
     parser = argparse.ArgumentParser()
     

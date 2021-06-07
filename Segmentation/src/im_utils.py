@@ -113,7 +113,6 @@ def vtk_write_mask_as_nifty(mask, image_fn, mask_fn):
 def get_array_from_vtkImage(image):
     from vtk.util.numpy_support import vtk_to_numpy
     py_im = vtk_to_numpy(image.GetPointData().GetScalars())
-    print(np.min(py_im),np.max(py_im))
     x , y, z = image.GetDimensions()
     out_im = py_im.reshape(z, y, x)
     return out_im
