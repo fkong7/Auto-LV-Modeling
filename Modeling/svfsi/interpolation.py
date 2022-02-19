@@ -165,6 +165,6 @@ if __name__=='__main__':
     except Exception as e: print(e)
     import glob
     fns = sorted(glob.glob(os.path.join(mesh_dir, "*.vtp")))
-    write_motion(fns,  args.phase ,args.num_interpolation, output_dir, args.num_cycle, args.duration, debug=False, mode=args.boundary_type)
+    write_motion(fns,  args.phase ,args.num_interpolation, output_dir, args.num_cycle, args.duration, debug=True, mode=args.boundary_type)
     end = time.time()
     print("Time spent: ", end-start)

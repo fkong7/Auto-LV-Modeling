@@ -22,7 +22,6 @@ if __name__ == '__main__':
     
     parser.add_argument('--input_dir', help="Path to the surface meshes")
     parser.add_argument('--output_dir', help="Path to the volume meshes")
-    parser.add_argument('--model_out', help="Name format of surface")
     parser.add_argument('--edge_size', type=float, help="Maximum edge size of the volumetric mesh.")
     parser.add_argument('--phase', default=-1, type=int, help="Id of the phase to generate volume mesh")
     args = parser.parse_args()

@@ -737,7 +737,7 @@ def change_polydata_points_coordinates(poly, pt_ids, pt_coords):
 
     return poly
 
-def project_points_to_fit_plane(points):
+def project_points_to_fit_plane(points, ref):
     """
     Find the best fit plane of VTK points, project the points to the plane
 
@@ -745,7 +745,7 @@ def project_points_to_fit_plane(points):
 
     Args:
         points: vtkPoints
-        #ref: a reference point above the plane (helps to determine the direction of normal)
+        #ref: a reference point above the plane (helps to determine the direction of normal)An estimated normal of the plane
     Returns:
         pyPts: projected points in Python
     """
@@ -760,14 +760,14 @@ def project_points_to_fit_plane(points):
     nrm /= np.linalg.norm(nrm)
     ori = np.mean(pyPts, axis=0)
 
-    #if np.dot(nrm, ref-ori)<0:
-    #    nrm = -1*nrm
+    if np.dot(nrm, ref)<0:
+        nrm = -1*nrm
 
 
     num = pyPts.shape[0]
-    #distance = np.sum((pyPts-np.repeat(ori[np.newaxis,:],num,axis=0))
-    #            * np.repeat(nrm[np.newaxis,:],num,axis=0),axis=1)
-    #ori += np.max(distance)*nrm
+    distance = np.sum((pyPts-np.repeat(ori[np.newaxis,:],num,axis=0))
+                * np.repeat(nrm[np.newaxis,:],num,axis=0),axis=1)
+    ori += np.max(distance)*nrm
 
     plane = vtk.vtkPlane()
     plane.SetOrigin(*ori)
@@ -823,6 +823,19 @@ class PointLocator:
         self.locator.FindClosestNPoints(N, pt, ids)
         return ids
 
+def get_surface_normals(poly):
+    norms = vtk.vtkPolyDataNormals()
+    norms.SetInputData(poly)
+    norms.ComputePointNormalsOn()
+    norms.ComputeCellNormalsOff()
+    norms.ConsistencyOn()
+    norms.SplittingOff()
+    #norms.FlipNormalsOn()
+    #norms.AutoOrientNormalsOn()
+    norms.Update()
+    poly = norms.GetOutput()
+    return poly
+
 def project_opening_to_fit_plane(poly, boundary_ids, points, MESH_SIZE):
     """
     This function projects the opening geometry to a best fit plane defined by the points on opennings. Differenet from the previous function, not only the points on openings were moved but the neighbouring nodes to maintain mesh connectivity.
@@ -864,10 +877,13 @@ def project_opening_to_fit_plane(poly, boundary_ids, points, MESH_SIZE):
                         pt += (displacement[close_pts.GetId(0),:]+displacement[close_pts.GetId(1)]) * factor/2
                         proj_pts = np.vstack((proj_pts, pt))
         return ids, pts, proj_pts
-    
+   
+    # cap normals
+    poly = get_surface_normals(poly)
+    normals_mean = np.mean(vtk_to_numpy(poly.GetPointData().GetArray('Normals'))[boundary_ids,:], axis=0)
     #make a copy of the pt ids
     ids = boundary_ids.copy()
-    proj_pts = project_points_to_fit_plane(pts)
+    proj_pts = project_points_to_fit_plane(pts, normals_mean)
     dist = np.max(np.linalg.norm(proj_pts - vtk_to_numpy(pts.GetData()), axis=1))
     ITER = int(np.ceil(dist/MESH_SIZE)*3)
     for factor in np.linspace(0.8, 0., ITER, endpoint=False):
