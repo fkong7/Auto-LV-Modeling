@@ -3,7 +3,7 @@ p_id=WS01
 # Path to SimVascular exectuable
 sv_python_dir=/usr/local/bin
 
-volume_mesh_script=Modeling/volume_mesh_main.py
+volume_mesh_script=modeling/volume_mesh_main.py
 
 # Path to the surface meshes
 input_dir=./04-SurfReg/$p_id

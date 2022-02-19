@@ -4,7 +4,7 @@ output_dir=02-Segmnts
 weight_dir=./Weights
 
 sv_python_dir=/usr/local/bin
-${sv_python_dir}/simvascular --python -- ./Segmentation/prediction.py \
+${sv_python_dir}/simvascular --python -- ./segmentation/prediction.py \
     --pid $patient_id \
     --image $image_dir \
     --output $output_dir \

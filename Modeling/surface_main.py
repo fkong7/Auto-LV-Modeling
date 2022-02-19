@@ -10,6 +10,7 @@ from image_processing import LVImage
 from models import LeftVentricle, LeftHeart
 from marching_cube import marching_cube, vtk_marching_cube
 import utils
+print(dir(utils))
 import vtk
 import time
 
@@ -36,7 +37,6 @@ def build_lv_model_from_image(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la
     if timming:
         start = time.time()
     for fn, poly_fn in zip(fns,poly_fns): 
-
         image = LVImage(fn)
         image.process(remove_ids)
 
@@ -57,9 +57,9 @@ def build_lv_model_from_image(fns, poly_fns, ug_fn=None, remove_ids=[1,4,5,7],la
             surf_time = time.time() - time_now
             time_now = time.time()
         try:
-            os.makedirs(os.path.join(os.path.dirname(__file__), "debug"))
+            os.makedirs(os.path.join(os.path.dirname(poly_fn), "geometry"))
         except Exception as e: print(e)
-        fn = os.path.join(os.path.dirname(__file__), "debug", os.path.basename(poly_fn))
+        fn = os.path.join(os.path.dirname(poly_fn), "geometry", os.path.basename(poly_fn))
         if use_SV:
             model.remesh(edge_size, fn, poly_fn, ug_fn)
         model.write_surface_mesh(poly_fn)
