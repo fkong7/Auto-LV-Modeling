@@ -8,10 +8,15 @@ import collections
 from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
 import io_utils
 import utils
+import re
 """
 Functions to write interpolated surface meshes for perscribed wall motion
 
 """
+def natural_sort(l): 
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ] 
+    return sorted(l, key = alphanum_key)
 
 def cubic_spline_ipl(time, t_m, dt_m, boundary_queue):
     """
@@ -165,7 +170,7 @@ if __name__=='__main__':
        os.makedirs(output_dir)
     except Exception as e: print(e)
     import glob
-    fns = sorted(glob.glob(os.path.join(mesh_dir, "*.vtp")))
+    fns = natural_sort(glob.glob(os.path.join(mesh_dir, "*.vtp")))
     write_motion(fns,  args.phase ,args.num_interpolation, output_dir, args.num_cycle, args.duration, debug=False, mode=args.boundary_type, scale=args.scale)
     end = time.time()
     print("Time spent: ", end-start)
