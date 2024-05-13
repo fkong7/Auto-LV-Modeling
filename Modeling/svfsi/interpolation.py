@@ -88,7 +88,7 @@ def move_mesh(fns, start_point, intpl_num, num_cycle):
 
     return store
 
-def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, debug=False, mode='displacement'):
+def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, debug=False, mode='displacement', scale=1.):
     total_num_phase = len(fns)
     total_steps = num_cycle* total_num_phase * (intpl_num+1)+1
     initialized = False
@@ -130,7 +130,7 @@ def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, 
         face_ids = vtk_to_numpy(face_poly.GetPointData().GetArray('GlobalNodeID'))
         node_id_index = find_index_in_array(node_ids, face_ids)
         for i in node_id_index:
-            disp = displacements[i, :, :]
+            disp = displacements[i, :, :] * scale
             f.write('{}\n'.format(node_ids[i]))
             for j in range(total_steps):
                 if mode=='displacement':
@@ -153,6 +153,7 @@ if __name__=='__main__':
     parser.add_argument('--num_interpolation', type=int, help="Number of interpolations")
     parser.add_argument('--num_cycle', type=int, help="Number of cardiac cycles")
     parser.add_argument('--duration', type=float, help="Cycle duration in seconds")
+    parser.add_argument('--scale', default=1., type=float, help="Scale displacements.")
     parser.add_argument('--phase', default=-1, type=int, help="Id of the phase to generate volume mesh")
     parser.add_argument('--boundary_type', default='displacement', help='Type of the boundary condition, displacement or velocity')
     args = parser.parse_args()
@@ -165,6 +166,6 @@ if __name__=='__main__':
     except Exception as e: print(e)
     import glob
     fns = sorted(glob.glob(os.path.join(mesh_dir, "*.vtp")))
-    write_motion(fns,  args.phase ,args.num_interpolation, output_dir, args.num_cycle, args.duration, debug=True, mode=args.boundary_type)
+    write_motion(fns,  args.phase ,args.num_interpolation, output_dir, args.num_cycle, args.duration, debug=False, mode=args.boundary_type, scale=args.scale)
     end = time.time()
     print("Time spent: ", end-start)
