@@ -9,6 +9,7 @@ from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
 import io_utils
 import utils
 import re
+import vtk
 """
 Functions to write interpolated surface meshes for perscribed wall motion
 
@@ -60,11 +61,11 @@ def find_index_in_array(x, y):
     indices = xsorted[ypos]
     return indices
 
-def move_mesh(fns, start_point, intpl_num, num_cycle):
-    total_num_phase = len(fns)
+def move_mesh(meshes, start_point, intpl_num, num_cycle):
+    total_num_phase = len(meshes)
     total_steps = total_num_phase * (intpl_num+1)*num_cycle
     initialized = False
-    poly_template = io_utils.read_vtk_mesh(fns[start_point])
+    poly_template = meshes[start_point]
     ref_coords = vtk_to_numpy(poly_template.GetPoints().GetData())
     store = np.zeros((poly_template.GetNumberOfPoints(), 3, total_steps+1)) 
     count = 0
@@ -72,13 +73,13 @@ def move_mesh(fns, start_point, intpl_num, num_cycle):
     for msh_idx in list(range(start_point, total_num_phase))+ list(range(0, start_point)):
         if not initialized:
             boundary_queue = collections.deque(4*[None], 4)
-            boundary_queue.append(io_utils.read_vtk_mesh(fns[(msh_idx+total_num_phase-1)%total_num_phase]))
-            boundary_queue.append(io_utils.read_vtk_mesh(fns[msh_idx]))
-            boundary_queue.append(io_utils.read_vtk_mesh(fns[(msh_idx+1)%total_num_phase]))
-            boundary_queue.append(io_utils.read_vtk_mesh(fns[(msh_idx+2)%total_num_phase]))
+            boundary_queue.append(meshes[(msh_idx+total_num_phase-1)%total_num_phase])
+            boundary_queue.append(meshes[msh_idx])
+            boundary_queue.append(meshes[(msh_idx+1)%total_num_phase])
+            boundary_queue.append(meshes[(msh_idx+2)%total_num_phase])
             initialized = True
         else:
-            boundary_queue.append(io_utils.read_vtk_mesh(fns[(msh_idx+2)%total_num_phase]))
+            boundary_queue.append(meshes[(msh_idx+2)%total_num_phase])
 
         for i_idx in range(intpl_num+1):
             new_coords = cubic_spline_ipl(i_idx, 0, intpl_num+1, boundary_queue)
@@ -93,15 +94,15 @@ def move_mesh(fns, start_point, intpl_num, num_cycle):
 
     return store
 
-def write_motion(fns,  start_point, intpl_num, output_dir, num_cycle, duration, debug=False, mode='displacement', scale=1.):
-    total_num_phase = len(fns)
+def write_motion(meshes,  start_point, intpl_num, output_dir, num_cycle, duration, debug=False, mode='displacement', scale=1.):
+    total_num_phase = len(meshes)
     total_steps = num_cycle* total_num_phase * (intpl_num+1)+1
     initialized = False
     time_pts = np.linspace(0,num_cycle*duration, total_steps)
     
-    poly_template = io_utils.read_vtk_mesh(fns[start_point])
+    poly_template = meshes[start_point]
     
-    displacements = move_mesh(fns, start_point, intpl_num, num_cycle)
+    displacements = move_mesh(meshes, start_point, intpl_num, num_cycle)
     if debug:
         import vtk
         debug_dir = os.path.join(output_dir,"Debug")
@@ -159,6 +160,9 @@ if __name__=='__main__':
     parser.add_argument('--num_cycle', type=int, help="Number of cardiac cycles")
     parser.add_argument('--duration', type=float, help="Cycle duration in seconds")
     parser.add_argument('--scale', default=1., type=float, help="Scale displacements.")
+    parser.add_argument('--mesh_complete_surface', default=None, help="Optional mesh complete exterior \
+            file that can be used to make sure the correspondence between the simulation mesh input and \
+            the motion meshes are correct")
     parser.add_argument('--phase', default=-1, type=int, help="Id of the phase to generate volume mesh")
     parser.add_argument('--boundary_type', default='displacement', help='Type of the boundary condition, displacement or velocity')
     args = parser.parse_args()
@@ -171,6 +175,28 @@ if __name__=='__main__':
     except Exception as e: print(e)
     import glob
     fns = natural_sort(glob.glob(os.path.join(mesh_dir, "*.vtp")))
-    write_motion(fns,  args.phase ,args.num_interpolation, output_dir, args.num_cycle, args.duration, debug=False, mode=args.boundary_type, scale=args.scale)
+   
+    meshes = [io_utils.read_vtk_mesh(f) for f in fns]
+
+    if args.mesh_complete_surface is not None:
+        surf_ori = io_utils.read_vtk_mesh(args.mesh_complete_surface)
+        id_list = utils.find_point_correspondence(meshes[args.phase], surf_ori.GetPoints())
+        # check if correspondence can be established
+        points = vtk_to_numpy(meshes[args.phase].GetPoints().GetData())
+        points = points[id_list, :]
+        error = np.mean(np.linalg.norm(points - vtk_to_numpy(surf_ori.GetPoints().GetData()), axis=0))
+        surf_ori.GetPoints().SetData(numpy_to_vtk(points))
+        if error > 1e-3:
+            raise ValueError("There are uncorrected point mismatched between the motion files and mesh complete files")
+        else:
+            meshes[args.phase].GetPoints().SetData(surf_ori.GetPoints().GetData())
+        for m in meshes:
+            points = vtk_to_numpy(m.GetPoints().GetData())
+            points = points[id_list, :]
+            surf_ori.GetPoints().SetData(numpy_to_vtk(points))
+            m = vtk.vtkPolyData()
+            m.DeepCopy(surf_ori)
+
+    write_motion(meshes,  args.phase ,args.num_interpolation, output_dir, args.num_cycle, args.duration, debug=True, mode=args.boundary_type, scale=args.scale)
     end = time.time()
     print("Time spent: ", end-start)
