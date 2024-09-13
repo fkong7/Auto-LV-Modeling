@@ -104,7 +104,6 @@ def write_motion(meshes,  start_point, intpl_num, output_dir, num_cycle, duratio
     
     displacements = move_mesh(meshes, start_point, intpl_num, num_cycle)
     if debug:
-        import vtk
         debug_dir = os.path.join(output_dir,"Debug")
         try:
             os.makedirs(debug_dir)
@@ -113,7 +112,7 @@ def write_motion(meshes,  start_point, intpl_num, output_dir, num_cycle, duratio
         poly = vtk.vtkPolyData()
         poly.DeepCopy(poly_template)
         for ii in range(displacements.shape[-1]):
-            poly.GetPoints().SetData(numpy_to_vtk(displacements[:,:,ii]+coords))
+            poly.GetPoints().SetData(numpy_to_vtk(displacements[:,:,ii] * scale + coords * scale))
             fn_debug = os.path.join(debug_dir, "debug%05d.vtp" %ii)
             io_utils.write_vtk_polydata(poly, fn_debug)
 
@@ -135,6 +134,15 @@ def write_motion(meshes,  start_point, intpl_num, output_dir, num_cycle, duratio
         #f.write('{}\n'.format(face_poly.GetNumberOfPoints()))
         face_ids = vtk_to_numpy(face_poly.GetPointData().GetArray('GlobalNodeID'))
         node_id_index = find_index_in_array(node_ids, face_ids)
+        if debug:
+            coords = vtk_to_numpy(face_poly.GetPoints().GetData())
+            poly = vtk.vtkPolyData()
+            poly.DeepCopy(face_poly)
+            face_displacements = displacements[node_id_index, :, :] * scale
+            for ii in range(face_displacements.shape[-1]):
+                poly.GetPoints().SetData(numpy_to_vtk(face_displacements[:,:,ii]+coords*scale))
+                fn_debug = os.path.join(debug_dir, "face{}debug{:05d}.vtp".format(face, ii))
+                io_utils.write_vtk_polydata(poly, fn_debug)
         for i in node_id_index:
             disp = displacements[i, :, :] * scale
             f.write('{}\n'.format(node_ids[i]))
@@ -179,23 +187,27 @@ if __name__=='__main__':
     meshes = [io_utils.read_vtk_mesh(f) for f in fns]
 
     if args.mesh_complete_surface is not None:
+        print("!!!!!!!!", args.mesh_complete_surface)
+        print("!!!!!!!!", fns[args.phase])
         surf_ori = io_utils.read_vtk_mesh(args.mesh_complete_surface)
-        id_list = utils.find_point_correspondence(meshes[args.phase], surf_ori.GetPoints())
+        id_list = utils.find_point_correspondence(surf_ori, meshes[args.phase].GetPoints())
         # check if correspondence can be established
         points = vtk_to_numpy(meshes[args.phase].GetPoints().GetData())
         points = points[id_list, :]
         error = np.mean(np.linalg.norm(points - vtk_to_numpy(surf_ori.GetPoints().GetData()), axis=0))
-        surf_ori.GetPoints().SetData(numpy_to_vtk(points))
+        #surf_ori.GetPoints().SetData(numpy_to_vtk(points))
         if error > 1e-3:
+            print("error: ", error)
             raise ValueError("There are uncorrected point mismatched between the motion files and mesh complete files")
         else:
             meshes[args.phase].GetPoints().SetData(surf_ori.GetPoints().GetData())
-        for m in meshes:
+        for ind, m in enumerate(meshes):
             points = vtk_to_numpy(m.GetPoints().GetData())
-            points = points[id_list, :]
-            surf_ori.GetPoints().SetData(numpy_to_vtk(points))
+            points_new = points[id_list, :]
             m = vtk.vtkPolyData()
             m.DeepCopy(surf_ori)
+            m.GetPoints().SetData(numpy_to_vtk(points_new))
+            meshes[ind] = m
 
     write_motion(meshes,  args.phase ,args.num_interpolation, output_dir, args.num_cycle, args.duration, debug=True, mode=args.boundary_type, scale=args.scale)
     end = time.time()
