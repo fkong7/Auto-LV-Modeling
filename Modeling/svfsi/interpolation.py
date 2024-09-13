@@ -10,6 +10,8 @@ import io_utils
 import utils
 import re
 import vtk
+from scipy.interpolate import CubicSpline
+
 """
 Functions to write interpolated surface meshes for perscribed wall motion
 
@@ -61,7 +63,7 @@ def find_index_in_array(x, y):
     indices = xsorted[ypos]
     return indices
 
-def move_mesh(meshes, start_point, intpl_num, num_cycle):
+def move_mesh_cubic_hermite(meshes, start_point, intpl_num, num_cycle):
     total_num_phase = len(meshes)
     total_steps = total_num_phase * (intpl_num+1)*num_cycle
     initialized = False
@@ -91,10 +93,39 @@ def move_mesh(meshes, start_point, intpl_num, num_cycle):
         s = c*total_num_phase * (intpl_num+1)
         e = s + total_num_phase * (intpl_num+1)
         store[:,:,s:e] = store[:, :,0:count]
-
+    
     return store
 
-def write_motion(meshes,  start_point, intpl_num, output_dir, num_cycle, duration, debug=False, mode='displacement', scale=1.):
+def move_mesh_cubic(meshes, start_point, intpl_num, num_cycle):
+    total_num_phase = len(meshes)
+    total_steps = total_num_phase * (intpl_num+1)*num_cycle
+    poly_template = meshes[start_point]
+    ref_coords = vtk_to_numpy(poly_template.GetPoints().GetData())
+    store = np.zeros((poly_template.GetNumberOfPoints(), 3, total_steps+1)) 
+    count = 0
+    mesh_list = [meshes[idx] for idx in list(range(start_point, total_num_phase)) +\
+            list(range(0, start_point))]
+    mesh_list = [mesh_list[-3], mesh_list[-2], mesh_list[-1]] + mesh_list + \
+            [mesh_list[0], mesh_list[1], mesh_list[2]]
+    mesh_point_list = [vtk_to_numpy(m.GetPoints().GetData()) for m in mesh_list]
+    mesh_points = np.array(mesh_point_list)
+    time_list = [-3, -2, -1] + list(range(total_num_phase)) + \
+            [total_num_phase, total_num_phase+1, total_num_phase+2]
+    
+    cs = CubicSpline(np.array(time_list), mesh_points)
+    
+    time_interp = np.linspace(0, total_num_phase, total_num_phase * (intpl_num+1))
+    new_coords = cs(time_interp).transpose(1, 2, 0)
+    displacements = new_coords - np.expand_dims(ref_coords, axis=-1)
+    
+    ## The rest cycles are copies of first cycle
+    for c in range(num_cycle):
+        s = c*total_num_phase * (intpl_num+1)
+        e = s + total_num_phase * (intpl_num+1)
+        store[:,:,s:e] = displacements
+    return store
+
+def write_motion(meshes,  start_point, intpl_num, output_dir, num_cycle, duration, debug=False, scale=1.):
     total_num_phase = len(meshes)
     total_steps = num_cycle* total_num_phase * (intpl_num+1)+1
     initialized = False
@@ -102,7 +133,8 @@ def write_motion(meshes,  start_point, intpl_num, output_dir, num_cycle, duratio
     
     poly_template = meshes[start_point]
     
-    displacements = move_mesh(meshes, start_point, intpl_num, num_cycle)
+    displacements = move_mesh_cubic(meshes, start_point, intpl_num, num_cycle)
+    #displacements = move_mesh_cubic_hermite(meshes, start_point, intpl_num, num_cycle)
     if debug:
         debug_dir = os.path.join(output_dir,"Debug")
         try:
@@ -120,12 +152,7 @@ def write_motion(meshes,  start_point, intpl_num, output_dir, num_cycle, duratio
     face_ids = vtk_to_numpy(poly_template.GetCellData().GetArray('ModelFaceID'))
     #write time steps and node numbers
     for face in np.unique(face_ids):
-        if mode=='displacement':
-            fn = os.path.join(output_dir, '%d_displacement.dat' % face)
-        elif mode=='velocity':
-            fn = os.path.join(output_dir, '%d_velocity.dat' % face)
-        else:
-            raise ValueError('Unsupported boundary type {}; should be displacement or velocity.'.format(mode))
+        fn = os.path.join(output_dir, '%d_displacement.dat' % face)
         face_poly = utils.threshold_polydata(poly_template, 'ModelFaceID', (face,face))
         f = open(fn, 'w')
         f.write('{} {} {}\n'.format(3, total_steps,face_poly.GetNumberOfPoints()))
@@ -147,10 +174,7 @@ def write_motion(meshes,  start_point, intpl_num, output_dir, num_cycle, duratio
             disp = displacements[i, :, :] * scale
             f.write('{}\n'.format(node_ids[i]))
             for j in range(total_steps):
-                if mode=='displacement':
-                    f.write('{} {} {}\n'.format(disp[0,j], disp[1,j],disp[2,j]))
-                elif mode=='velocity':
-                    f.write('{} {} {}\n'.format(disp[0,j]/(time_pts[1]-time_pts[0]), disp[1,j]/(time_pts[1]-time_pts[0]),disp[2,j]/(time_pts[1]-time_pts[0])))
+                f.write('{} {} {}\n'.format(disp[0,j], disp[1,j],disp[2,j]))
         f.close()
 
 
@@ -172,7 +196,6 @@ if __name__=='__main__':
             file that can be used to make sure the correspondence between the simulation mesh input and \
             the motion meshes are correct")
     parser.add_argument('--phase', default=-1, type=int, help="Id of the phase to generate volume mesh")
-    parser.add_argument('--boundary_type', default='displacement', help='Type of the boundary condition, displacement or velocity')
     args = parser.parse_args()
     
     mesh_dir = args.input_dir
@@ -209,6 +232,6 @@ if __name__=='__main__':
             m.GetPoints().SetData(numpy_to_vtk(points_new))
             meshes[ind] = m
 
-    write_motion(meshes,  args.phase ,args.num_interpolation, output_dir, args.num_cycle, args.duration, debug=True, mode=args.boundary_type, scale=args.scale)
+    write_motion(meshes,  args.phase ,args.num_interpolation, output_dir, args.num_cycle, args.duration, debug=False, scale=args.scale)
     end = time.time()
     print("Time spent: ", end-start)
