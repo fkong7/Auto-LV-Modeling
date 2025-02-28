@@ -37,7 +37,7 @@ image_dir
 ```
 ### Trained Models
 We used the image and ground truth data provided by [MMWHS](http://www.sdspeople.fudan.edu.cn/zhuangxiahai/0/mmwhs/) to train our models. 
-Our segmentation models were trainined simultaneously on CT and MR data and trained weights are [here](https://drive.google.com/open?id=162Xr5OezSZL-0K3aoYO7WnHWuGTEXkkj). 
+Our segmentation models were trainined simultaneously on CT and MR data, and the trained weights as well as a test dataset are [here](https://www.vascularmodel.com/additionaldata.html). 
 
 ### Prediction
 To generate segmentations for 3D CT or MR image volumes:
